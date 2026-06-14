@@ -4,7 +4,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class RewardedAdService {
   static const String rewardedAdUnitId =
-      'ca-app-pub-3940256099942544/5224354917';
+      'ca-app-pub-7683034036748999/1933132998';
 
   Future<bool> showRewardedAd({
     required FutureOr<void> Function() onUserEarnedReward,
