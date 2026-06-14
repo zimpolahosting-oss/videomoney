@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "280202502782",
+    "project_id": "videomoney-efb89",
+    "storage_bucket": "videomoney-efb89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280202502782:android:05393df2acf4ea1fad6e2f",
+        "android_client_info": {
+          "package_name": "com.videomoney.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB7eHWWJl8ROqRixgtpqDugCwD_Oi97_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
