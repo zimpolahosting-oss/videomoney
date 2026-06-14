@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/rewarded_ad_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/stat_card.dart';
 
@@ -19,15 +20,23 @@ class _EarnScreenState extends State<EarnScreen> {
   final _earningsService = EarningsService();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _earningsService.preloadRewardedVideo();
+  }
+
   Future<void> _watchVideo() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || _isLoading) return;
 
     setState(() => _isLoading = true);
+    String? lastStatusMessage;
 
     final rewardGranted = await _earningsService.watchRewardedVideo(
       uid: user.uid,
       onAdStatus: (message) {
+        lastStatusMessage = message;
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
@@ -37,15 +46,21 @@ class _EarnScreenState extends State<EarnScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          rewardGranted
-              ? 'You earned ${FirestoreService.rewardCoinsPerVideo} coins.'
-              : 'Rewarded ad was not completed.',
+    if (rewardGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'You earned ${FirestoreService.rewardCoinsPerVideo} coins.',
+          ),
         ),
-      ),
-    );
+      );
+    } else if (lastStatusMessage != RewardedAdService.adUnavailableMessage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rewarded ad was not completed.'),
+        ),
+      );
+    }
 
     setState(() => _isLoading = false);
   }

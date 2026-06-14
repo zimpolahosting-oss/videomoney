@@ -13,6 +13,10 @@ class EarningsService {
   final FirestoreService _firestoreService;
   final RewardedAdService _rewardedAdService;
 
+  Future<void> preloadRewardedVideo() {
+    return _rewardedAdService.preloadRewardedAd();
+  }
+
   Future<bool> watchRewardedVideo({
     required String uid,
     required ValueChanged<String> onAdStatus,
