@@ -4,6 +4,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'firebase_options.dart';
 import 'screens/auth/auth_gate.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,23 +21,10 @@ class VideoMoneyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seedColor = Colors.deepPurple;
-
     return MaterialApp(
-      title: 'Video&Money',
+      title: 'VideoMoney',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
-        scaffoldBackgroundColor: const Color(0xFFF6F3FF),
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          border: OutlineInputBorder(),
-        ),
-      ),
+      theme: AppTheme.darkTheme(),
       home: const AuthGate(),
     );
   }

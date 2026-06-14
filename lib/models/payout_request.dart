@@ -7,6 +7,9 @@ class PayoutRequest {
     required this.coinsRequested,
     required this.status,
     required this.createdAt,
+    required this.payPalEmail,
+    required this.ibanOrBankAccount,
+    required this.accountHolderName,
   });
 
   final String id;
@@ -14,6 +17,9 @@ class PayoutRequest {
   final int coinsRequested;
   final String status;
   final DateTime? createdAt;
+  final String payPalEmail;
+  final String ibanOrBankAccount;
+  final String accountHolderName;
 
   factory PayoutRequest.fromDoc(
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -25,6 +31,9 @@ class PayoutRequest {
       coinsRequested: (data['coinsRequested'] as num?)?.toInt() ?? 0,
       status: data['status'] as String? ?? 'pending',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      payPalEmail: data['payPalEmail'] as String? ?? '',
+      ibanOrBankAccount: data['ibanOrBankAccount'] as String? ?? '',
+      accountHolderName: data['accountHolderName'] as String? ?? '',
     );
   }
 }
