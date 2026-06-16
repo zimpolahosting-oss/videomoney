@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'You earned ${FirestoreService.rewardCoinsPerVideo} coins.',
+            'You earned ${FirestoreService.rewardCoinsPerVideo} view.',
           ),
         ),
       );
@@ -78,12 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
         final appUser = snapshot.data;
-        final coins = appUser?.coins ?? 0;
+        final views = appUser?.views ?? 0;
         final videosWatched = appUser?.videosWatched ?? 0;
-        final coinsRemaining = coins >= FirestoreService.minimumPayoutCoins
+        final estimatedEarnings = FirestoreService.estimateEarningsEuro(views);
+        final viewsRemaining = views >= FirestoreService.minimumPayoutCoins
             ? 0
-            : FirestoreService.minimumPayoutCoins - coins;
-        final isReadyForPayout = coins >= FirestoreService.minimumPayoutCoins;
+            : FirestoreService.minimumPayoutCoins - views;
+        final isReadyForPayout = views >= FirestoreService.minimumPayoutCoins;
 
         return Scaffold(
           appBar: AppBar(title: const Text('Home')),
@@ -138,8 +139,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           _MetricPill(
                             icon: Icons.account_balance_wallet_outlined,
-                            label: 'Balance',
-                            value: '$coins coins',
+                            label: 'Views',
+                            value: '$views views',
                             color: AppTheme.coin,
                           ),
                           _MetricPill(
@@ -154,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         isReadyForPayout
                             ? 'You are ready to request a payout.'
-                            : '$coinsRemaining more coins needed to reach the payout minimum.',
+                            : '$viewsRemaining more views needed to reach the payout minimum.',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 18),
@@ -178,11 +179,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               StatCard(
-                title: 'Coin balance',
-                value: '$coins',
+                title: 'View balance',
+                value: '$views',
                 icon: Icons.monetization_on,
                 color: AppTheme.coin,
                 caption: 'Available for future payout requests',
+              ),
+              const SizedBox(height: 14),
+              StatCard(
+                title: 'Estimated earnings',
+                value: '€${estimatedEarnings.toStringAsFixed(2)}',
+                icon: Icons.query_stats,
+                color: AppTheme.primarySoft,
+                caption:
+                    'Estimate only. 50 completed views ≈ €0.01 and actual earnings may vary.',
               ),
               const SizedBox(height: 14),
               StatCard(
@@ -191,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.ondemand_video,
                 color: AppTheme.primary,
                 caption:
-                    '${FirestoreService.rewardCoinsPerVideo} coins are granted after each completed rewarded ad',
+                    '${FirestoreService.rewardCoinsPerVideo} view is granted only after each completed rewarded ad',
               ),
               const SizedBox(height: 14),
               StatCard(
@@ -200,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.request_quote_outlined,
                 color: isReadyForPayout ? AppTheme.primary : Colors.orangeAccent,
                 caption:
-                    'Minimum payout: ${FirestoreService.minimumPayoutCoins} coins, processing time: ${FirestoreService.payoutProcessingDays} days',
+                    'Minimum payout: ${FirestoreService.minimumPayoutCoins} views, processing time: ${FirestoreService.payoutProcessingDays} days',
               ),
             ],
           ),

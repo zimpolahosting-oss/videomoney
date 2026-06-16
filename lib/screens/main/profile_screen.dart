@@ -93,8 +93,8 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     _ProfileRow(
                       icon: Icons.monetization_on_outlined,
-                      title: 'Coins',
-                      value: '${appUser?.coins ?? 0}',
+                      title: 'Views',
+                      value: '${appUser?.views ?? 0}',
                     ),
                     _ProfileRow(
                       icon: Icons.video_collection_outlined,

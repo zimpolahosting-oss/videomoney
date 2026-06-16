@@ -8,9 +8,12 @@ class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  static const int rewardCoinsPerVideo = 200;
+  static const int rewardCoinsPerVideo = 1;
   static const int minimumPayoutCoins = 10000;
   static const int payoutProcessingDays = 30;
+  static const int estimatedViewsPerCent = 50;
+  static const String rewardBalanceResetAppliedField =
+      'rewardBalanceResetApplied';
 
   final FirebaseFirestore _firestore;
 
@@ -20,17 +23,34 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _payouts =>
       _firestore.collection('payouts');
 
+  static double estimateEarningsEuro(int views) {
+    return views / estimatedViewsPerCent / 100;
+  }
+
   Future<void> createUserProfile(User user) async {
     final docRef = _users.doc(user.uid);
     final doc = await docRef.get();
 
-    if (doc.exists) return;
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      final rewardBalanceResetApplied =
+          data[rewardBalanceResetAppliedField] as bool? ?? false;
+
+      if (!rewardBalanceResetApplied) {
+        await docRef.update({
+          'coins': 0,
+          rewardBalanceResetAppliedField: true,
+        });
+      }
+      return;
+    }
 
     await docRef.set({
       'uid': user.uid,
       'email': user.email ?? '',
       'coins': 0,
       'videosWatched': 0,
+      rewardBalanceResetAppliedField: true,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -93,11 +113,11 @@ class FirestoreService {
 
       final currentCoins = (userData['coins'] as num?)?.toInt() ?? 0;
       if (coinsRequested <= 0) {
-        throw Exception('Requested coins must be greater than zero.');
+        throw Exception('Requested views must be greater than zero.');
       }
       if (coinsRequested < minimumPayoutCoins) {
         throw Exception(
-          'Minimum payout is $minimumPayoutCoins coins.',
+          'Minimum payout is $minimumPayoutCoins views.',
         );
       }
       if (trimmedAccountHolderName.isEmpty) {
@@ -107,7 +127,7 @@ class FirestoreService {
         throw Exception('Enter a PayPal email or an IBAN / bank account.');
       }
       if (currentCoins < coinsRequested) {
-        throw Exception('Not enough coins available.');
+        throw Exception('Not enough views available.');
       }
 
       transaction.update(userRef, {

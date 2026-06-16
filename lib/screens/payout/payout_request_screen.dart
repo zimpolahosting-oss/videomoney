@@ -13,7 +13,7 @@ class PayoutRequestScreen extends StatefulWidget {
 
 class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _coinsController = TextEditingController();
+  final _viewsController = TextEditingController();
   final _payPalController = TextEditingController();
   final _ibanController = TextEditingController();
   final _accountHolderController = TextEditingController();
@@ -23,7 +23,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
 
   @override
   void dispose() {
-    _coinsController.dispose();
+    _viewsController.dispose();
     _payPalController.dispose();
     _ibanController.dispose();
     _accountHolderController.dispose();
@@ -41,7 +41,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     try {
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
-        coinsRequested: int.parse(_coinsController.text.trim()),
+        coinsRequested: int.parse(_viewsController.text.trim()),
         payPalEmail: _payPalController.text,
         ibanOrBankAccount: _ibanController.text,
         accountHolderName: _accountHolderController.text,
@@ -94,7 +94,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     _RuleLine(
                       icon: Icons.flag_circle_outlined,
                       text:
-                          'Minimum payout is ${FirestoreService.minimumPayoutCoins} coins.',
+                          'Minimum payout is ${FirestoreService.minimumPayoutCoins} views.',
                     ),
                     _RuleLine(
                       icon: Icons.schedule_outlined,
@@ -111,16 +111,21 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Submit a payout request using your coin balance.',
+                'Submit a payout request using your view balance.',
                 style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Estimated earnings only. 50 completed views ≈ €0.01 and this is not a guaranteed payout promise.',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
               TextFormField(
-                controller: _coinsController,
+                controller: _viewsController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Coins to request',
-                  helperText: 'Minimum 10,000 coins',
+                  labelText: 'Views to request',
+                  helperText: 'Minimum 10,000 views',
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -132,7 +137,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     return 'Enter a valid positive number.';
                   }
                   if (number < FirestoreService.minimumPayoutCoins) {
-                    return 'Minimum payout is ${FirestoreService.minimumPayoutCoins} coins.';
+                    return 'Minimum payout is ${FirestoreService.minimumPayoutCoins} views.';
                   }
                   return null;
                 },

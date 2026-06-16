@@ -50,7 +50,7 @@ class _EarnScreenState extends State<EarnScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'You earned ${FirestoreService.rewardCoinsPerVideo} coins.',
+            'You earned ${FirestoreService.rewardCoinsPerVideo} view.',
           ),
         ),
       );
@@ -79,8 +79,10 @@ class _EarnScreenState extends State<EarnScreen> {
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
         final appUser = snapshot.data;
-        final currentCoins = appUser?.coins ?? 0;
+        final currentViews = appUser?.views ?? 0;
         final totalVideos = appUser?.videosWatched ?? 0;
+        final estimatedEarnings =
+            FirestoreService.estimateEarningsEuro(currentViews);
 
         return Scaffold(
           appBar: AppBar(title: const Text('Earn')),
@@ -110,7 +112,7 @@ class _EarnScreenState extends State<EarnScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Start the same rewarded ad flow used on the Home page and collect ${FirestoreService.rewardCoinsPerVideo} coins per completed video.',
+                      'Start the same rewarded ad flow used on the Home page and collect ${FirestoreService.rewardCoinsPerVideo} view per completed rewarded ad.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 22),
@@ -128,7 +130,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ),
                         _StepChip(
                           icon: Icons.savings_outlined,
-                          text: 'Coins land in your wallet',
+                          text: 'Views land in your wallet',
                         ),
                       ],
                     ),
@@ -152,11 +154,20 @@ class _EarnScreenState extends State<EarnScreen> {
               ),
               const SizedBox(height: 16),
               StatCard(
-                title: 'Current balance',
-                value: '$currentCoins coins',
+                title: 'Current views',
+                value: '$currentViews views',
                 icon: Icons.savings,
                 color: AppTheme.primary,
                 caption: 'Ready for payout once you reach the minimum threshold',
+              ),
+              const SizedBox(height: 14),
+              StatCard(
+                title: 'Estimated earnings',
+                value: '€${estimatedEarnings.toStringAsFixed(2)}',
+                icon: Icons.query_stats,
+                color: AppTheme.coin,
+                caption:
+                    'Estimate only. 50 completed views ≈ €0.01 and actual earnings may vary.',
               ),
               const SizedBox(height: 14),
               StatCard(
@@ -165,12 +176,12 @@ class _EarnScreenState extends State<EarnScreen> {
                 icon: Icons.movie_filter,
                 color: AppTheme.primarySoft,
                 caption:
-                    '${totalVideos * FirestoreService.rewardCoinsPerVideo} total coins generated from completed rewarded ads',
+                    '${totalVideos * FirestoreService.rewardCoinsPerVideo} total views generated from completed rewarded ads',
               ),
               const SizedBox(height: 14),
               StatCard(
                 title: 'Minimum payout target',
-                value: '${FirestoreService.minimumPayoutCoins} coins',
+                value: '${FirestoreService.minimumPayoutCoins} views',
                 icon: Icons.flag_circle_outlined,
                 color: AppTheme.coin,
                 caption:

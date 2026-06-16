@@ -31,13 +31,15 @@ class WalletScreen extends StatelessWidget {
             stream: firestoreService.watchUser(user.uid),
             builder: (context, snapshot) {
               final appUser = snapshot.data;
-              final currentCoins = appUser?.coins ?? 0;
+              final currentViews = appUser?.views ?? 0;
+              final estimatedEarnings =
+                  FirestoreService.estimateEarningsEuro(currentViews);
               final shortfall =
-                  currentCoins >= FirestoreService.minimumPayoutCoins
+                  currentViews >= FirestoreService.minimumPayoutCoins
                   ? 0
-                  : FirestoreService.minimumPayoutCoins - currentCoins;
+                  : FirestoreService.minimumPayoutCoins - currentViews;
               final readyForPayout =
-                  currentCoins >= FirestoreService.minimumPayoutCoins;
+                  currentViews >= FirestoreService.minimumPayoutCoins;
 
               return Container(
                 padding: const EdgeInsets.all(24),
@@ -62,15 +64,25 @@ class WalletScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      '$currentCoins coins',
+                      '$currentViews views',
                       style: Theme.of(context).textTheme.displaySmall,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       readyForPayout
                           ? 'You can submit a payout request now.'
-                          : '$shortfall more coins are needed before payout becomes available.',
+                          : '$shortfall more views are needed before payout becomes available.',
                       style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Estimated earnings: €${estimatedEarnings.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Estimate only. 50 completed views ≈ €0.01 and actual earnings may vary.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -96,7 +108,7 @@ class WalletScreen extends StatelessWidget {
           _WalletRuleCard(
             icon: Icons.flag_circle_outlined,
             title: 'Minimum payout',
-            value: '${FirestoreService.minimumPayoutCoins} coins',
+            value: '${FirestoreService.minimumPayoutCoins} views',
           ),
           const SizedBox(height: 12),
           _WalletRuleCard(
@@ -178,7 +190,7 @@ class WalletScreen extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '${payout.coinsRequested} coins',
+                                      '${payout.viewsRequested} views',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium,

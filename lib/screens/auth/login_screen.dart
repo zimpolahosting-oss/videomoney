@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(height: 10),
                                 Text(
                                   _isLogin
-                                      ? 'Sign in to keep earning coins and managing payouts.'
+                                      ? 'Sign in to keep earning views and managing payouts.'
                                       : 'Register to start watching rewarded videos and building your balance.',
                                   style: Theme.of(context).textTheme.bodyLarge,
                                 ),
@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(
                               _isLogin
                                   ? 'Secure access to your earning dashboard'
-                                  : 'Your payout history and coins are stored in Firestore',
+                                  : 'Your payout history and reward balance are stored in Firestore',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),

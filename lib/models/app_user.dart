@@ -15,6 +15,8 @@ class AppUser {
   final int videosWatched;
   final DateTime? createdAt;
 
+  int get views => coins;
+
   factory AppUser.fromMap(Map<String, dynamic> map) {
     return AppUser(
       uid: map['uid'] as String? ?? '',

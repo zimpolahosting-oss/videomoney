@@ -21,6 +21,8 @@ class PayoutRequest {
   final String ibanOrBankAccount;
   final String accountHolderName;
 
+  int get viewsRequested => coinsRequested;
+
   factory PayoutRequest.fromDoc(
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
