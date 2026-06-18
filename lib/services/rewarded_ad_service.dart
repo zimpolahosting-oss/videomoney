@@ -14,6 +14,8 @@ class RewardedAdService {
       'ca-app-pub-7683034036748999/1933132998';
   static const String adUnavailableMessage =
       'No ad available right now. Please try again in a moment.';
+  static const String rewardDeliveryFailedMessage =
+      'The ad finished, but we could not update your balance. Please try again.';
 
   RewardedAd? _rewardedAd;
   bool _isLoading = false;
@@ -96,8 +98,13 @@ class RewardedAdService {
 
     ad.show(
       onUserEarnedReward: (ad, reward) async {
-        rewardEarned = true;
-        await onUserEarnedReward();
+        try {
+          await onUserEarnedReward();
+          rewardEarned = true;
+        } catch (_) {
+          rewardEarned = false;
+          onAdStatus?.call(rewardDeliveryFailedMessage);
+        }
       },
     );
 

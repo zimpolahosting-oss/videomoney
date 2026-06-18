@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
+enum _PayoutMethod { paypal, revolut }
+
 class PayoutRequestScreen extends StatefulWidget {
-  const PayoutRequestScreen({super.key});
+  const PayoutRequestScreen({super.key, this.initialMethod});
+
+  final String? initialMethod;
 
   @override
   State<PayoutRequestScreen> createState() => _PayoutRequestScreenState();
@@ -15,17 +19,25 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _viewsController = TextEditingController();
   final _payPalController = TextEditingController();
-  final _ibanController = TextEditingController();
+  final _revolutController = TextEditingController();
   final _accountHolderController = TextEditingController();
   final _firestoreService = FirestoreService();
 
   bool _isSubmitting = false;
+  late _PayoutMethod _method;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = (widget.initialMethod ?? '').toLowerCase();
+    _method = initial == 'revolut' ? _PayoutMethod.revolut : _PayoutMethod.paypal;
+  }
 
   @override
   void dispose() {
     _viewsController.dispose();
     _payPalController.dispose();
-    _ibanController.dispose();
+    _revolutController.dispose();
     _accountHolderController.dispose();
     super.dispose();
   }
@@ -42,8 +54,10 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
         coinsRequested: int.parse(_viewsController.text.trim()),
-        payPalEmail: _payPalController.text,
-        ibanOrBankAccount: _ibanController.text,
+        payoutMethod: _method == _PayoutMethod.paypal ? 'paypal' : 'revolut',
+        payPalEmail: _method == _PayoutMethod.paypal ? _payPalController.text : '',
+        revolutUsername:
+            _method == _PayoutMethod.revolut ? _revolutController.text : '',
         accountHolderName: _accountHolderController.text,
       );
 
@@ -102,9 +116,8 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                           'Processing can take up to ${FirestoreService.payoutProcessingDays} days after admin approval.',
                     ),
                     const _RuleLine(
-                      icon: Icons.account_balance_outlined,
-                      text:
-                          'Add an account holder name and at least one payout destination.',
+                      icon: Icons.verified_user_outlined,
+                      text: 'Every request is reviewed by admin before it is paid.',
                     ),
                   ],
                 ),
@@ -120,6 +133,41 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
+              Text(
+                'Payout method',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 10),
+              SegmentedButton<_PayoutMethod>(
+                segments: const [
+                  ButtonSegment(
+                    value: _PayoutMethod.paypal,
+                    icon: Icon(Icons.payments_outlined),
+                    label: Text('PayPal'),
+                  ),
+                  ButtonSegment(
+                    value: _PayoutMethod.revolut,
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    label: Text('Revolut'),
+                  ),
+                ],
+                selected: {_method},
+                onSelectionChanged: (value) {
+                  setState(() => _method = value.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return AppTheme.primary.withOpacity(0.12);
+                    }
+                    return Theme.of(context).colorScheme.surface;
+                  }),
+                  side: MaterialStateProperty.all(
+                    BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _viewsController,
                 keyboardType: TextInputType.number,
@@ -156,39 +204,40 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _payPalController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'PayPal email',
-                  helperText: 'Optional if you provide IBAN / bank account',
+              if (_method == _PayoutMethod.paypal) ...[
+                TextFormField(
+                  controller: _payPalController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'PayPal email',
+                  ),
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return 'Enter a PayPal email.';
+                    }
+                    if (!trimmed.contains('@')) {
+                      return 'Enter a valid PayPal email.';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  final trimmed = value?.trim() ?? '';
-                  if (trimmed.isNotEmpty && !trimmed.contains('@')) {
-                    return 'Enter a valid PayPal email.';
-                  }
-                  if (trimmed.isEmpty && _ibanController.text.trim().isEmpty) {
-                    return 'Enter a PayPal email or an IBAN / bank account.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ibanController,
-                decoration: const InputDecoration(
-                  labelText: 'IBAN / bank account',
-                  helperText: 'Optional if you provide PayPal email',
+              ] else ...[
+                TextFormField(
+                  controller: _revolutController,
+                  decoration: const InputDecoration(
+                    labelText: 'Revolut username',
+                    helperText: 'Example: @yourname',
+                  ),
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return 'Enter your Revolut username.';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  final trimmed = value?.trim() ?? '';
-                  if (trimmed.isEmpty && _payPalController.text.trim().isEmpty) {
-                    return 'Enter an IBAN / bank account or a PayPal email.';
-                  }
-                  return null;
-                },
-              ),
+              ],
               const SizedBox(height: 26),
               SizedBox(
                 width: double.infinity,

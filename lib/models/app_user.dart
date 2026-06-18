@@ -6,6 +6,10 @@ class AppUser {
     required this.email,
     required this.coins,
     required this.videosWatched,
+    required this.dailyVideosWatched,
+    required this.dailyProgressDate,
+    required this.dailyBonusAwarded,
+    required this.isAdmin,
     required this.createdAt,
   });
 
@@ -13,6 +17,11 @@ class AppUser {
   final String email;
   final int coins;
   final int videosWatched;
+  final int dailyVideosWatched;
+  /// Format: `YYYY-MM-DD` in the device local timezone.
+  final String dailyProgressDate;
+  final bool dailyBonusAwarded;
+  final bool isAdmin;
   final DateTime? createdAt;
 
   int get views => coins;
@@ -23,6 +32,10 @@ class AppUser {
       email: map['email'] as String? ?? '',
       coins: (map['coins'] as num?)?.toInt() ?? 0,
       videosWatched: (map['videosWatched'] as num?)?.toInt() ?? 0,
+      dailyVideosWatched: (map['dailyVideosWatched'] as num?)?.toInt() ?? 0,
+      dailyProgressDate: map['dailyProgressDate'] as String? ?? '',
+      dailyBonusAwarded: map['dailyBonusAwarded'] as bool? ?? false,
+      isAdmin: map['isAdmin'] as bool? ?? (map['admin'] as bool? ?? false),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -33,6 +46,10 @@ class AppUser {
       'email': email,
       'coins': coins,
       'videosWatched': videosWatched,
+      'dailyVideosWatched': dailyVideosWatched,
+      'dailyProgressDate': dailyProgressDate,
+      'dailyBonusAwarded': dailyBonusAwarded,
+      'isAdmin': isAdmin,
       'createdAt': createdAt,
     };
   }

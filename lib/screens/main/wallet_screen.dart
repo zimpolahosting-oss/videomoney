@@ -2,11 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../app_routes.dart';
 import '../../models/app_user.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
-import '../payout/payout_request_screen.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -23,208 +23,359 @@ class WalletScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Wallet')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        children: [
-          StreamBuilder<AppUser?>(
-            stream: firestoreService.watchUser(user.uid),
-            builder: (context, snapshot) {
-              final appUser = snapshot.data;
-              final currentViews = appUser?.views ?? 0;
-              final estimatedEarnings =
-                  FirestoreService.estimateEarningsEuro(currentViews);
-              final shortfall =
-                  currentViews >= FirestoreService.minimumPayoutCoins
-                  ? 0
-                  : FirestoreService.minimumPayoutCoins - currentViews;
-              final readyForPayout =
-                  currentViews >= FirestoreService.minimumPayoutCoins;
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+          children: [
+            const _TopTitle(title: 'Wallet'),
+            const SizedBox(height: 14),
+            StreamBuilder<AppUser?>(
+              stream: firestoreService.watchUser(user.uid),
+              builder: (context, snapshot) {
+                final appUser = snapshot.data;
+                final currentViews = appUser?.views ?? 0;
+                final estimatedEarnings =
+                    FirestoreService.estimateEarningsEuro(currentViews);
+                final remaining = currentViews >= FirestoreService.minimumPayoutCoins
+                    ? 0
+                    : FirestoreService.minimumPayoutCoins - currentViews;
 
-              return Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF132319),
-                      Color(0xFF08100C),
-                    ],
-                  ),
-                  border: Border.all(color: AppTheme.outline.withOpacity(0.8)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Available balance',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '$currentViews views',
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      readyForPayout
-                          ? 'You can submit a payout request now.'
-                          : '$shortfall more views are needed before payout becomes available.',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Estimated earnings: €${estimatedEarnings.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Estimate only. 50 completed views ≈ €0.01 and actual earnings may vary.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const PayoutRequestScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.request_quote),
-                        label: const Text('Request Payout'),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          _WalletRuleCard(
-            icon: Icons.flag_circle_outlined,
-            title: 'Minimum payout',
-            value: '${FirestoreService.minimumPayoutCoins} views',
-          ),
-          const SizedBox(height: 12),
-          _WalletRuleCard(
-            icon: Icons.schedule_outlined,
-            title: 'Processing time',
-            value: '${FirestoreService.payoutProcessingDays} days',
-          ),
-          const SizedBox(height: 12),
-          const _WalletRuleCard(
-            icon: Icons.verified_user_outlined,
-            title: 'Approval',
-            value: 'Every payout request is reviewed by admin before processing',
-          ),
-          const SizedBox(height: 22),
-          Text(
-            'Payout history',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          StreamBuilder<List<PayoutRequest>>(
-            stream: firestoreService.watchPayouts(user.uid),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final payouts = snapshot.data ?? const <PayoutRequest>[];
-              if (payouts.isEmpty) {
-                return const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('No payout requests yet.'),
-                  ),
-                );
-              }
-
-              return Column(
-                children: payouts.map((payout) {
-                  final formattedDate = payout.createdAt == null
-                      ? 'Pending timestamp'
-                      : DateFormat.yMMMd().add_jm().format(payout.createdAt!);
-                  final payoutDestination = payout.payPalEmail.isNotEmpty
-                      ? 'PayPal: ${payout.payPalEmail}'
-                      : payout.ibanOrBankAccount.isNotEmpty
-                          ? 'IBAN / bank: ${payout.ibanOrBankAccount}'
-                          : 'Destination not saved';
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border.all(
-                        color: AppTheme.outline.withOpacity(0.55),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 48,
-                          width: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppTheme.primary.withOpacity(0.12),
-                          ),
-                          child: const Icon(
-                            Icons.payments_outlined,
-                            color: AppTheme.primarySoft,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${payout.viewsRequested} views',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                  ),
-                                  _StatusBadge(status: payout.status),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                payoutDestination,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              if (payout.accountHolderName.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Account holder: ${payout.accountHolderName}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              Text(
-                                'Created: $formattedDate',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
+                return Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF11261C),
+                        Color(0xFF08120E),
+                        Color(0xFF04100A),
                       ],
                     ),
+                    border: Border.all(color: AppTheme.outline.withOpacity(0.9)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withOpacity(0.12),
+                        blurRadius: 28,
+                        offset: const Offset(0, 18),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'VideoMoney',
+                              style: TextStyle(
+                                color: AppTheme.primarySoft,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(AppRoutes.payoutHistory);
+                            },
+                            icon: const Icon(
+                              Icons.history_toggle_off,
+                              color: AppTheme.primarySoft,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Your Wallet',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Available Views',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  NumberFormat.decimalPattern()
+                                      .format(currentViews),
+                                  style: Theme.of(context).textTheme.displaySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Image.asset(
+                              'assets/illustrations/wallet_purse_v2.jpg',
+                              height: 96,
+                              width: 96,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SmallStat(
+                              label: 'Estimated Payout',
+                              value: '€${estimatedEarnings.toStringAsFixed(2)}',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _SmallStat(
+                              label: 'Remaining to Payout',
+                              value: '${NumberFormat.decimalPattern().format(remaining)} views',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(AppRoutes.payoutRequest);
+                          },
+                          icon: const Icon(Icons.request_quote_outlined),
+                          label: const Text('Request Payout'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _RuleMiniCard(
+                    icon: Icons.flag_circle_outlined,
+                    title: 'Min. Payout',
+                    value: NumberFormat.decimalPattern()
+                        .format(FirestoreService.minimumPayoutCoins),
+                    suffix: 'views',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _RuleMiniCard(
+                    icon: Icons.schedule_outlined,
+                    title: 'Processing Time',
+                    value: '${FirestoreService.payoutProcessingDays}',
+                    suffix: 'days',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: _RuleMiniCard(
+                    icon: Icons.verified_user_outlined,
+                    title: 'Approval',
+                    value: 'Admin',
+                    suffix: 'review',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const _SectionTitle(title: 'Payout Methods'),
+            const SizedBox(height: 10),
+            _MethodTile(
+              icon: Icons.payments_outlined,
+              title: 'PayPal',
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'paypal',
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            _MethodTile(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Revolut',
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'revolut',
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const _SectionTitle(title: 'Payout History'),
+            const SizedBox(height: 10),
+            StreamBuilder<List<PayoutRequest>>(
+              stream: firestoreService.watchPayouts(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final payouts = snapshot.data ?? const <PayoutRequest>[];
+                if (payouts.isEmpty) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text('No payout requests yet.'),
+                    ),
                   );
-                }).toList(growable: false),
-              );
-            },
+                }
+
+                final preview = payouts.take(3).toList(growable: false);
+                return Column(
+                  children: [
+                    ...preview.map((payout) {
+                      final formattedDate = payout.createdAt == null
+                          ? 'Pending timestamp'
+                          : DateFormat.yMMMd().format(payout.createdAt!);
+                      final method = payout.payoutMethod.isNotEmpty
+                          ? payout.payoutMethod
+                          : (payout.revolutUsername.isNotEmpty ? 'revolut' : 'paypal');
+                      final destination = method == 'revolut'
+                          ? 'Revolut: ${payout.revolutUsername.isNotEmpty ? payout.revolutUsername : payout.ibanOrBankAccount}'
+                          : 'PayPal: ${payout.payPalEmail}';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          color: Theme.of(context).colorScheme.surface,
+                          border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    destination,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    formattedDate,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _StatusBadge(status: payout.status),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (payouts.length > preview.length)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(AppRoutes.payoutHistory);
+                          },
+                          child: const Text('View full history'),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopTitle extends StatelessWidget {
+  const _TopTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppTheme.primary,
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleLarge,
+    );
+  }
+}
+
+class _SmallStat extends StatelessWidget {
+  const _SmallStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withOpacity(0.03),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -232,49 +383,93 @@ class WalletScreen extends StatelessWidget {
   }
 }
 
-class _WalletRuleCard extends StatelessWidget {
-  const _WalletRuleCard({
+class _RuleMiniCard extends StatelessWidget {
+  const _RuleMiniCard({
     required this.icon,
     required this.title,
     required this.value,
+    required this.suffix,
   });
 
   final IconData icon;
   final String title;
   final String value;
+  final String suffix;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         color: Theme.of(context).colorScheme.surface,
         border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 48,
-            width: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.primary.withOpacity(0.12),
-            ),
-            child: Icon(icon, color: AppTheme.primarySoft),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(value, style: Theme.of(context).textTheme.bodyMedium),
-              ],
+          Icon(icon, color: AppTheme.primarySoft, size: 18),
+          const SizedBox(height: 10),
+          Text(title, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 6),
+          Text(
+            '$value $suffix',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MethodTile extends StatelessWidget {
+  const _MethodTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.primary.withOpacity(0.12),
+              ),
+              child: Icon(icon, color: AppTheme.primarySoft),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+          ],
+        ),
       ),
     );
   }
@@ -290,6 +485,7 @@ class _StatusBadge extends StatelessWidget {
     final normalizedStatus = status.toLowerCase();
     final color = switch (normalizedStatus) {
       'approved' => AppTheme.primary,
+      'paid' => AppTheme.primarySoft,
       'rejected' => const Color(0xFFFF7B7B),
       _ => AppTheme.coin,
     };

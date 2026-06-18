@@ -43,4 +43,18 @@ class AuthService {
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
   }
+
+  Future<void> sendPasswordResetEmail({
+    required String email,
+  }) async {
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Enter your email address first.',
+      );
+    }
+
+    await _firebaseAuth.sendPasswordResetEmail(email: normalizedEmail);
+  }
 }

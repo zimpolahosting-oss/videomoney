@@ -1,12 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../app_routes.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/rewarded_ad_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/stat_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,13 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (rewardGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'You earned ${FirestoreService.rewardCoinsPerVideo} view.',
-          ),
-        ),
+        const SnackBar(content: Text('Reward confirmed. Views added.')),
       );
-    } else if (lastStatusMessage != RewardedAdService.adUnavailableMessage) {
+    } else if (lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Rewarded ad was not completed.'),
@@ -80,137 +77,290 @@ class _HomeScreenState extends State<HomeScreen> {
         final appUser = snapshot.data;
         final views = appUser?.views ?? 0;
         final videosWatched = appUser?.videosWatched ?? 0;
-        final estimatedEarnings = FirestoreService.estimateEarningsEuro(views);
         final viewsRemaining = views >= FirestoreService.minimumPayoutCoins
             ? 0
             : FirestoreService.minimumPayoutCoins - views;
         final isReadyForPayout = views >= FirestoreService.minimumPayoutCoins;
 
+        final todayKey = FirestoreService.formatLocalDateKey(DateTime.now());
+        final dailyCount = (appUser?.dailyProgressDate == todayKey)
+            ? (appUser?.dailyVideosWatched ?? 0)
+            : 0;
+        final dailyBonusAwarded = (appUser?.dailyProgressDate == todayKey)
+            ? (appUser?.dailyBonusAwarded ?? false)
+            : false;
+        final dailyProgress = (dailyCount / FirestoreService.dailyBonusTargetVideos)
+            .clamp(0, 1)
+            .toDouble();
+        final payoutProgress =
+            (views / FirestoreService.minimumPayoutCoins).clamp(0, 1).toDouble();
+
         return Scaffold(
-          appBar: AppBar(title: const Text('Home')),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.96, end: 1),
-                duration: const Duration(milliseconds: 360),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Transform.scale(scale: value, child: child);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF11261C),
-                        Color(0xFF08120E),
-                        Color(0xFF04100A),
-                      ],
-                    ),
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.8)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.10),
-                        blurRadius: 26,
-                        offset: const Offset(0, 18),
-                      ),
+              const _TopTitle(title: 'Home'),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF11261C),
+                      Color(0xFF08120E),
+                      Color(0xFF04100A),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        user.email ?? 'Signed-in user',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          _MetricPill(
-                            icon: Icons.account_balance_wallet_outlined,
-                            label: 'Views',
-                            value: '$views views',
-                            color: AppTheme.coin,
-                          ),
-                          _MetricPill(
-                            icon: Icons.movie_creation_outlined,
-                            label: 'Watched',
-                            value: '$videosWatched videos',
-                            color: AppTheme.primarySoft,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        isReadyForPayout
-                            ? 'You are ready to request a payout.'
-                            : '$viewsRemaining more views needed to reach the payout minimum.',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isLoading ? null : _watchVideo,
-                          icon: Icon(
-                            _isLoading
-                                ? Icons.hourglass_top_rounded
-                                : Icons.play_circle_fill_rounded,
-                          ),
-                          label: Text(
-                            _isLoading ? 'Loading ad...' : 'Watch Video',
+                  border: Border.all(color: AppTheme.outline.withOpacity(0.9)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withOpacity(0.12),
+                      blurRadius: 28,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'VideoMoney',
+                            style: TextStyle(
+                              color: AppTheme.primarySoft,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(AppRoutes.settings);
+                          },
+                          icon: const Icon(
+                            Icons.notifications_none_rounded,
+                            color: AppTheme.primarySoft,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back,',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user.email ?? 'Signed-in user',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Watch videos, earn views, and get paid!',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.asset(
+                            'assets/illustrations/home_movie_v2.jpg',
+                            height: 118,
+                            width: 118,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MiniStatCard(
+                            icon: Icons.visibility_outlined,
+                            title: 'Current Views',
+                            value: NumberFormat.decimalPattern().format(views),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _MiniStatCard(
+                            icon: Icons.ondemand_video_outlined,
+                            title: 'Videos Watched',
+                            value:
+                                NumberFormat.decimalPattern().format(videosWatched),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              StatCard(
-                title: 'View balance',
-                value: '$views',
-                icon: Icons.monetization_on,
-                color: AppTheme.coin,
-                caption: 'Available for future payout requests',
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Progress to payout',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "You're on your way!",
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${NumberFormat.decimalPattern().format(views)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)} views',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        Text(
+                          '${(payoutProgress * 100).round()}%',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        value: payoutProgress,
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _isLoading ? null : _watchVideo,
+                        icon: Icon(
+                          _isLoading
+                              ? Icons.hourglass_top_rounded
+                              : Icons.play_arrow_rounded,
+                        ),
+                        label: Text(_isLoading ? 'Loading...' : 'Watch Video'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        'Earn views now!',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isReadyForPayout
+                          ? 'Payout unlocked. You can request payout in the Wallet.'
+                          : '${NumberFormat.decimalPattern().format(viewsRemaining)} more views until payout.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
-              StatCard(
-                title: 'Estimated earnings',
-                value: '€${estimatedEarnings.toStringAsFixed(2)}',
-                icon: Icons.query_stats,
-                color: AppTheme.primarySoft,
-                caption:
-                    'Estimate only. 50 completed views ≈ €0.01 and actual earnings may vary.',
-              ),
-              const SizedBox(height: 14),
-              StatCard(
-                title: 'Videos watched',
-                value: '$videosWatched',
-                icon: Icons.ondemand_video,
-                color: AppTheme.primary,
-                caption:
-                    '${FirestoreService.rewardCoinsPerVideo} view is granted only after each completed rewarded ad',
-              ),
-              const SizedBox(height: 14),
-              StatCard(
-                title: 'Payout access',
-                value: isReadyForPayout ? 'Unlocked' : 'Locked',
-                icon: Icons.request_quote_outlined,
-                color: isReadyForPayout ? AppTheme.primary : Colors.orangeAccent,
-                caption:
-                    'Minimum payout: ${FirestoreService.minimumPayoutCoins} views, processing time: ${FirestoreService.payoutProcessingDays} days',
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.emoji_events_outlined,
+                            color: AppTheme.primarySoft),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Daily Bonus',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            color: AppTheme.primary.withOpacity(0.12),
+                            border: Border.all(
+                              color: AppTheme.primary.withOpacity(0.28),
+                            ),
+                          ),
+                          child: Text(
+                            '+${FirestoreService.dailyBonusViews}',
+                            style: const TextStyle(
+                              color: AppTheme.primarySoft,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Watch ${FirestoreService.dailyBonusTargetVideos} videos daily to get bonus views!',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} videos watched',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        Text(
+                          dailyBonusAwarded ? 'Bonus claimed' : 'Bonus',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        value: dailyProgress,
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        valueColor:
+                            const AlwaysStoppedAnimation(AppTheme.primary),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -220,40 +370,66 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _MetricPill extends StatelessWidget {
-  const _MetricPill({
+class _TopTitle extends StatelessWidget {
+  const _TopTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppTheme.primary,
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniStatCard extends StatelessWidget {
+  const _MiniStatCard({
     required this.icon,
-    required this.label,
+    required this.title,
     required this.value,
-    required this.color,
   });
 
   final IconData icon;
-  final String label;
+  final String title;
   final String value;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: Colors.white.withOpacity(0.04),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        borderRadius: BorderRadius.circular(22),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.55),
+        border: Border.all(color: AppTheme.outline.withOpacity(0.6)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color),
+          Icon(icon, color: AppTheme.primarySoft),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 3),
-              Text(value, style: Theme.of(context).textTheme.titleMedium),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
