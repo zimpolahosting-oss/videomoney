@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const functions = require("firebase-functions/v1");
 const logger = require("firebase-functions/logger");
 
 admin.initializeApp();
@@ -38,27 +38,119 @@ async function writeInboxMessages(users, title, message, type, notificationId) {
   }
 }
 
-exports.dispatchAdminNotification = onDocumentCreated(
-  "adminNotifications/{notificationId}",
-  async (event) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-      return;
+function shouldRemoveToken(errorCode) {
+  return (
+    errorCode === "messaging/invalid-registration-token" ||
+    errorCode === "messaging/registration-token-not-registered"
+  );
+}
+
+async function removeInvalidTokens(tokenOwners) {
+  if (tokenOwners.length === 0) {
+    return;
+  }
+
+  const batch = db.batch();
+  for (const tokenOwner of tokenOwners) {
+    batch.set(
+      db.collection("users").doc(tokenOwner.userId),
+      {
+        fcmTokens: admin.firestore.FieldValue.arrayRemove(tokenOwner.token),
+        lastFcmTokenUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+}
+
+async function resolveRecipients(audience, targetUserId) {
+  if (audience === "user") {
+    if (!targetUserId) {
+      throw new Error("Missing targetUserId for USER notification.");
     }
 
+    const userDoc = await db.collection("users").doc(targetUserId).get();
+    if (!userDoc.exists) {
+      throw new Error(`Target user not found: ${targetUserId}`);
+    }
+
+    return [
+      {
+        uid: userDoc.id,
+        ...userDoc.data(),
+      },
+    ];
+  }
+
+  const userSnapshot = await db.collection("users").get();
+  return userSnapshot.docs
+    .map((doc) => ({
+      uid: doc.id,
+      ...doc.data(),
+    }))
+    .filter(
+      (user) => Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0
+    );
+}
+
+function buildTokenOwners(users) {
+  const entries = [];
+  for (const user of users) {
+    if ((user.settings || {}).notificationsEnabled === false) {
+      continue;
+    }
+
+    const tokens = Array.isArray(user.fcmTokens) ? user.fcmTokens : [];
+    for (const token of tokens) {
+      if (!token || typeof token !== "string") {
+        continue;
+      }
+
+      entries.push({
+        userId: user.uid,
+        token: token.trim(),
+      });
+    }
+  }
+
+  const seen = new Set();
+  return entries.filter((entry) => {
+    const key = `${entry.userId}:${entry.token}`;
+    if (!entry.token || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+exports.dispatchAdminNotification = functions
+  .region("europe-west1")
+  .firestore.document("adminNotifications/{notificationId}")
+  .onCreate(async (snapshot) => {
     const notificationId = snapshot.id;
     const data = snapshot.data() || {};
     const title = String(data.title || "").trim();
     const message = String(data.message || "").trim();
     const type = String(data.type || "announcement").trim();
-    const audience = String(data.audience || "all").trim();
+    const audience = String(data.audience || "all").trim().toLowerCase();
     const targetUserId = String(data.targetUserId || "").trim();
+
+    await snapshot.ref.set(
+      {
+        status: "processing",
+        errorMessage: "",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     if (!title || !message) {
       await snapshot.ref.set(
         {
           status: "failed",
-          error: "Missing title or message.",
+          errorMessage: "Missing title or message.",
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
@@ -67,35 +159,33 @@ exports.dispatchAdminNotification = onDocumentCreated(
     }
 
     try {
-      let userDocs = [];
-      if (audience === "user" && targetUserId) {
-        const userDoc = await db.collection("users").doc(targetUserId).get();
-        if (userDoc.exists) {
-          userDocs = [userDoc];
-        }
-      } else {
-        const userSnapshot = await db.collection("users").get();
-        userDocs = userSnapshot.docs;
+      const recipients = await resolveRecipients(audience, targetUserId);
+      if (recipients.length === 0) {
+        throw new Error("No recipient users found with valid fcmTokens.");
       }
 
-      const users = userDocs.map((doc) => ({
-        uid: doc.id,
-        ...doc.data(),
-      }));
+      const tokenOwners = buildTokenOwners(recipients);
+      const tokens = tokenOwners.map((item) => item.token);
+      if (tokens.length === 0) {
+        throw new Error("No valid fcmTokens found for the selected recipients.");
+      }
 
-      await writeInboxMessages(users, title, message, type, notificationId);
-
-      const pushUsers = users.filter(
-        (user) => (user.settings || {}).notificationsEnabled !== false
+      await writeInboxMessages(
+        recipients,
+        title,
+        message,
+        type,
+        notificationId
       );
-      const tokens = uniqueTokens(pushUsers);
+
       let successCount = 0;
       let failureCount = 0;
+      const invalidTokens = [];
 
       for (const tokenChunk of chunk(tokens, 500)) {
-        if (tokenChunk.length === 0) {
-          continue;
-        }
+        const chunkOwners = tokenOwners.filter((owner) =>
+          tokenChunk.includes(owner.token)
+        );
 
         const response = await admin.messaging().sendEachForMulticast({
           tokens: tokenChunk,
@@ -108,20 +198,40 @@ exports.dispatchAdminNotification = onDocumentCreated(
             message,
             type,
             notificationId,
+            audience,
           },
           android: {
             priority: "high",
+            notification: {
+              channelId: "videomoney_general",
+            },
           },
         });
 
         successCount += response.successCount;
         failureCount += response.failureCount;
+
+        response.responses.forEach((result, index) => {
+          if (!result.success && shouldRemoveToken(result.error?.code)) {
+            const owner = chunkOwners[index];
+            if (owner) {
+              invalidTokens.push(owner);
+            }
+          }
+        });
+      }
+
+      await removeInvalidTokens(invalidTokens);
+
+      if (successCount <= 0) {
+        throw new Error("FCM send failed for all selected recipients.");
       }
 
       await snapshot.ref.set(
         {
           status: "sent",
-          recipientCount: users.length,
+          errorMessage: "",
+          recipientCount: recipients.length,
           tokenCount: tokens.length,
           successCount,
           failureCount,
@@ -135,11 +245,11 @@ exports.dispatchAdminNotification = onDocumentCreated(
       await snapshot.ref.set(
         {
           status: "failed",
-          error: error instanceof Error ? error.message : String(error),
+          errorMessage:
+            error instanceof Error ? error.message : String(error),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
     }
-  }
-);
+  });

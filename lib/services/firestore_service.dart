@@ -699,6 +699,7 @@ class FirestoreService {
       'title': trimmedTitle,
       'message': trimmedMessage,
       'status': 'pending',
+      'errorMessage': '',
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

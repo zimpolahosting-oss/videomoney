@@ -706,6 +706,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       final title = data['title'] as String? ?? '';
                       final message = data['message'] as String? ?? '';
                       final status = data['status'] as String? ?? 'pending';
+                      final errorMessage = data['errorMessage'] as String? ?? '';
                       final audience = data['audience'] as String? ?? 'all';
                       final createdAt =
                           (data['createdAt'] as Timestamp?)?.toDate();
@@ -733,6 +734,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               '${audience.toUpperCase()} • ${status.toUpperCase()} • ${_formatDateTime(createdAt)}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
+                            if (errorMessage.trim().isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Error: $errorMessage',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ],
                         ),
                       );

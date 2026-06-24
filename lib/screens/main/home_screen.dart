@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const _TopTitle(title: 'Home'),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 236,
+                  height: 286,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/home_movie_v2.jpg',
                     imageOpacity: 0.18,
@@ -191,6 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             user.email ?? 'Signed-in user',
                             style: Theme.of(context).textTheme.titleLarge,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -201,8 +203,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(height: 22),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _MiniStatCard(

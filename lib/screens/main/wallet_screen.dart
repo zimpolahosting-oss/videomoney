@@ -42,7 +42,7 @@ class WalletScreen extends StatelessWidget {
                     : FirestoreService.minimumPayoutCoins - currentViews;
 
                 return SizedBox(
-                  height: 248,
+                  height: 338,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
                     imageOpacity: 0.17,
@@ -95,8 +95,9 @@ class WalletScreen extends StatelessWidget {
                           NumberFormat.decimalPattern().format(currentViews),
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 18),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _SmallStat(

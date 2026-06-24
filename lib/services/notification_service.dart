@@ -40,10 +40,13 @@ class NotificationService {
   String? _activeUserId;
   String? _activeToken;
   bool _isInitialized = false;
+  bool _localNotificationsReady = false;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
     _isInitialized = true;
+
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     tz.initializeTimeZones();
     try {
@@ -54,23 +57,27 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
 
-    const androidSettings =
-        AndroidInitializationSettings('@android:drawable/ic_dialog_info');
-    const settings = InitializationSettings(android: androidSettings);
-    await _localNotifications.initialize(settings);
+    try {
+      const androidSettings = AndroidInitializationSettings(
+        '@android:drawable/ic_dialog_info',
+      );
+      const settings = InitializationSettings(android: androidSettings);
+      await _localNotifications.initialize(settings);
 
-    const androidChannel = AndroidNotificationChannel(
-      _channelId,
-      _channelName,
-      description: _channelDescription,
-      importance: Importance.high,
-    );
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
-
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      const androidChannel = AndroidNotificationChannel(
+        _channelId,
+        _channelName,
+        description: _channelDescription,
+        importance: Importance.high,
+      );
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
+      _localNotificationsReady = true;
+    } catch (_) {
+      _localNotificationsReady = false;
+    }
 
     _foregroundMessageSubscription =
         FirebaseMessaging.onMessage.listen(_showRemoteMessageAsLocalNotification);
@@ -152,10 +159,12 @@ class NotificationService {
       provisional: false,
     );
 
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    if (_localNotificationsReady) {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
   }
 
   Future<void> updateNotificationPreferences({
@@ -182,6 +191,8 @@ class NotificationService {
     int hour = 19,
     int minute = 0,
   }) async {
+    if (!_localNotificationsReady) return;
+
     final now = tz.TZDateTime.now(tz.local);
     var scheduled =
         tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
@@ -189,52 +200,67 @@ class NotificationService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    await _localNotifications.zonedSchedule(
-      _dailyReminderId,
-      'VideoMoney',
-      'Vergeet je daily bonus niet.',
-      scheduled,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _localNotifications.zonedSchedule(
+        _dailyReminderId,
+        'VideoMoney',
+        'Vergeet je daily bonus niet.',
+        scheduled,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
         ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {
+      _localNotificationsReady = false;
+    }
   }
 
   Future<void> cancelDailyReminder() async {
-    await _localNotifications.cancel(_dailyReminderId);
+    if (!_localNotificationsReady) return;
+    try {
+      await _localNotifications.cancel(_dailyReminderId);
+    } catch (_) {
+      _localNotificationsReady = false;
+    }
   }
 
   Future<void> _showRemoteMessageAsLocalNotification(
     RemoteMessage message,
   ) async {
+    if (!_localNotificationsReady) return;
+
     final notification = message.notification;
     final title = notification?.title ?? message.data['title'] as String?;
     final body = notification?.body ?? message.data['message'] as String?;
     if ((title ?? '').trim().isEmpty && (body ?? '').trim().isEmpty) return;
 
-    await _localNotifications.show(
-      message.hashCode,
-      title ?? 'VideoMoney',
-      body ?? '',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _localNotifications.show(
+        message.hashCode,
+        title ?? 'VideoMoney',
+        body ?? '',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      _localNotificationsReady = false;
+    }
   }
 }
