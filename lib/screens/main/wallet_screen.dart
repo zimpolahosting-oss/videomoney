@@ -42,7 +42,7 @@ class WalletScreen extends StatelessWidget {
                     : FirestoreService.minimumPayoutCoins - currentViews;
 
                 return SizedBox(
-                  height: 338,
+                  height: 294,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
                     imageOpacity: 0.17,
@@ -78,11 +78,11 @@ class WalletScreen extends StatelessWidget {
                           'Your Wallet',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
@@ -90,12 +90,15 @@ class WalletScreen extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           NumberFormat.decimalPattern().format(currentViews),
-                          style: Theme.of(context).textTheme.displaySmall,
+                          style:
+                              Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -114,12 +117,12 @@ class WalletScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         Text(
                           'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
@@ -337,13 +340,19 @@ class _SmallStat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 3),
           Text(
             value,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
           ),
         ],

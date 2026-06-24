@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const _TopTitle(title: 'Home'),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 286,
+                  height: 264,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/home_movie_v2.jpg',
                     imageOpacity: 0.18,
@@ -190,12 +190,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
                             user.email ?? 'Signed-in user',
-                            style: Theme.of(context).textTheme.titleLarge,
+                            style: Theme.of(context).textTheme.titleMedium,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 235),
                           child: Text(
@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 14),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -439,19 +439,25 @@ class _MiniStatCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.primarySoft),
-          const SizedBox(width: 10),
+          Icon(icon, color: AppTheme.primarySoft, size: 18),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
+                    fontSize: 13,
                   ),
                 ),
               ],
