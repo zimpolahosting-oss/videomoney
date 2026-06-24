@@ -6,8 +6,8 @@ import '../../app_routes.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/rewarded_ad_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/watermark_hero_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,9 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } else if (lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rewarded ad was not completed.'),
-        ),
+        const SnackBar(content: Text('Rewarded ad was not completed.')),
       );
     }
     setState(() => _isLoading = false);
@@ -102,113 +100,131 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const _TopTitle(title: 'Home'),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF11261C),
-                        Color(0xFF08120E),
-                        Color(0xFF04100A),
+                SizedBox(
+                  height: 236,
+                  child: WatermarkHeroCard(
+                    imageAsset: 'assets/illustrations/home_movie_v2.jpg',
+                    imageOpacity: 0.18,
+                    imageScale: 1.42,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'VideoMoney',
+                                style: TextStyle(
+                                  color: AppTheme.primarySoft,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            StreamBuilder<int>(
+                              stream:
+                                  _firestoreService.watchUnreadInboxCount(user.uid),
+                              builder: (context, inboxSnapshot) {
+                                final unread = inboxSnapshot.data ?? 0;
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.of(context)
+                                            .pushNamed(AppRoutes.inbox);
+                                      },
+                                      icon: const Icon(
+                                        Icons.mail_outline_rounded,
+                                        color: AppTheme.primarySoft,
+                                      ),
+                                    ),
+                                    if (unread > 0)
+                                      Positioned(
+                                        right: 4,
+                                        top: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primary,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            unread > 99 ? '99+' : '$unread',
+                                            style: const TextStyle(
+                                              color: Color(0xFF04110A),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                Navigator.of(context).pushNamed(AppRoutes.settings);
+                              },
+                              icon: const Icon(
+                                Icons.settings_outlined,
+                                color: AppTheme.primarySoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: Text(
+                            'Welcome back,',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: Text(
+                            user.email ?? 'Signed-in user',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 235),
+                          child: Text(
+                            'Watch videos, earn views, and get paid.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MiniStatCard(
+                                icon: Icons.visibility_outlined,
+                                title: 'Current Views',
+                                value: NumberFormat.decimalPattern().format(views),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _MiniStatCard(
+                                icon: Icons.ondemand_video_outlined,
+                                title: 'Videos Watched',
+                                value: NumberFormat.decimalPattern().format(
+                                  videosWatched,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.9)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.12),
-                        blurRadius: 28,
-                        offset: const Offset(0, 18),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'VideoMoney',
-                              style: TextStyle(
-                                color: AppTheme.primarySoft,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed(AppRoutes.settings);
-                            },
-                            icon: const Icon(
-                              Icons.notifications_none_rounded,
-                              color: AppTheme.primarySoft,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back,',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  user.email ?? 'Signed-in user',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Watch videos, earn views, and get paid!',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Image.asset(
-                              'assets/illustrations/home_movie_v2.jpg',
-                              height: 118,
-                              width: 118,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MiniStatCard(
-                              icon: Icons.visibility_outlined,
-                              title: 'Current Views',
-                              value: NumberFormat.decimalPattern().format(views),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _MiniStatCard(
-                              icon: Icons.ondemand_video_outlined,
-                              title: 'Videos Watched',
-                              value: NumberFormat.decimalPattern().format(
-                                videosWatched,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -228,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "You're on your way!",
+                        "You're on your way.",
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 12),
@@ -273,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 8),
                       Center(
                         child: Text(
-                          'Earn views now!',
+                          'Earn views now.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
@@ -336,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Watch ${FirestoreService.dailyBonusTargetVideos} videos daily to get bonus views!',
+                        'Watch ${FirestoreService.dailyBonusTargetVideos} videos daily to get bonus views.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 14),
@@ -415,7 +431,7 @@ class _MiniStatCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.55),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.58),
         border: Border.all(color: AppTheme.outline.withOpacity(0.6)),
       ),
       child: Row(

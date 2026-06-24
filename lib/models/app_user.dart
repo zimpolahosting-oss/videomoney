@@ -10,6 +10,10 @@ class AppUser {
     required this.dailyProgressDate,
     required this.dailyBonusAwarded,
     required this.isAdmin,
+    required this.appVerified,
+    required this.fcmTokens,
+    required this.notificationsEnabled,
+    required this.dailyReminderEnabled,
     required this.createdAt,
   });
 
@@ -22,11 +26,16 @@ class AppUser {
   final String dailyProgressDate;
   final bool dailyBonusAwarded;
   final bool isAdmin;
+  final bool appVerified;
+  final List<String> fcmTokens;
+  final bool notificationsEnabled;
+  final bool dailyReminderEnabled;
   final DateTime? createdAt;
 
   int get views => coins;
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
+    final settings = map['settings'] as Map<String, dynamic>? ?? const {};
     return AppUser(
       uid: map['uid'] as String? ?? '',
       email: map['email'] as String? ?? '',
@@ -36,6 +45,13 @@ class AppUser {
       dailyProgressDate: map['dailyProgressDate'] as String? ?? '',
       dailyBonusAwarded: map['dailyBonusAwarded'] as bool? ?? false,
       isAdmin: map['isAdmin'] as bool? ?? (map['admin'] as bool? ?? false),
+      appVerified: map['appVerified'] as bool? ?? false,
+      fcmTokens: ((map['fcmTokens'] as List<dynamic>?) ?? const [])
+          .map((token) => token.toString())
+          .where((token) => token.trim().isNotEmpty)
+          .toList(growable: false),
+      notificationsEnabled: settings['notificationsEnabled'] as bool? ?? true,
+      dailyReminderEnabled: settings['dailyReminderEnabled'] as bool? ?? true,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -50,6 +66,12 @@ class AppUser {
       'dailyProgressDate': dailyProgressDate,
       'dailyBonusAwarded': dailyBonusAwarded,
       'isAdmin': isAdmin,
+      'appVerified': appVerified,
+      'fcmTokens': fcmTokens,
+      'settings': {
+        'notificationsEnabled': notificationsEnabled,
+        'dailyReminderEnabled': dailyReminderEnabled,
+      },
       'createdAt': createdAt,
     };
   }

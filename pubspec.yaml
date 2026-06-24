@@ -1,7 +1,7 @@
 name: video_money
 description: Video&Money Flutter app with Firebase Auth, Firestore and rewarded ads.
 publish_to: "none"
-version: 1.0.0+2
+version: 1.0.1+3
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -13,8 +13,13 @@ dependencies:
   firebase_core: ^3.1.1
   firebase_auth: ^5.1.1
   cloud_firestore: ^5.0.2
+  firebase_messaging: ^15.0.2
+  flutter_local_notifications: ^17.2.2
+  flutter_timezone: ^4.0.0
   google_mobile_ads: ^5.1.0
   intl: ^0.19.0
+  timezone: ^0.9.4
+  webview_flutter: ^4.8.0
 
 dev_dependencies:
   flutter_test:

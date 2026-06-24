@@ -4,6 +4,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'app_routes.dart';
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -25,6 +26,7 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await NotificationService.instance.initialize();
     await MobileAds.instance.initialize();
   }
 

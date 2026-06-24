@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../app_routes.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -32,6 +33,7 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
     try {
       await _firestoreService.submitBugReport(
         uid: user.uid,
+        email: user.email ?? '',
         title: _titleController.text,
         description: _descController.text,
       );
@@ -97,12 +99,25 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _isSubmitting ? null : _submit,
-                    child: Text(_isSubmitting ? 'Submitting...' : 'Submit'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: Text(_isSubmitting ? 'Submitting...' : 'Submit'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(AppRoutes.inbox);
+                        },
+                        icon: const Icon(Icons.inbox_outlined),
+                        label: const Text('Open inbox'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -112,4 +127,3 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
     );
   }
 }
-

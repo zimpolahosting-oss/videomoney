@@ -7,6 +7,7 @@ import '../../models/app_user.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/watermark_hero_card.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -40,130 +41,97 @@ class WalletScreen extends StatelessWidget {
                     ? 0
                     : FirestoreService.minimumPayoutCoins - currentViews;
 
-                return Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF11261C),
-                        Color(0xFF08120E),
-                        Color(0xFF04100A),
-                      ],
-                    ),
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.9)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.12),
-                        blurRadius: 28,
-                        offset: const Offset(0, 18),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'VideoMoney',
-                              style: TextStyle(
-                                color: AppTheme.primarySoft,
-                                fontWeight: FontWeight.w800,
+                return SizedBox(
+                  height: 248,
+                  child: WatermarkHeroCard(
+                    imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
+                    imageOpacity: 0.17,
+                    imageScale: 1.42,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'VideoMoney',
+                                style: TextStyle(
+                                  color: AppTheme.primarySoft,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
+                            IconButton(
+                              onPressed: () {
+                                Navigator.of(context)
+                                    .pushNamed(AppRoutes.payoutHistory);
+                              },
+                              icon: const Icon(
+                                Icons.history_toggle_off,
+                                color: AppTheme.primarySoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Your Wallet',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
                           ),
-                          IconButton(
+                        ),
+                        const SizedBox(height: 14),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: Text(
+                            'Available Views',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          NumberFormat.decimalPattern().format(currentViews),
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SmallStat(
+                                label: 'Estimated Payout',
+                                value: '€${estimatedEarnings.toStringAsFixed(2)}',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _SmallStat(
+                                label: 'Remaining to Payout',
+                                value: '${NumberFormat.decimalPattern().format(remaining)} views',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
                             onPressed: () {
-                              Navigator.of(context).pushNamed(AppRoutes.payoutHistory);
+                              Navigator.of(context)
+                                  .pushNamed(AppRoutes.payoutRequest);
                             },
-                            icon: const Icon(
-                              Icons.history_toggle_off,
-                              color: AppTheme.primarySoft,
-                            ),
+                            icon: const Icon(Icons.request_quote_outlined),
+                            label: const Text('Request Payout'),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Your Wallet',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Available Views',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  NumberFormat.decimalPattern()
-                                      .format(currentViews),
-                                  style: Theme.of(context).textTheme.displaySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Image.asset(
-                              'assets/illustrations/wallet_purse_v2.jpg',
-                              height: 96,
-                              width: 96,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SmallStat(
-                              label: 'Estimated Payout',
-                              value: '€${estimatedEarnings.toStringAsFixed(2)}',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SmallStat(
-                              label: 'Remaining to Payout',
-                              value: '${NumberFormat.decimalPattern().format(remaining)} views',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pushNamed(AppRoutes.payoutRequest);
-                          },
-                          icon: const Icon(Icons.request_quote_outlined),
-                          label: const Text('Request Payout'),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

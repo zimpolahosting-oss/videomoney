@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/auth_gate.dart';
+import 'screens/main/app_rating_screen.dart';
+import 'screens/main/inbox_screen.dart';
 import 'screens/payout/payout_history_screen.dart';
 import 'screens/payout/payout_request_screen.dart';
 import 'screens/support/about_screen.dart';
 import 'screens/support/help_support_screen.dart';
+import 'screens/support/privacy_policy_screen.dart';
 import 'screens/support/report_bug_screen.dart';
 import 'screens/support/settings_screen.dart';
+import 'screens/support/terms_of_service_screen.dart';
 
 class AppRoutes {
   static const String authGate = '/';
@@ -15,9 +19,13 @@ class AppRoutes {
   static const String helpSupport = '/help-support';
   static const String reportBug = '/report-bug';
   static const String about = '/about';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String termsOfService = '/terms-of-service';
   static const String adminDashboard = '/admin-dashboard';
   static const String payoutRequest = '/payout-request';
   static const String payoutHistory = '/payout-history';
+  static const String inbox = '/inbox';
+  static const String appRating = '/app-rating';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -46,9 +54,29 @@ class AppRoutes {
           builder: (_) => const AboutScreen(),
           settings: settings,
         );
+      case AppRoutes.privacyPolicy:
+        return MaterialPageRoute<void>(
+          builder: (_) => const PrivacyPolicyScreen(),
+          settings: settings,
+        );
+      case AppRoutes.termsOfService:
+        return MaterialPageRoute<void>(
+          builder: (_) => const TermsOfServiceScreen(),
+          settings: settings,
+        );
       case AppRoutes.adminDashboard:
         return MaterialPageRoute<void>(
           builder: (_) => const AdminDashboardScreen(),
+          settings: settings,
+        );
+      case AppRoutes.inbox:
+        return MaterialPageRoute<void>(
+          builder: (_) => const InboxScreen(),
+          settings: settings,
+        );
+      case AppRoutes.appRating:
+        return MaterialPageRoute<void>(
+          builder: (_) => const AppRatingScreen(),
           settings: settings,
         );
       case AppRoutes.payoutHistory:

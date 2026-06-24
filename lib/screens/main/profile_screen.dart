@@ -33,7 +33,7 @@ class ProfileScreen extends StatelessWidget {
         final createdAt = appUser?.createdAt == null
             ? 'Not available yet'
             : DateFormat.yMMMd().format(appUser!.createdAt!);
-        final emailVerified = user.emailVerified;
+        final emailVerified = user.emailVerified || (appUser?.appVerified ?? false);
 
         return Scaffold(
           body: SafeArea(
@@ -119,7 +119,7 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  emailVerified ? 'Email verified' : 'Email not verified',
+                                  emailVerified ? 'Email Verified' : 'Email not verified',
                                   style: TextStyle(
                                     color: emailVerified
                                         ? AppTheme.primarySoft
@@ -190,6 +190,44 @@ class ProfileScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _MenuTile(
+                        icon: Icons.inbox_outlined,
+                        title: 'Inbox',
+                        subtitle: 'Read admin replies and notifications',
+                        trailing: StreamBuilder<int>(
+                          stream: firestoreService.watchUnreadInboxCount(user.uid),
+                          builder: (context, snapshot) {
+                            final unread = snapshot.data ?? 0;
+                            if (unread <= 0) {
+                              return const Icon(
+                                Icons.chevron_right,
+                                color: AppTheme.textMuted,
+                              );
+                            }
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                color: AppTheme.primary.withOpacity(0.12),
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(
+                                  color: AppTheme.primarySoft,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pushNamed(AppRoutes.inbox);
+                        },
+                      ),
+                      _MenuTile(
                         icon: Icons.settings_outlined,
                         title: 'Settings',
                         subtitle: 'Notifications, privacy, and app settings',
@@ -216,13 +254,9 @@ class ProfileScreen extends StatelessWidget {
                       _MenuTile(
                         icon: Icons.star_rate_outlined,
                         title: 'Rate App',
-                        subtitle: 'Rate VideoMoney on Google Play',
+                        subtitle: 'Send your in-app rating from 1 to 5 stars',
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Rating flow will be enabled in the store build.'),
-                            ),
-                          );
+                          Navigator.of(context).pushNamed(AppRoutes.appRating);
                         },
                       ),
                       _MenuTile(
@@ -333,12 +367,14 @@ class _MenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.trailing,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
+  final Widget? trailing;
   final VoidCallback onTap;
 
   @override
@@ -376,7 +412,7 @@ class _MenuTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+            trailing ?? const Icon(Icons.chevron_right, color: AppTheme.textMuted),
           ],
         ),
       ),

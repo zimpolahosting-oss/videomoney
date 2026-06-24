@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../app_routes.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -49,21 +51,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showProductionLinkMessage(String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label link can be added in the production build.'),
-      ),
-    );
-  }
-
   Future<void> _save() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     setState(() => _isSaving = true);
     try {
-      await _firestoreService.updateUserSettings(
+      await NotificationService.instance.updateNotificationPreferences(
         uid: user.uid,
         notificationsEnabled: _notificationsEnabled,
         dailyReminderEnabled: _dailyReminderEnabled,
@@ -145,19 +139,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  'Links can be configured for your production build.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: () => _showProductionLinkMessage('Privacy Policy'),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
+                  },
                   icon: const Icon(Icons.privacy_tip_outlined),
                   label: const Text('Privacy Policy'),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
-                  onPressed: () => _showProductionLinkMessage('Terms of Service'),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(AppRoutes.termsOfService);
+                  },
                   icon: const Icon(Icons.description_outlined),
                   label: const Text('Terms of Service'),
                 ),
@@ -183,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 Text(
-                  'v1.3',
+                  '1.0.1+3',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],

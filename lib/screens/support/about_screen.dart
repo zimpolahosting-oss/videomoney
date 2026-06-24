@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_routes.dart';
 import '../../theme/app_theme.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -36,7 +37,7 @@ class AboutScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
-                const _Line(label: 'Version', value: 'v1.3'),
+                const _Line(label: 'Version', value: '1.0.1+3'),
                 const _Line(label: 'Minimum payout', value: '10,000 views'),
                 const _Line(label: 'Processing time', value: '30 days'),
                 const _Line(label: 'Review', value: 'Admin approval required'),
@@ -44,6 +45,28 @@ class AboutScreen extends StatelessWidget {
                 Text(
                   'Estimated earnings only. Actual earnings may vary based on ad performance and policy rules.',
                   style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
+                      },
+                      icon: const Icon(Icons.privacy_tip_outlined),
+                      label: const Text('Privacy Policy'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.termsOfService);
+                      },
+                      icon: const Icon(Icons.description_outlined),
+                      label: const Text('Terms of Service'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -81,4 +104,3 @@ class _Line extends StatelessWidget {
     );
   }
 }
-

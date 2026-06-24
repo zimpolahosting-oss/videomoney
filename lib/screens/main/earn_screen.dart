@@ -6,8 +6,8 @@ import '../../app_routes.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/rewarded_ad_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/watermark_hero_card.dart';
 
 class EarnScreen extends StatefulWidget {
   const EarnScreen({super.key});
@@ -92,106 +92,77 @@ class _EarnScreenState extends State<EarnScreen> {
               children: [
                 const _TopTitle(title: 'Earn'),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF11261C),
-                        Color(0xFF08120E),
-                        Color(0xFF04100A),
-                      ],
-                    ),
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.9)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.12),
-                        blurRadius: 28,
-                        offset: const Offset(0, 18),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'VideoMoney',
-                              style: TextStyle(
-                                color: AppTheme.primarySoft,
-                                fontWeight: FontWeight.w800,
+                SizedBox(
+                  height: 230,
+                  child: WatermarkHeroCard(
+                    imageAsset: 'assets/illustrations/earn_phone.jpg',
+                    imageOpacity: 0.17,
+                    imageScale: 1.36,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'VideoMoney',
+                                style: TextStyle(
+                                  color: AppTheme.primarySoft,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed(AppRoutes.about);
-                            },
-                            icon: const Icon(
-                              Icons.info_outline_rounded,
-                              color: AppTheme.primarySoft,
+                            IconButton(
+                              onPressed: () {
+                                Navigator.of(context).pushNamed(AppRoutes.about);
+                              },
+                              icon: const Icon(
+                                Icons.info_outline_rounded,
+                                color: AppTheme.primarySoft,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Earn Views',
-                                  style: Theme.of(context).textTheme.headlineMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Watch rewarded videos and earn views instantly.',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Image.asset(
-                              'assets/illustrations/earn_phone.jpg',
-                              height: 112,
-                              width: 112,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isLoading ? null : _watchVideo,
-                          icon: Icon(
-                            _isLoading
-                                ? Icons.hourglass_top_rounded
-                                : Icons.play_arrow_rounded,
-                          ),
-                          label: Text(_isLoading ? 'Loading...' : 'Watch Video'),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          'Earn views',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        const SizedBox(height: 6),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: Text(
+                            'Earn Views',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 235),
+                          child: Text(
+                            'Watch rewarded videos and earn views instantly.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        const Spacer(),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _isLoading ? null : _watchVideo,
+                            icon: Icon(
+                              _isLoading
+                                  ? Icons.hourglass_top_rounded
+                                  : Icons.play_arrow_rounded,
+                            ),
+                            label:
+                                Text(_isLoading ? 'Loading...' : 'Watch Video'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            'Earn views',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),

@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/app_rating.dart';
 import '../models/app_user.dart';
+import '../models/inbox_message.dart';
 import '../models/payout_request.dart';
+import '../models/support_ticket.dart';
 
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
@@ -22,6 +25,17 @@ class FirestoreService {
     'paid',
     'rejected',
   };
+  static const Set<String> allowedSupportTypes = {
+    'support',
+    'payment',
+    'bug',
+  };
+  static const Set<String> allowedSupportStatuses = {
+    'pending',
+    'processing',
+    'fixed',
+    'closed',
+  };
 
   final FirebaseFirestore _firestore;
 
@@ -34,8 +48,14 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _supportTickets =>
       _firestore.collection('supportTickets');
 
-  CollectionReference<Map<String, dynamic>> get _bugReports =>
-      _firestore.collection('bugReports');
+  CollectionReference<Map<String, dynamic>> get _inboxMessages =>
+      _firestore.collection('inboxMessages');
+
+  CollectionReference<Map<String, dynamic>> get _ratings =>
+      _firestore.collection('ratings');
+
+  CollectionReference<Map<String, dynamic>> get _adminNotifications =>
+      _firestore.collection('adminNotifications');
 
   static double estimateEarningsEuro(int views) {
     return views / estimatedViewsPerCent / 100;
@@ -58,27 +78,42 @@ class FirestoreService {
       final data = doc.data() ?? <String, dynamic>{};
       final rewardBalanceResetApplied =
           data[rewardBalanceResetAppliedField] as bool? ?? false;
+      final updates = <String, dynamic>{
+        'uid': user.uid,
+        'email': user.email ?? '',
+        'appVerified': true,
+      };
 
       if (!rewardBalanceResetApplied) {
-        await docRef.update({
+        updates.addAll({
           'coins': 0,
           rewardBalanceResetAppliedField: true,
         });
       }
 
-      final dailyUpdates = <String, dynamic>{};
       if (!data.containsKey('dailyProgressDate')) {
-        dailyUpdates['dailyProgressDate'] = todayKey;
+        updates['dailyProgressDate'] = todayKey;
       }
       if (!data.containsKey('dailyVideosWatched')) {
-        dailyUpdates['dailyVideosWatched'] = 0;
+        updates['dailyVideosWatched'] = 0;
       }
       if (!data.containsKey('dailyBonusAwarded')) {
-        dailyUpdates['dailyBonusAwarded'] = false;
+        updates['dailyBonusAwarded'] = false;
       }
-      if (dailyUpdates.isNotEmpty) {
-        await docRef.update(dailyUpdates);
+      if (!data.containsKey('settings')) {
+        updates['settings'] = {
+          'notificationsEnabled': true,
+          'dailyReminderEnabled': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
       }
+      if (!data.containsKey('fcmTokens')) {
+        updates['fcmTokens'] = <String>[];
+      }
+      if (!data.containsKey('createdAt')) {
+        updates['createdAt'] = FieldValue.serverTimestamp();
+      }
+      await docRef.set(updates, SetOptions(merge: true));
       return;
     }
 
@@ -91,6 +126,13 @@ class FirestoreService {
       'dailyVideosWatched': 0,
       'dailyBonusAwarded': false,
       'isAdmin': false,
+      'appVerified': true,
+      'fcmTokens': <String>[],
+      'settings': {
+        'notificationsEnabled': true,
+        'dailyReminderEnabled': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
       rewardBalanceResetAppliedField: true,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -118,6 +160,73 @@ class FirestoreService {
       'notificationsEnabled': settings['notificationsEnabled'] as bool? ?? true,
       'dailyReminderEnabled': settings['dailyReminderEnabled'] as bool? ?? true,
     };
+  }
+
+  Stream<int> watchUnreadInboxCount(String uid) {
+    return _inboxMessages
+        .where('userId', isEqualTo: uid)
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  Stream<List<InboxMessage>> watchUserInbox(String uid) {
+    return _inboxMessages
+        .where('userId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(InboxMessage.fromDoc)
+              .toList(growable: false),
+        );
+  }
+
+  Stream<List<InboxMessage>> watchAllInboxMessages() {
+    return _inboxMessages
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(InboxMessage.fromDoc)
+              .toList(growable: false),
+        );
+  }
+
+  Future<void> markInboxMessageRead(String messageId) async {
+    await _inboxMessages.doc(messageId).set({
+      'read': true,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> markAllInboxMessagesRead(String uid) async {
+    final snapshot = await _inboxMessages
+        .where('userId', isEqualTo: uid)
+        .where('read', isEqualTo: false)
+        .get();
+    if (snapshot.docs.isEmpty) return;
+
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.set(doc.reference, {'read': true}, SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
+
+  Future<void> createInboxMessage({
+    required String userId,
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    await _inboxMessages.add({
+      'userId': userId,
+      'title': title.trim(),
+      'message': message.trim(),
+      'type': type.trim().isEmpty ? 'info' : type.trim().toLowerCase(),
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> rewardUser({
@@ -234,7 +343,6 @@ class FirestoreService {
         'payoutMethod': trimmedMethod,
         'status': 'pending',
         'payPalEmail': trimmedPayPalEmail,
-        // Legacy field kept for backward compatibility with existing data.
         'ibanOrBankAccount': trimmedRevolutUsername,
         'revolutUsername': trimmedRevolutUsername,
         'accountHolderName': trimmedAccountHolderName,
@@ -339,42 +447,137 @@ class FirestoreService {
 
   Future<void> submitSupportTicket({
     required String uid,
+    required String email,
+    required String type,
+    required String subject,
     required String message,
   }) async {
+    final normalizedType = type.trim().toLowerCase();
+    final normalizedSubject = subject.trim();
     final trimmed = message.trim();
+    if (!allowedSupportTypes.contains(normalizedType)) {
+      throw Exception('Invalid support type.');
+    }
+    if (normalizedSubject.isEmpty) {
+      throw Exception('Subject cannot be empty.');
+    }
     if (trimmed.isEmpty) {
       throw Exception('Message cannot be empty.');
     }
 
     await _supportTickets.add({
       'userId': uid,
+      'email': email.trim(),
+      'type': normalizedType,
+      'subject': normalizedSubject,
       'message': trimmed,
-      'status': 'open',
+      'status': 'pending',
+      'latestReply': '',
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> submitBugReport({
     required String uid,
+    required String email,
     required String title,
     required String description,
   }) async {
-    final trimmedTitle = title.trim();
-    final trimmedDesc = description.trim();
-    if (trimmedTitle.isEmpty) {
-      throw Exception('Title cannot be empty.');
+    await submitSupportTicket(
+      uid: uid,
+      email: email,
+      type: 'bug',
+      subject: title,
+      message: description,
+    );
+  }
+
+  Stream<List<SupportTicket>> watchSupportTicketsForUser(String uid) {
+    return _supportTickets
+        .where('userId', isEqualTo: uid)
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(SupportTicket.fromDoc)
+              .toList(growable: false),
+        );
+  }
+
+  Stream<List<SupportTicket>> watchAllSupportTickets() {
+    return _supportTickets
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(SupportTicket.fromDoc)
+              .toList(growable: false),
+        );
+  }
+
+  Future<void> replyToSupportTicket({
+    required String ticketId,
+    required String status,
+    required String replyMessage,
+    required String adminUserId,
+    required String adminEmail,
+  }) async {
+    final normalizedStatus = status.trim().toLowerCase();
+    final trimmedReply = replyMessage.trim();
+    if (!allowedSupportStatuses.contains(normalizedStatus)) {
+      throw Exception('Invalid ticket status.');
     }
-    if (trimmedDesc.isEmpty) {
-      throw Exception('Description cannot be empty.');
+    if (trimmedReply.isEmpty) {
+      throw Exception('Reply cannot be empty.');
     }
 
-    await _bugReports.add({
-      'userId': uid,
-      'title': trimmedTitle,
-      'description': trimmedDesc,
-      'status': 'open',
-      'createdAt': FieldValue.serverTimestamp(),
+    final ticketRef = _supportTickets.doc(ticketId);
+    final inboxRef = _inboxMessages.doc();
+    await _firestore.runTransaction((transaction) async {
+      final ticketSnapshot = await transaction.get(ticketRef);
+      final ticketData = ticketSnapshot.data();
+      if (ticketData == null) {
+        throw Exception('Support ticket not found.');
+      }
+
+      final userId = ticketData['userId'] as String? ?? '';
+      final subject = ticketData['subject'] as String? ?? 'Support update';
+      final type = ticketData['type'] as String? ?? 'support';
+
+      transaction.set(ticketRef, {
+        'status': normalizedStatus,
+        'latestReply': trimmedReply,
+        'latestReplyAt': FieldValue.serverTimestamp(),
+        'latestReplyBy': adminUserId,
+        'latestReplyEmail': adminEmail.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      transaction.set(inboxRef, {
+        'userId': userId,
+        'title': 'Reply: $subject',
+        'message': trimmedReply,
+        'type': type,
+        'read': false,
+        'ticketId': ticketId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     });
+  }
+
+  Future<void> updateSupportTicketStatus({
+    required String ticketId,
+    required String status,
+  }) async {
+    final normalizedStatus = status.trim().toLowerCase();
+    if (!allowedSupportStatuses.contains(normalizedStatus)) {
+      throw Exception('Invalid ticket status.');
+    }
+    await _supportTickets.doc(ticketId).set({
+      'status': normalizedStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> updateUserSettings({
@@ -389,5 +592,121 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       },
     }, SetOptions(merge: true));
+  }
+
+  Future<void> saveUserFcmToken({
+    required String uid,
+    required String token,
+  }) async {
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) return;
+    await _users.doc(uid).set({
+      'fcmTokens': FieldValue.arrayUnion([trimmedToken]),
+      'lastFcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> removeUserFcmToken({
+    required String uid,
+    required String token,
+  }) async {
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) return;
+    await _users.doc(uid).set({
+      'fcmTokens': FieldValue.arrayRemove([trimmedToken]),
+      'lastFcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> submitRating({
+    required String uid,
+    required String email,
+    required int stars,
+  }) async {
+    if (stars < 1 || stars > 5) {
+      throw Exception('Rating must be between 1 and 5 stars.');
+    }
+
+    final docRef = _ratings.doc(uid);
+    final snapshot = await docRef.get();
+    final alreadyExists = snapshot.exists;
+    await docRef.set({
+      'userId': uid,
+      'email': email.trim(),
+      'stars': stars,
+      if (!alreadyExists) 'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Stream<AppRating?> watchUserRating(String uid) {
+    return _ratings.doc(uid).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return AppRating.fromDoc(doc);
+    });
+  }
+
+  Stream<List<AppRating>> watchAllRatings() {
+    return _ratings
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(AppRating.fromDoc)
+              .toList(growable: false),
+        );
+  }
+
+  Stream<List<AppUser>> watchAllUsers() {
+    return _users.orderBy('createdAt', descending: true).snapshots().map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AppUser.fromMap(doc.data()))
+              .toList(growable: false),
+        );
+  }
+
+  Future<void> createAdminNotification({
+    required String createdByUid,
+    required String createdByEmail,
+    required String audience,
+    required String type,
+    required String title,
+    required String message,
+    String? targetUserId,
+  }) async {
+    final normalizedAudience = audience.trim().toLowerCase();
+    final normalizedType = type.trim().toLowerCase();
+    final trimmedTitle = title.trim();
+    final trimmedMessage = message.trim();
+    if (normalizedAudience != 'all' && normalizedAudience != 'user') {
+      throw Exception('Invalid audience.');
+    }
+    if (trimmedTitle.isEmpty || trimmedMessage.isEmpty) {
+      throw Exception('Title and message are required.');
+    }
+    if (normalizedAudience == 'user' &&
+        (targetUserId == null || targetUserId.trim().isEmpty)) {
+      throw Exception('Select a user.');
+    }
+
+    await _adminNotifications.add({
+      'createdByUid': createdByUid,
+      'createdByEmail': createdByEmail.trim(),
+      'audience': normalizedAudience,
+      'targetUserId':
+          normalizedAudience == 'user' ? targetUserId!.trim() : null,
+      'type': normalizedType.isEmpty ? 'announcement' : normalizedType,
+      'title': trimmedTitle,
+      'message': trimmedMessage,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchAdminNotifications() {
+    return _adminNotifications
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 }
