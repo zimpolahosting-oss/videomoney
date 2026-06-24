@@ -55,7 +55,7 @@ class NotificationService {
     }
 
     const androidSettings =
-        AndroidInitializationSettings('ic_launcher');
+        AndroidInitializationSettings('@android:drawable/ic_dialog_info');
     const settings = InitializationSettings(android: androidSettings);
     await _localNotifications.initialize(settings);
 
