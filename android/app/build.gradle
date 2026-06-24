@@ -52,7 +52,6 @@ android {
             }
         }
     }
-}
 
 flutter {
     source = "../.."
