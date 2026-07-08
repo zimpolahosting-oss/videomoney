@@ -1,113 +1,171 @@
 import 'dart:async';
 
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter/services.dart';
 
 class RewardedAdService {
   factory RewardedAdService() => _instance;
 
   RewardedAdService._internal() {
-    _loadRewardedAd();
+    _registerMethodHandler();
   }
 
   static final RewardedAdService _instance = RewardedAdService._internal();
-  static const String rewardedAdUnitId =
-      'ca-app-pub-7683034036748999/1933132998';
+  static const MethodChannel _channel =
+      MethodChannel('com.videomoney.app/rewarded_video');
   static const String adUnavailableMessage =
       'No ad available right now. Please try again in a moment.';
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
 
-  RewardedAd? _rewardedAd;
+  Completer<bool>? _showCompleter;
+  FutureOr<void> Function()? _onUserEarnedReward;
+  void Function(String message)? _onAdStatus;
+  bool _isInitialized = false;
   bool _isLoading = false;
   bool _isShowing = false;
+  bool _rewardEarned = false;
+  bool _hasHandler = false;
+  bool _isAdReady = false;
 
-  bool get isAdReady => _rewardedAd != null;
+  bool get isAdReady => _isAdReady;
 
-  Future<void> preloadRewardedAd() => _loadRewardedAd();
+  Future<void> initialize() async {
+    _registerMethodHandler();
+    if (_isInitialized) {
+      return preloadRewardedAd();
+    }
 
-  Future<void> _loadRewardedAd() async {
-    if (_isLoading || _rewardedAd != null) return;
+    await _channel.invokeMethod<void>('ensureAppodealInitialized');
+    _isInitialized = true;
+    await preloadRewardedAd();
+  }
+
+  Future<void> preloadRewardedAd() async {
+    _registerMethodHandler();
+    if (_isLoading) return;
 
     _isLoading = true;
-
-    await RewardedAd.load(
-      adUnitId: rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-          _isLoading = false;
-        },
-        onAdFailedToLoad: (_) {
-          _rewardedAd = null;
-          _isLoading = false;
-        },
-      ),
-    );
-  }
-
-  void _disposeCurrentAd([RewardedAd? ad]) {
-    ad?.dispose();
-    _rewardedAd?.dispose();
-    _rewardedAd = null;
-  }
-
-  Future<void> _resetAndLoadNextAd([RewardedAd? ad]) async {
-    _disposeCurrentAd(ad);
-    _isShowing = false;
-    unawaited(_loadRewardedAd());
+    try {
+      await _channel.invokeMethod<void>('preloadRewardedVideo');
+    } finally {
+      if (!_isAdReady) {
+        _isLoading = false;
+      }
+    }
   }
 
   Future<bool> showRewardedAd({
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
   }) async {
-    final completer = Completer<bool>();
-    var rewardEarned = false;
-    final ad = _rewardedAd;
+    await initialize();
 
     if (_isShowing) {
       onAdStatus?.call(adUnavailableMessage);
       return false;
     }
 
-    if (ad == null) {
-      unawaited(_loadRewardedAd());
+    final canShow =
+        await _channel.invokeMethod<bool>('isRewardedVideoLoaded') ?? false;
+    _isAdReady = canShow;
+
+    if (!canShow) {
+      unawaited(preloadRewardedAd());
       onAdStatus?.call(adUnavailableMessage);
       return false;
     }
 
-    _rewardedAd = null;
+    _showCompleter = Completer<bool>();
+    _onUserEarnedReward = onUserEarnedReward;
+    _onAdStatus = onAdStatus;
+    _rewardEarned = false;
     _isShowing = true;
+    _isAdReady = false;
 
-    ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) async {
-        await _resetAndLoadNextAd(ad);
-        if (!completer.isCompleted) {
-          completer.complete(rewardEarned);
-        }
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) async {
-        onAdStatus?.call(adUnavailableMessage);
-        await _resetAndLoadNextAd(ad);
-        if (!completer.isCompleted) {
-          completer.complete(false);
-        }
-      },
-    );
+    final shown = await _channel.invokeMethod<bool>('showRewardedVideo') ?? false;
+    if (!shown) {
+      _completeShowFlow(false, reloadNextAd: true);
+      onAdStatus?.call(adUnavailableMessage);
+      return false;
+    }
 
-    ad.show(
-      onUserEarnedReward: (ad, reward) async {
-        try {
-          await onUserEarnedReward();
-          rewardEarned = true;
-        } catch (_) {
-          rewardEarned = false;
-          onAdStatus?.call(rewardDeliveryFailedMessage);
-        }
-      },
-    );
+    return _showCompleter!.future;
+  }
 
-    return completer.future;
+  void _registerMethodHandler() {
+    if (_hasHandler) return;
+    _channel.setMethodCallHandler(_handlePlatformCall);
+    _hasHandler = true;
+  }
+
+  Future<void> _handlePlatformCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onRewardedVideoLoaded':
+        _isLoading = false;
+        _isAdReady = true;
+        break;
+      case 'onRewardedVideoFailedToLoad':
+      case 'onRewardedVideoExpired':
+        _isLoading = false;
+        _isAdReady = false;
+        break;
+      case 'onRewardedVideoShowFailed':
+        _onAdStatus?.call(adUnavailableMessage);
+        _completeShowFlow(false, reloadNextAd: true);
+        break;
+      case 'onRewardedVideoFinished':
+        await _grantReward();
+        break;
+      case 'onRewardedVideoClosed':
+        final finished = (call.arguments as Map<Object?, Object?>?)?['finished'];
+        if (finished == true && !_rewardEarned) {
+          await _grantReward();
+        }
+        _completeShowFlow(
+          _rewardEarned,
+          reloadNextAd: true,
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _grantReward() async {
+    final onUserEarnedReward = _onUserEarnedReward;
+    if (onUserEarnedReward == null || _rewardEarned) {
+      return;
+    }
+
+    try {
+      await onUserEarnedReward();
+      _rewardEarned = true;
+    } catch (_) {
+      _rewardEarned = false;
+      _onAdStatus?.call(rewardDeliveryFailedMessage);
+    }
+  }
+
+  void _completeShowFlow(
+    bool rewardGranted, {
+    required bool reloadNextAd,
+  }) {
+    _isShowing = false;
+    _isLoading = false;
+    _isAdReady = false;
+
+    final completer = _showCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(rewardGranted);
+    }
+
+    _showCompleter = null;
+    _onUserEarnedReward = null;
+    _onAdStatus = null;
+    _rewardEarned = false;
+
+    if (reloadNextAd) {
+      unawaited(preloadRewardedAd());
+    }
   }
 }
