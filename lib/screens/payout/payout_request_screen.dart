@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
-enum _PayoutMethod { paypal, revolut }
+enum _PayoutMethod { paypal, revolut, bank }
+enum _PayoutCurrency { eur, gbp, usd }
 
 class PayoutRequestScreen extends StatefulWidget {
   const PayoutRequestScreen({super.key, this.initialMethod});
@@ -21,16 +22,24 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   final _payPalController = TextEditingController();
   final _revolutController = TextEditingController();
   final _accountHolderController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _ibanController = TextEditingController();
+  final _bankAccountNumberController = TextEditingController();
   final _firestoreService = FirestoreService();
 
   bool _isSubmitting = false;
   late _PayoutMethod _method;
+  _PayoutCurrency _currency = _PayoutCurrency.eur;
 
   @override
   void initState() {
     super.initState();
     final initial = (widget.initialMethod ?? '').toLowerCase();
-    _method = initial == 'revolut' ? _PayoutMethod.revolut : _PayoutMethod.paypal;
+    _method = switch (initial) {
+      'revolut' => _PayoutMethod.revolut,
+      'bank' => _PayoutMethod.bank,
+      _ => _PayoutMethod.paypal,
+    };
   }
 
   @override
@@ -39,6 +48,9 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     _payPalController.dispose();
     _revolutController.dispose();
     _accountHolderController.dispose();
+    _bankNameController.dispose();
+    _ibanController.dispose();
+    _bankAccountNumberController.dispose();
     super.dispose();
   }
 
@@ -54,11 +66,20 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
         coinsRequested: int.parse(_viewsController.text.trim()),
-        payoutMethod: _method == _PayoutMethod.paypal ? 'paypal' : 'revolut',
+        payoutMethod: switch (_method) {
+          _PayoutMethod.paypal => 'paypal',
+          _PayoutMethod.revolut => 'revolut',
+          _PayoutMethod.bank => 'bank',
+        },
         payPalEmail: _method == _PayoutMethod.paypal ? _payPalController.text : '',
         revolutUsername:
             _method == _PayoutMethod.revolut ? _revolutController.text : '',
         accountHolderName: _accountHolderController.text,
+        payoutCurrency: _currency.name.toUpperCase(),
+        bankName: _method == _PayoutMethod.bank ? _bankNameController.text : '',
+        iban: _method == _PayoutMethod.bank ? _ibanController.text : '',
+        bankAccountNumber:
+            _method == _PayoutMethod.bank ? _bankAccountNumberController.text : '',
       );
 
       if (!mounted) return;
@@ -119,6 +140,11 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                       icon: Icons.verified_user_outlined,
                       text: 'Every request is reviewed by admin before it is paid.',
                     ),
+                    const _RuleLine(
+                      icon: Icons.account_balance_outlined,
+                      text:
+                          'Use Bank for manual transfer and add your IBAN or bank account number.',
+                    ),
                   ],
                 ),
               ),
@@ -131,6 +157,43 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               Text(
                 'Estimated earnings only. 50 completed views ≈ €0.01 and this is not a guaranteed payout promise.',
                 style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Payout currency',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 10),
+              SegmentedButton<_PayoutCurrency>(
+                segments: const [
+                  ButtonSegment(
+                    value: _PayoutCurrency.eur,
+                    label: Text('EUR'),
+                  ),
+                  ButtonSegment(
+                    value: _PayoutCurrency.gbp,
+                    label: Text('GBP'),
+                  ),
+                  ButtonSegment(
+                    value: _PayoutCurrency.usd,
+                    label: Text('USD'),
+                  ),
+                ],
+                selected: {_currency},
+                onSelectionChanged: (value) {
+                  setState(() => _currency = value.first);
+                },
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return AppTheme.primary.withOpacity(0.12);
+                    }
+                    return Theme.of(context).colorScheme.surface;
+                  }),
+                  side: MaterialStateProperty.all(
+                    BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+                  ),
+                ),
               ),
               const SizedBox(height: 18),
               Text(
@@ -149,6 +212,11 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     value: _PayoutMethod.revolut,
                     icon: Icon(Icons.account_balance_wallet_outlined),
                     label: Text('Revolut'),
+                  ),
+                  ButtonSegment(
+                    value: _PayoutMethod.bank,
+                    icon: Icon(Icons.account_balance_outlined),
+                    label: Text('Bank'),
                   ),
                 ],
                 selected: {_method},
@@ -222,7 +290,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     return null;
                   },
                 ),
-              ] else ...[
+              ] else if (_method == _PayoutMethod.revolut) ...[
                 TextFormField(
                   controller: _revolutController,
                   decoration: const InputDecoration(
@@ -233,6 +301,44 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
                       return 'Enter your Revolut username.';
+                    }
+                    return null;
+                  },
+                ),
+              ] else ...[
+                TextFormField(
+                  controller: _bankNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bank name',
+                  ),
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return 'Enter your bank name.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _ibanController,
+                  decoration: const InputDecoration(
+                    labelText: 'IBAN',
+                    helperText: 'Optional if you provide a bank account number',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _bankAccountNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bank account number',
+                    helperText: 'Required if you do not enter an IBAN',
+                  ),
+                  validator: (value) {
+                    final iban = _ibanController.text.trim();
+                    final accountNumber = value?.trim() ?? '';
+                    if (iban.isEmpty && accountNumber.isEmpty) {
+                      return 'Enter an IBAN or bank account number.';
                     }
                     return null;
                   },

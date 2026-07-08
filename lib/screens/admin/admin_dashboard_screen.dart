@@ -61,7 +61,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Updated payout to ${status.toUpperCase()}')),
+        SnackBar(
+          content: Text(
+            status == 'paid'
+                ? 'Marked payout as manually paid.'
+                : 'Updated payout to ${status.toUpperCase()}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
@@ -377,12 +383,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             return Column(
               children: payouts.map((payout) {
-                final method = payout.payoutMethod.isNotEmpty
-                    ? payout.payoutMethod
-                    : (payout.revolutUsername.isNotEmpty ? 'revolut' : 'paypal');
-                final destination = method == 'revolut'
-                    ? 'Revolut: ${payout.revolutUsername.isNotEmpty ? payout.revolutUsername : payout.ibanOrBankAccount}'
-                    : 'PayPal: ${payout.payPalEmail}';
                 final statusLower = payout.status.toLowerCase();
                 final canApprove = statusLower == 'pending';
                 final canMarkPaid = statusLower == 'approved';
@@ -416,7 +416,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        destination,
+                        '${payout.payoutMethodLabel} • ${payout.normalizedCurrency}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        payout.destinationSummary,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
@@ -424,6 +429,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'Account holder: ${payout.accountHolderName.isEmpty ? 'Not provided' : payout.accountHolderName}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      if (payout.isBankTransfer && payout.bankName.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Bank: ${payout.bankName}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
                         _formatDateTime(payout.createdAt),
@@ -437,7 +449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: FilledButton(
                                   onPressed: () => _setStatus(payout, 'approved'),
-                                  child: const Text('Approve'),
+                                  child: const Text('Approve Request'),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -454,7 +466,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: FilledButton(
                                   onPressed: () => _setStatus(payout, 'paid'),
-                                  child: const Text('Mark Paid'),
+                                  child: const Text('Mark Manual Paid'),
                                 ),
                               ),
                           ],

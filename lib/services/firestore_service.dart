@@ -25,6 +25,16 @@ class FirestoreService {
     'paid',
     'rejected',
   };
+  static const Set<String> allowedPayoutMethods = {
+    'paypal',
+    'revolut',
+    'bank',
+  };
+  static const Set<String> allowedPayoutCurrencies = {
+    'EUR',
+    'GBP',
+    'USD',
+  };
   static const Set<String> allowedSupportTypes = {
     'support',
     'payment',
@@ -289,6 +299,10 @@ class FirestoreService {
     required String payPalEmail,
     required String revolutUsername,
     required String accountHolderName,
+    required String payoutCurrency,
+    required String bankName,
+    required String iban,
+    required String bankAccountNumber,
   }) async {
     final userRef = _users.doc(uid);
     final payoutRef = _payouts.doc();
@@ -296,6 +310,12 @@ class FirestoreService {
     final trimmedRevolutUsername = revolutUsername.trim();
     final trimmedAccountHolderName = accountHolderName.trim();
     final trimmedMethod = payoutMethod.trim().toLowerCase();
+    final trimmedCurrency = payoutCurrency.trim().toUpperCase();
+    final trimmedBankName = bankName.trim();
+    final trimmedIban = iban.trim();
+    final trimmedBankAccountNumber = bankAccountNumber.trim();
+    final legacyBankValue =
+        trimmedIban.isNotEmpty ? trimmedIban : trimmedBankAccountNumber;
 
     await _firestore.runTransaction((transaction) async {
       final userSnapshot = await transaction.get(userRef);
@@ -317,14 +337,25 @@ class FirestoreService {
       if (trimmedAccountHolderName.isEmpty) {
         throw Exception('Account holder name is required.');
       }
-      if (trimmedMethod != 'paypal' && trimmedMethod != 'revolut') {
+      if (!allowedPayoutMethods.contains(trimmedMethod)) {
         throw Exception('Select a payout method.');
+      }
+      if (!allowedPayoutCurrencies.contains(trimmedCurrency)) {
+        throw Exception('Select a payout currency.');
       }
       if (trimmedMethod == 'paypal' && trimmedPayPalEmail.isEmpty) {
         throw Exception('Enter a PayPal email.');
       }
       if (trimmedMethod == 'revolut' && trimmedRevolutUsername.isEmpty) {
         throw Exception('Enter your Revolut username.');
+      }
+      if (trimmedMethod == 'bank') {
+        if (trimmedBankName.isEmpty) {
+          throw Exception('Enter your bank name.');
+        }
+        if (trimmedIban.isEmpty && trimmedBankAccountNumber.isEmpty) {
+          throw Exception('Enter an IBAN or bank account number.');
+        }
       }
       if (currentCoins < coinsRequested) {
         throw Exception('Not enough views available.');
@@ -341,11 +372,16 @@ class FirestoreService {
         'userEmail': userEmail,
         'coinsRequested': coinsRequested,
         'payoutMethod': trimmedMethod,
+        'payoutCurrency': trimmedCurrency,
         'status': 'pending',
         'payPalEmail': trimmedPayPalEmail,
-        'ibanOrBankAccount': trimmedRevolutUsername,
+        'ibanOrBankAccount':
+            trimmedMethod == 'revolut' ? trimmedRevolutUsername : legacyBankValue,
         'revolutUsername': trimmedRevolutUsername,
         'accountHolderName': trimmedAccountHolderName,
+        'bankName': trimmedBankName,
+        'iban': trimmedIban,
+        'bankAccountNumber': trimmedBankAccountNumber,
         'minimumPayoutCoins': minimumPayoutCoins,
         'processingDays': payoutProcessingDays,
         'createdAt': FieldValue.serverTimestamp(),
@@ -415,6 +451,7 @@ class FirestoreService {
       }
       if (normalized == 'paid') {
         updates['paidAt'] = FieldValue.serverTimestamp();
+        updates['paymentHandledManually'] = true;
       }
       if (normalized == 'rejected') {
         updates['rejectedAt'] = FieldValue.serverTimestamp();

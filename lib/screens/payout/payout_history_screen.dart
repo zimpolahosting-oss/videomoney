@@ -56,13 +56,6 @@ class PayoutHistoryScreen extends StatelessWidget {
               final formattedDate = payout.createdAt == null
                   ? 'Pending timestamp'
                   : DateFormat.yMMMd().add_jm().format(payout.createdAt!);
-              final method = payout.payoutMethod.isNotEmpty
-                  ? payout.payoutMethod
-                  : (payout.revolutUsername.isNotEmpty ? 'revolut' : 'paypal');
-              final destination = method == 'revolut'
-                  ? 'Revolut: ${payout.revolutUsername.isNotEmpty ? payout.revolutUsername : payout.ibanOrBankAccount}'
-                  : 'PayPal: ${payout.payPalEmail}';
-
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(16),
@@ -84,7 +77,12 @@ class PayoutHistoryScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            destination,
+                            'Currency: ${payout.normalizedCurrency}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            payout.destinationSummary,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),

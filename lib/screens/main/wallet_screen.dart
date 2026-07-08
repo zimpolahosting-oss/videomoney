@@ -178,6 +178,7 @@ class WalletScreen extends StatelessWidget {
             _MethodTile(
               icon: Icons.payments_outlined,
               title: 'PayPal',
+              subtitle: 'Request payout in EUR, GBP, or USD',
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -189,10 +190,23 @@ class WalletScreen extends StatelessWidget {
             _MethodTile(
               icon: Icons.account_balance_wallet_outlined,
               title: 'Revolut',
+              subtitle: 'Fast wallet payout with chosen currency',
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
                   arguments: 'revolut',
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            _MethodTile(
+              icon: Icons.account_balance_outlined,
+              title: 'Bank Transfer',
+              subtitle: 'Add IBAN or bank account number for manual payout',
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'bank',
                 );
               },
             ),
@@ -223,13 +237,6 @@ class WalletScreen extends StatelessWidget {
                       final formattedDate = payout.createdAt == null
                           ? 'Pending timestamp'
                           : DateFormat.yMMMd().format(payout.createdAt!);
-                      final method = payout.payoutMethod.isNotEmpty
-                          ? payout.payoutMethod
-                          : (payout.revolutUsername.isNotEmpty ? 'revolut' : 'paypal');
-                      final destination = method == 'revolut'
-                          ? 'Revolut: ${payout.revolutUsername.isNotEmpty ? payout.revolutUsername : payout.ibanOrBankAccount}'
-                          : 'PayPal: ${payout.payPalEmail}';
-
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(16),
@@ -250,7 +257,12 @@ class WalletScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    destination,
+                                    '${payout.payoutMethodLabel} • ${payout.normalizedCurrency}',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    payout.destinationSummary,
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   const SizedBox(height: 4),
@@ -408,11 +420,13 @@ class _MethodTile extends StatelessWidget {
   const _MethodTile({
     required this.icon,
     required this.title,
+    required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
@@ -440,9 +454,19 @@ class _MethodTile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ),
             ),
             const Icon(Icons.chevron_right, color: AppTheme.textMuted),
