@@ -46,6 +46,11 @@ class RewardedAdDebugPanel extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
+                'Forced order: Meta -> Start.io -> Appnext -> Appodeal -> AdMob',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Text(
                 'Selected next: ${debugState.selectedNetwork}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
@@ -75,7 +80,7 @@ class RewardedAdDebugPanel extends StatelessWidget {
                 },
                 title: const Text('Skip direct AdMob'),
                 subtitle: const Text(
-                  'Turn this on to force-test Appodeal, Appnext, Meta, and Start.io first.',
+                  'Forced order stays the same, but AdMob is skipped for testing.',
                 ),
               ),
             ],

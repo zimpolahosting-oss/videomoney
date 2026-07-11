@@ -20,7 +20,7 @@ class RewardedAdDebugState {
         selectedNetwork: 'Waiting...',
         lastShownNetwork: 'None',
         loadedNetworks: <String>[],
-        lastEvent: 'Initializing ad networks...',
+        lastEvent: 'Forced order: Meta -> Start.io -> Appnext -> Appodeal -> AdMob',
       );
 
   final bool skipDirectAdMobForTesting;
@@ -64,11 +64,11 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.admob,
-    _RewardedNetwork.appodeal,
-    _RewardedNetwork.appnext,
     _RewardedNetwork.meta,
     _RewardedNetwork.startio,
+    _RewardedNetwork.appnext,
+    _RewardedNetwork.appodeal,
+    _RewardedNetwork.admob,
   ];
 
   RewardedAd? _rewardedAd;
@@ -99,8 +99,8 @@ class RewardedAdService {
     debugState.value = debugState.value.copyWith(
       skipDirectAdMobForTesting: value,
       lastEvent: value
-          ? 'Direct AdMob test mode disabled. Trying other networks.'
-          : 'Direct AdMob test mode enabled again.',
+          ? 'Forced order active without direct AdMob.'
+          : 'Forced order active: Meta -> Start.io -> Appnext -> Appodeal -> AdMob',
     );
     if (value) {
       _disposeCurrentAd();
@@ -288,7 +288,7 @@ class RewardedAdService {
       if (_isRewardedReady(network)) {
         _lastServedRewardedIndex = index;
         _setSelectedNetwork(_labelForNetwork(network));
-        debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)}.');
+        debugPrint('[Ads][rewarded] forced order selected ${_labelForNetwork(network)}.');
         return network;
       }
     }
@@ -528,7 +528,7 @@ class RewardedAdService {
   void _setSelectedNetwork(String network) {
     debugState.value = debugState.value.copyWith(
       selectedNetwork: network,
-      lastEvent: 'Selected network: $network',
+      lastEvent: 'Forced order selected: $network',
     );
   }
 
