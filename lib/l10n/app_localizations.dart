@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'extra_localized_values.dart';
+
 class AppLocalizations {
   AppLocalizations(this.locale);
 
@@ -16,6 +18,13 @@ class AppLocalizations {
     Locale('fr'),
     Locale('ru'),
     Locale('el'),
+    Locale('pt'),
+    Locale('it'),
+    Locale('tr'),
+    Locale('ar'),
+    Locale('bn'),
+    Locale('ta'),
+    Locale('te'),
   ];
 
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = [
@@ -36,11 +45,12 @@ class AppLocalizations {
 
   String get _languageCode {
     final code = locale.languageCode.toLowerCase();
-    return _localizedValues.containsKey(code) ? code : 'en';
+    return _allLocalizedValues.containsKey(code) ? code : 'en';
   }
 
   String _text(String key) =>
-      _localizedValues[_languageCode]![key] ?? _localizedValues['en']![key]!;
+      _allLocalizedValues[_languageCode]![key] ??
+      _localizedValues['en']![key]!;
 
   String _format(String key, Map<String, String> values) {
     var result = _text(key);
@@ -308,6 +318,11 @@ class AppLocalizations {
         return type.toUpperCase();
     }
   }
+
+  static const Map<String, Map<String, String>> _allLocalizedValues = {
+    ..._localizedValues,
+    ...extraLocalizedValues,
+  };
 
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {

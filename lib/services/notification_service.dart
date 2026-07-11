@@ -281,6 +281,20 @@ class NotificationService {
         return 'Не забудьте получить ежедневный бонус.';
       case 'el':
         return 'Μην ξεχάσετε το ημερήσιο μπόνους σας.';
+      case 'pt':
+        return 'Não se esqueça do seu bónus diário.';
+      case 'it':
+        return 'Non dimenticare il tuo bonus giornaliero.';
+      case 'tr':
+        return 'Günlük bonusunu unutma.';
+      case 'ar':
+        return 'لا تنسَ مكافأتك اليومية.';
+      case 'bn':
+        return 'আপনার দৈনিক বোনাস নিতে ভুলবেন না।';
+      case 'ta':
+        return 'உங்கள் தினசரி போனஸை மறக்க வேண்டாம்.';
+      case 'te':
+        return 'మీ రోజువారీ బోనస్‌ను మర్చిపోవద్దు.';
       default:
         return 'Don\'t forget your daily bonus.';
     }
