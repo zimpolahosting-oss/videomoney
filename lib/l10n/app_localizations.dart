@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -6,7 +7,7 @@ class AppLocalizations {
 
   final Locale locale;
 
-  static const supportedLocales = [
+  static const List<Locale> supportedLocales = [
     Locale('en'),
     Locale('nl'),
     Locale('hi'),
@@ -17,7 +18,7 @@ class AppLocalizations {
     Locale('el'),
   ];
 
-  static const localizationsDelegates = [
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = [
     AppLocalizationsDelegate(),
     GlobalMaterialLocalizations.delegate,
     GlobalWidgetsLocalizations.delegate,
@@ -2204,8 +2205,8 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
       );
 
   @override
-  Future<AppLocalizations> load(Locale locale) async {
-    return AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) {
+    return SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
   }
 
   @override
