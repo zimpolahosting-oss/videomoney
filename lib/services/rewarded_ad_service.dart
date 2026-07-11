@@ -6,47 +6,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 enum _RewardedNetwork { admob, appodeal, appnext, meta, startio }
 
-class RewardedAdDebugState {
-  const RewardedAdDebugState({
-    required this.skipDirectAdMobForTesting,
-    required this.selectedNetwork,
-    required this.lastShownNetwork,
-    required this.loadedNetworks,
-    required this.lastEvent,
-  });
-
-  factory RewardedAdDebugState.initial() => const RewardedAdDebugState(
-        skipDirectAdMobForTesting: false,
-        selectedNetwork: 'Waiting...',
-        lastShownNetwork: 'None',
-        loadedNetworks: <String>[],
-        lastEvent: 'Forced order: Meta -> Start.io -> Appnext -> Appodeal -> AdMob',
-      );
-
-  final bool skipDirectAdMobForTesting;
-  final String selectedNetwork;
-  final String lastShownNetwork;
-  final List<String> loadedNetworks;
-  final String lastEvent;
-
-  RewardedAdDebugState copyWith({
-    bool? skipDirectAdMobForTesting,
-    String? selectedNetwork,
-    String? lastShownNetwork,
-    List<String>? loadedNetworks,
-    String? lastEvent,
-  }) {
-    return RewardedAdDebugState(
-      skipDirectAdMobForTesting:
-          skipDirectAdMobForTesting ?? this.skipDirectAdMobForTesting,
-      selectedNetwork: selectedNetwork ?? this.selectedNetwork,
-      lastShownNetwork: lastShownNetwork ?? this.lastShownNetwork,
-      loadedNetworks: loadedNetworks ?? this.loadedNetworks,
-      lastEvent: lastEvent ?? this.lastEvent,
-    );
-  }
-}
-
 class RewardedAdService {
   factory RewardedAdService() => _instance;
 
@@ -64,11 +23,11 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.meta,
-    _RewardedNetwork.startio,
-    _RewardedNetwork.appnext,
-    _RewardedNetwork.appodeal,
     _RewardedNetwork.admob,
+    _RewardedNetwork.appodeal,
+    _RewardedNetwork.startio,
+    _RewardedNetwork.meta,
+    _RewardedNetwork.appnext,
   ];
 
   RewardedAd? _rewardedAd;
@@ -87,36 +46,12 @@ class RewardedAdService {
   bool _isNativeRewardEarned = false;
   bool _methodHandlerRegistered = false;
   int _lastServedRewardedIndex = -1;
-  bool _skipDirectAdMobForTesting = false;
-  final ValueNotifier<RewardedAdDebugState> debugState =
-      ValueNotifier(RewardedAdDebugState.initial());
 
   bool get isAdReady => _rewardedAd != null;
-  ValueListenable<RewardedAdDebugState> get debugListenable => debugState;
-
-  Future<void> setSkipDirectAdMobForTesting(bool value) async {
-    _skipDirectAdMobForTesting = value;
-    debugState.value = debugState.value.copyWith(
-      skipDirectAdMobForTesting: value,
-      lastEvent: value
-          ? 'Forced order active without direct AdMob.'
-          : 'Forced order active: Meta -> Start.io -> Appnext -> Appodeal -> AdMob',
-    );
-    if (value) {
-      _disposeCurrentAd();
-    }
-    await preloadRewardedAd();
-  }
 
   Future<void> preloadRewardedAd() async {
     _registerMethodHandler();
-    if (_skipDirectAdMobForTesting) {
-      _disposeCurrentAd();
-      _logUnavailable(_RewardedNetwork.admob,
-          event: 'Direct AdMob skipped for testing.');
-    } else {
-      await _loadRewardedAd();
-    }
+    await _loadRewardedAd();
     await Future.wait([
       _invokeVoidMethod('preloadRewardedVideo'),
       _invokeVoidMethod('preloadAppnextRewardedVideo'),
@@ -127,10 +62,6 @@ class RewardedAdService {
   }
 
   Future<void> _loadRewardedAd() async {
-    if (_skipDirectAdMobForTesting) {
-      _disposeCurrentAd();
-      return;
-    }
     if (_isLoading || _rewardedAd != null) return;
     _isLoading = true;
     await RewardedAd.load(
@@ -282,13 +213,9 @@ class RewardedAdService {
     for (var offset = 1; offset <= _rotationOrder.length; offset++) {
       final index = (_lastServedRewardedIndex + offset) % _rotationOrder.length;
       final network = _rotationOrder[index];
-      if (_skipDirectAdMobForTesting && network == _RewardedNetwork.admob) {
-        continue;
-      }
       if (_isRewardedReady(network)) {
         _lastServedRewardedIndex = index;
-        _setSelectedNetwork(_labelForNetwork(network));
-        debugPrint('[Ads][rewarded] forced order selected ${_labelForNetwork(network)}.');
+        debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)}.');
         return network;
       }
     }
@@ -467,12 +394,9 @@ class RewardedAdService {
     _nativeRewardedReady[network] = isReady;
     if (previous == isReady) return;
     if (isReady) {
-      _logLoaded(network, event: '${_labelForNetwork(network)} rewarded loaded.');
+      _logLoaded(network);
     } else {
-      _logUnavailable(
-        network,
-        event: '${_labelForNetwork(network)} rewarded unavailable.',
-      );
+      _logUnavailable(network);
     }
   }
 
@@ -496,56 +420,15 @@ class RewardedAdService {
     };
   }
 
-  void _logLoaded(
-    _RewardedNetwork network, {
-    String? event,
-  }) {
-    _refreshDebugLoadedNetworks();
-    _setLastEvent(event ?? '${_labelForNetwork(network)} loaded.');
+  void _logLoaded(_RewardedNetwork network) {
     debugPrint('[Ads][rewarded] ${_labelForNetwork(network)} loaded.');
   }
 
-  void _logShown(
-    _RewardedNetwork network, {
-    String? event,
-  }) {
-    debugState.value = debugState.value.copyWith(
-      lastShownNetwork: _labelForNetwork(network),
-      lastEvent: event ?? '${_labelForNetwork(network)} shown.',
-    );
+  void _logShown(_RewardedNetwork network) {
     debugPrint('[Ads][rewarded] ${_labelForNetwork(network)} shown.');
   }
 
-  void _logUnavailable(
-    _RewardedNetwork network, {
-    String? event,
-  }) {
-    _refreshDebugLoadedNetworks();
-    _setLastEvent(event ?? '${_labelForNetwork(network)} unavailable.');
+  void _logUnavailable(_RewardedNetwork network) {
     debugPrint('[Ads][rewarded] ${_labelForNetwork(network)} unavailable.');
-  }
-
-  void _setSelectedNetwork(String network) {
-    debugState.value = debugState.value.copyWith(
-      selectedNetwork: network,
-      lastEvent: 'Forced order selected: $network',
-    );
-  }
-
-  void _setLastEvent(String event) {
-    debugState.value = debugState.value.copyWith(lastEvent: event);
-  }
-
-  void _refreshDebugLoadedNetworks() {
-    final loaded = <String>[];
-    if (!_skipDirectAdMobForTesting && _rewardedAd != null) {
-      loaded.add(_labelForNetwork(_RewardedNetwork.admob));
-    }
-    for (final entry in _nativeRewardedReady.entries) {
-      if (entry.value) {
-        loaded.add(_labelForNetwork(entry.key));
-      }
-    }
-    debugState.value = debugState.value.copyWith(loadedNetworks: loaded);
   }
 }

@@ -7,7 +7,6 @@ import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/rewarded_ad_debug_panel.dart';
 import '../../widgets/watermark_hero_card.dart';
 
 class EarnScreen extends StatefulWidget {
@@ -315,8 +314,6 @@ class _EarnScreenState extends State<EarnScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                RewardedAdDebugPanel(earningsService: _earningsService),
               ],
             ),
           ),
