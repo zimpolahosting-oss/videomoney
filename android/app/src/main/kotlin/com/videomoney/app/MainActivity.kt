@@ -6,7 +6,6 @@ import com.appnext.ads.fullscreen.RewardedVideo
 import com.appnext.core.Appnext
 import com.appnext.core.callbacks.OnAdClosed
 import com.appnext.core.callbacks.OnAdError
-import com.appnext.core.callbacks.OnAdLoaded
 import com.appnext.core.callbacks.OnAdOpened
 import com.appnext.core.callbacks.OnVideoEnded
 import com.appodeal.ads.Appodeal
@@ -177,11 +176,6 @@ class MainActivity : FlutterActivity() {
         }
 
         appnextRewardedVideo = RewardedVideo(this, placementId).apply {
-            setOnAdLoadedCallback(object : OnAdLoaded {
-                override fun adLoaded(bannerId: String) {
-                    emitEvent("onAppnextRewardedVideoLoaded", mapOf("bannerId" to bannerId))
-                }
-            })
             setOnAdOpenedCallback(object : OnAdOpened {
                 override fun adOpened() {
                     emitEvent("onAppnextRewardedVideoOpened")
