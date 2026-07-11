@@ -32,6 +32,11 @@ def appnextPlacementId = (
                 ?: System.getenv('APPNEXT_PLACEMENT_ID')
                 ?: ''
 ).trim()
+def startioAppId = (
+        localProperties.getProperty('startio.appId')
+                ?: System.getenv('STARTIO_APP_ID')
+                ?: '206588272'
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -60,6 +65,7 @@ android {
         buildConfigField "String", "APPODEAL_APP_KEY", "\"${appodealAppKey}\""
         buildConfigField "String", "APPNEXT_APP_ID", "\"${appnextAppId}\""
         buildConfigField "String", "APPNEXT_PLACEMENT_ID", "\"${appnextPlacementId}\""
+        manifestPlaceholders = [startioAppId: startioAppId]
     }
     signingConfigs {
         release {
@@ -93,5 +99,6 @@ dependencies {
     implementation "com.appodeal.ads.sdk:core:4.2.0"
     implementation "com.appodeal.ads.sdk.adapters:admob:24.7.0.0"
     implementation "com.appodeal.ads.sdk.adapters:iab:1.8.1.0"
+    implementation "com.startapp:inapp-sdk:5.3.1"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
 }
