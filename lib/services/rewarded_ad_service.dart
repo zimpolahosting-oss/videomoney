@@ -71,14 +71,12 @@ class RewardedAdService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isLoading = false;
-          _logLoaded(_RewardedNetwork.admob,
-              event: 'AdMob rewarded loaded and ready.');
+          _logLoaded(_RewardedNetwork.admob);
         },
         onAdFailedToLoad: (_) {
           _rewardedAd = null;
           _isLoading = false;
-          _logUnavailable(_RewardedNetwork.admob,
-              event: 'AdMob rewarded failed to load.');
+          _logUnavailable(_RewardedNetwork.admob);
         },
       ),
     );

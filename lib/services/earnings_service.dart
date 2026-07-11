@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'firestore_service.dart';
 import 'rewarded_ad_service.dart';
 
