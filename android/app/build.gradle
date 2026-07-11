@@ -32,11 +32,6 @@ def appnextPlacementId = (
                 ?: System.getenv('APPNEXT_PLACEMENT_ID')
                 ?: ''
 ).trim()
-def startioAppId = (
-        localProperties.getProperty('startio.appId')
-                ?: System.getenv('STARTIO_APP_ID')
-                ?: '206588272'
-).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -65,7 +60,6 @@ android {
         buildConfigField "String", "APPODEAL_APP_KEY", "\"${appodealAppKey}\""
         buildConfigField "String", "APPNEXT_APP_ID", "\"${appnextAppId}\""
         buildConfigField "String", "APPNEXT_PLACEMENT_ID", "\"${appnextPlacementId}\""
-        manifestPlaceholders = [startioAppId: startioAppId]
     }
     signingConfigs {
         release {

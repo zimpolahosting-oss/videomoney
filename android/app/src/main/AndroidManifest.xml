@@ -14,7 +14,7 @@
             android:value="ca-app-pub-3940256099942544~3347511713" />
         <meta-data
             android:name="com.startapp.sdk.APPLICATION_ID"
-            android:value="${startioAppId}" />
+            android:value="206588272" />
         <meta-data
             android:name="com.startapp.sdk.RETURN_ADS_ENABLED"
             android:value="false" />
