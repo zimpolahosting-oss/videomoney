@@ -164,7 +164,7 @@ class WalletScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: _RuleMiniCard(
                     icon: Icons.verified_user_outlined,
                     title: l10n.approval,
