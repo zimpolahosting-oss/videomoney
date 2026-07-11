@@ -21,6 +21,12 @@ import com.facebook.ads.InterstitialAd
 import com.facebook.ads.InterstitialAdListener
 import com.facebook.ads.RewardedInterstitialAd
 import com.facebook.ads.RewardedInterstitialAdListener
+import com.startapp.sdk.adsbase.Ad as StartioAd
+import com.startapp.sdk.adsbase.StartAppAd
+import com.startapp.sdk.adsbase.StartAppAd.AdMode
+import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
+import com.startapp.sdk.adsbase.adlisteners.AdEventListener
+import com.startapp.sdk.adsbase.adlisteners.VideoListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -31,11 +37,16 @@ class MainActivity : FlutterActivity() {
     private var metaRewardedInterstitialAd: RewardedInterstitialAd? = null
     private var metaInterstitialAd: InterstitialAd? = null
     private var metaBannerAdView: AdView? = null
+    private var startioRewardedAd: StartAppAd? = null
+    private var startioInterstitialAd: StartAppAd? = null
+    private var startioRewardedLoaded = false
+    private var startioInterstitialLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureRewardedVideoCallbacks()
         initializeMetaAudienceNetwork()
+        initializeStartioIfNeeded()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
     }
@@ -67,6 +78,52 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
+                    "preloadMetaRewardedInterstitial" -> {
+                        preloadMetaRewardedInterstitial()
+                        result.success(null)
+                    }
+
+                    "isMetaRewardedInterstitialLoaded" -> {
+                        result.success(
+                            metaRewardedInterstitialAd?.isAdLoaded == true &&
+                                metaRewardedInterstitialAd?.isAdInvalidated != true,
+                        )
+                    }
+
+                    "showMetaRewardedInterstitial" -> {
+                        val rewardedInterstitialAd = metaRewardedInterstitialAd
+                        val canShow = rewardedInterstitialAd?.isAdLoaded == true &&
+                            rewardedInterstitialAd.isAdInvalidated != true
+                        if (canShow) {
+                            rewardedInterstitialAd?.show()
+                            result.success(true)
+                        } else {
+                            preloadMetaRewardedInterstitial()
+                            result.success(false)
+                        }
+                    }
+
+                    "preloadStartioRewardedVideo" -> {
+                        preloadStartioRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "isStartioRewardedVideoLoaded" -> {
+                        result.success(startioRewardedLoaded)
+                    }
+
+                    "showStartioRewardedVideo" -> {
+                        val rewardedAd = startioRewardedAd
+                        if (rewardedAd != null && startioRewardedLoaded) {
+                            startioRewardedLoaded = false
+                            rewardedAd.showAd(createStartioRewardedDisplayListener())
+                            result.success(true)
+                        } else {
+                            preloadStartioRewardedVideo()
+                            result.success(false)
+                        }
+                    }
+
                     "isAppnextRewardedVideoLoaded" -> {
                         result.success(appnextRewardedVideo?.isAdLoaded == true)
                     }
@@ -83,6 +140,7 @@ class MainActivity : FlutterActivity() {
                     "showAppnextRewardedVideo" -> {
                         val rewardedVideo = appnextRewardedVideo
                         if (rewardedVideo?.isAdLoaded == true) {
+                            Log.d(LOG_TAG, "[rewarded][appnext] showing.")
                             rewardedVideo.showAd()
                             result.success(true)
                         } else {
@@ -106,24 +164,30 @@ class MainActivity : FlutterActivity() {
         metaInterstitialAd = null
         metaBannerAdView?.destroy()
         metaBannerAdView = null
+        startioRewardedAd = null
+        startioInterstitialAd = null
         super.onDestroy()
     }
 
     private fun configureRewardedVideoCallbacks() {
         Appodeal.setRewardedVideoCallbacks(object : RewardedVideoCallbacks {
             override fun onRewardedVideoLoaded(isPrecache: Boolean) {
+                Log.d(LOG_TAG, "[rewarded][appodeal] loaded.")
                 emitEvent("onRewardedVideoLoaded", mapOf("isPrecache" to isPrecache))
             }
 
             override fun onRewardedVideoFailedToLoad() {
+                Log.w(LOG_TAG, "[rewarded][appodeal] failed to load.")
                 emitEvent("onRewardedVideoFailedToLoad")
             }
 
             override fun onRewardedVideoShown() {
+                Log.d(LOG_TAG, "[rewarded][appodeal] shown.")
                 emitEvent("onRewardedVideoShown")
             }
 
             override fun onRewardedVideoShowFailed() {
+                Log.w(LOG_TAG, "[rewarded][appodeal] failed to show.")
                 emitEvent("onRewardedVideoShowFailed")
                 cacheRewardedVideo()
             }
@@ -131,6 +195,7 @@ class MainActivity : FlutterActivity() {
             override fun onRewardedVideoClicked() = Unit
 
             override fun onRewardedVideoFinished(amount: Double, currency: String) {
+                Log.d(LOG_TAG, "[rewarded][appodeal] completed.")
                 emitEvent(
                     "onRewardedVideoFinished",
                     mapOf(
@@ -141,11 +206,13 @@ class MainActivity : FlutterActivity() {
             }
 
             override fun onRewardedVideoClosed(finished: Boolean) {
+                Log.d(LOG_TAG, "[rewarded][appodeal] closed.")
                 emitEvent("onRewardedVideoClosed", mapOf("finished" to finished))
                 cacheRewardedVideo()
             }
 
             override fun onRewardedVideoExpired() {
+                Log.w(LOG_TAG, "[rewarded][appodeal] expired.")
                 emitEvent("onRewardedVideoExpired")
                 cacheRewardedVideo()
             }
@@ -186,6 +253,11 @@ class MainActivity : FlutterActivity() {
         preloadMetaBanner()
     }
 
+    private fun initializeStartioIfNeeded() {
+        preloadStartioRewardedVideo()
+        preloadStartioInterstitial()
+    }
+
     private fun preloadMetaRewardedInterstitial() {
         val placementId = BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID
         if (placementId.isBlank()) {
@@ -199,23 +271,34 @@ class MainActivity : FlutterActivity() {
                 buildLoadAdConfig()
                     .withAdListener(object : RewardedInterstitialAdListener {
                         override fun onError(ad: Ad?, adError: AdError) {
+                            emitEvent(
+                                "onMetaRewardedInterstitialError",
+                                mapOf("error" to adError.errorMessage),
+                            )
                             Log.w(LOG_TAG, "Meta rewarded interstitial load failed: ${adError.errorMessage}")
                         }
 
                         override fun onAdLoaded(ad: Ad?) {
+                            emitEvent("onMetaRewardedInterstitialLoaded")
                             Log.d(LOG_TAG, "Meta rewarded interstitial loaded.")
                         }
 
                         override fun onAdClicked(ad: Ad?) = Unit
 
-                        override fun onLoggingImpression(ad: Ad?) = Unit
+                        override fun onLoggingImpression(ad: Ad?) {
+                            emitEvent("onMetaRewardedInterstitialShown")
+                            Log.d(LOG_TAG, "[rewarded][meta] shown.")
+                        }
 
                         override fun onRewardedInterstitialCompleted() {
+                            emitEvent("onMetaRewardedInterstitialCompleted")
                             Log.d(LOG_TAG, "Meta rewarded interstitial completed.")
                         }
 
                         override fun onRewardedInterstitialClosed() {
+                            emitEvent("onMetaRewardedInterstitialClosed")
                             Log.d(LOG_TAG, "Meta rewarded interstitial closed.")
+                            preloadMetaRewardedInterstitial()
                         }
                     })
                     .build(),
@@ -235,9 +318,12 @@ class MainActivity : FlutterActivity() {
             loadAd(
                 buildLoadAdConfig()
                     .withAdListener(object : InterstitialAdListener {
-                        override fun onInterstitialDisplayed(ad: Ad?) = Unit
+                        override fun onInterstitialDisplayed(ad: Ad?) {
+                            Log.d(LOG_TAG, "[interstitial][meta] shown.")
+                        }
 
                         override fun onInterstitialDismissed(ad: Ad?) {
+                            preloadMetaInterstitial()
                             Log.d(LOG_TAG, "Meta interstitial dismissed.")
                         }
 
@@ -287,6 +373,74 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun preloadStartioRewardedVideo() {
+        startioRewardedLoaded = false
+        startioRewardedAd = StartAppAd(this).apply {
+            setVideoListener(object : VideoListener {
+                override fun onVideoCompleted() {
+                    emitEvent("onStartioRewardedVideoCompleted")
+                    Log.d(LOG_TAG, "[rewarded][startio] completed.")
+                }
+            })
+            loadAd(
+                AdMode.REWARDED_VIDEO,
+                object : AdEventListener {
+                    override fun onReceiveAd(ad: StartioAd) {
+                        startioRewardedLoaded = true
+                        emitEvent("onStartioRewardedVideoLoaded")
+                        Log.d(LOG_TAG, "[rewarded][startio] loaded.")
+                    }
+
+                    override fun onFailedToReceiveAd(ad: StartioAd?) {
+                        startioRewardedLoaded = false
+                        emitEvent("onStartioRewardedVideoError")
+                        Log.w(LOG_TAG, "[rewarded][startio] failed to load.")
+                    }
+                },
+            )
+        }
+    }
+
+    private fun preloadStartioInterstitial() {
+        startioInterstitialLoaded = false
+        startioInterstitialAd = StartAppAd(this).apply {
+            loadAd(object : AdEventListener {
+                override fun onReceiveAd(ad: StartioAd) {
+                    startioInterstitialLoaded = true
+                    Log.d(LOG_TAG, "[interstitial][startio] loaded.")
+                }
+
+                override fun onFailedToReceiveAd(ad: StartioAd?) {
+                    startioInterstitialLoaded = false
+                    Log.w(LOG_TAG, "[interstitial][startio] failed to load.")
+                }
+            })
+        }
+    }
+
+    private fun createStartioRewardedDisplayListener(): AdDisplayListener {
+        return object : AdDisplayListener {
+            override fun adHidden(ad: StartioAd) {
+                emitEvent("onStartioRewardedVideoClosed")
+                Log.d(LOG_TAG, "[rewarded][startio] closed.")
+                preloadStartioRewardedVideo()
+            }
+
+            override fun adDisplayed(ad: StartioAd) {
+                emitEvent("onStartioRewardedVideoShown")
+                Log.d(LOG_TAG, "[rewarded][startio] shown.")
+            }
+
+            override fun adClicked(ad: StartioAd) = Unit
+
+            override fun adNotDisplayed(ad: StartioAd) {
+                emitEvent("onStartioRewardedVideoError")
+                Log.w(LOG_TAG, "[rewarded][startio] failed to show.")
+                preloadStartioRewardedVideo()
+            }
+        }
+    }
+
     private fun initializeAppnextIfNeeded() {
         createAppnextRewardedIfNeeded()
     }
@@ -330,6 +484,7 @@ class MainActivity : FlutterActivity() {
     private fun preloadAppnextRewardedVideo() {
         val rewardedVideo = appnextRewardedVideo ?: return
         if (!rewardedVideo.isAdLoaded) {
+            Log.d(LOG_TAG, "[rewarded][appnext] requesting load.")
             rewardedVideo.loadAd()
         }
     }
@@ -338,6 +493,7 @@ class MainActivity : FlutterActivity() {
         if (Appodeal.isInitialized(REWARDED_VIDEO_TYPE) &&
             !Appodeal.isLoaded(REWARDED_VIDEO_TYPE)
         ) {
+            Log.d(LOG_TAG, "[rewarded][appodeal] requesting load.")
             Appodeal.cache(this, REWARDED_VIDEO_TYPE)
         }
     }
