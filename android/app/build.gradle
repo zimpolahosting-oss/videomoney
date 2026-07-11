@@ -27,6 +27,11 @@ def appnextAppId = (
                 ?: System.getenv('APPNEXT_APP_ID')
                 ?: '1106737'
 ).trim()
+def appnextPlacementId = (
+        localProperties.getProperty('appnext.placementId')
+                ?: System.getenv('APPNEXT_PLACEMENT_ID')
+                ?: ''
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -54,6 +59,7 @@ android {
         versionName = flutter.versionName
         buildConfigField "String", "APPODEAL_APP_KEY", "\"${appodealAppKey}\""
         buildConfigField "String", "APPNEXT_APP_ID", "\"${appnextAppId}\""
+        buildConfigField "String", "APPNEXT_PLACEMENT_ID", "\"${appnextPlacementId}\""
     }
     signingConfigs {
         release {

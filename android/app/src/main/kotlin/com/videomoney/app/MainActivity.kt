@@ -2,7 +2,13 @@ package com.videomoney.app
 
 import android.os.Bundle
 import android.util.Log
+import com.appnext.ads.fullscreen.RewardedVideo
 import com.appnext.core.Appnext
+import com.appnext.core.callbacks.OnAdClosed
+import com.appnext.core.callbacks.OnAdError
+import com.appnext.core.callbacks.OnAdLoaded
+import com.appnext.core.callbacks.OnAdOpened
+import com.appnext.core.callbacks.OnVideoEnded
 import com.appodeal.ads.Appodeal
 import com.appodeal.ads.RewardedVideoCallbacks
 import com.appodeal.ads.initializing.ApdInitializationCallback
@@ -13,6 +19,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var rewardedVideoChannel: MethodChannel? = null
+    private var appnextRewardedVideo: RewardedVideo? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,12 +50,32 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
+                    "preloadAppnextRewardedVideo" -> {
+                        preloadAppnextRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "isAppnextRewardedVideoLoaded" -> {
+                        result.success(appnextRewardedVideo?.isAdLoaded == true)
+                    }
+
                     "showRewardedVideo" -> {
                         if (!Appodeal.isLoaded(REWARDED_VIDEO_TYPE)) {
                             cacheRewardedVideo()
                             result.success(false)
                         } else {
                             result.success(Appodeal.show(this, REWARDED_VIDEO_TYPE))
+                        }
+                    }
+
+                    "showAppnextRewardedVideo" -> {
+                        val rewardedVideo = appnextRewardedVideo
+                        if (rewardedVideo?.isAdLoaded == true) {
+                            rewardedVideo.showAd()
+                            result.success(true)
+                        } else {
+                            preloadAppnextRewardedVideo()
+                            result.success(false)
                         }
                     }
 
@@ -136,6 +163,55 @@ class MainActivity : FlutterActivity() {
     private fun initializeAppnextIfNeeded() {
         Appnext.init(this)
         Log.d(LOG_TAG, "Appnext SDK initialized for app ID ${BuildConfig.APPNEXT_APP_ID}")
+        createAppnextRewardedIfNeeded()
+    }
+
+    private fun createAppnextRewardedIfNeeded() {
+        val placementId = BuildConfig.APPNEXT_PLACEMENT_ID
+        if (placementId.isBlank()) {
+            Log.w(LOG_TAG, "Appnext placement ID is missing, rewarded fallback disabled.")
+            return
+        }
+        if (appnextRewardedVideo != null) {
+            return
+        }
+
+        appnextRewardedVideo = RewardedVideo(this, placementId).apply {
+            setOnAdLoadedCallback(object : OnAdLoaded {
+                override fun adLoaded(bannerId: String) {
+                    emitEvent("onAppnextRewardedVideoLoaded", mapOf("bannerId" to bannerId))
+                }
+            })
+            setOnAdOpenedCallback(object : OnAdOpened {
+                override fun adOpened() {
+                    emitEvent("onAppnextRewardedVideoOpened")
+                }
+            })
+            setOnAdClosedCallback(object : OnAdClosed {
+                override fun onAdClosed() {
+                    emitEvent("onAppnextRewardedVideoClosed")
+                    preloadAppnextRewardedVideo()
+                }
+            })
+            setOnAdErrorCallback(object : OnAdError {
+                override fun adError(error: String) {
+                    emitEvent("onAppnextRewardedVideoError", mapOf("error" to error))
+                }
+            })
+            setOnVideoEndedCallback(object : OnVideoEnded {
+                override fun videoEnded() {
+                    emitEvent("onAppnextRewardedVideoEnded")
+                }
+            })
+        }
+        preloadAppnextRewardedVideo()
+    }
+
+    private fun preloadAppnextRewardedVideo() {
+        val rewardedVideo = appnextRewardedVideo ?: return
+        if (!rewardedVideo.isAdLoaded) {
+            rewardedVideo.loadAd()
+        }
     }
 
     private fun cacheRewardedVideo() {
