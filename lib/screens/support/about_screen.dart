@@ -39,7 +39,7 @@ class AboutScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
-                _Line(label: l10n.version, value: '1.0.1+5'),
+                _Line(label: l10n.version, value: '1.0.1+6'),
                 _Line(label: l10n.minimumPayoutLabel, value: '10,000 ${l10n.viewsUnit}'),
                 _Line(label: l10n.processingTimeLabel, value: '30 days'),
                 _Line(label: l10n.reviewLabel, value: l10n.adminApproval),

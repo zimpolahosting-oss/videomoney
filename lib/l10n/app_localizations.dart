@@ -275,6 +275,9 @@ class AppLocalizations {
   String get termsSupportBullet2 => _text('termsSupportBullet2');
   String get termsSupportBullet3 => _text('termsSupportBullet3');
   String get settingsTitle => _text('settingsTitle');
+  String get appLanguage => _text('appLanguage');
+  String get appLanguageSubtitle => _text('appLanguageSubtitle');
+  String get automaticLanguage => _text('automaticLanguage');
 
   String payoutStatus(String status) {
     switch (status.toLowerCase()) {
@@ -563,6 +566,10 @@ class AppLocalizations {
       'termsSupportBullet3':
           'Serious misuse, harassment, or fraudulent activity can lead to restriction of app access.',
       'settingsTitle': 'Settings',
+      'appLanguage': 'App language',
+      'appLanguageSubtitle':
+          'Use automatic device language or choose a language manually.',
+      'automaticLanguage': 'Automatic (device language)',
       'statusPending': 'PENDING',
       'statusApproved': 'APPROVED',
       'statusPaid': 'PAID',
@@ -813,6 +820,10 @@ class AppLocalizations {
       'termsSupportBullet3':
           'Ernstig misbruik, intimidatie of frauduleuze activiteit kan leiden tot beperking van apptoegang.',
       'settingsTitle': 'Instellingen',
+      'appLanguage': 'App-taal',
+      'appLanguageSubtitle':
+          'Gebruik automatisch de telefoontaal of kies zelf een taal.',
+      'automaticLanguage': 'Automatisch (telefoontaal)',
       'statusPending': 'IN AFWACHTING',
       'statusApproved': 'GOEDGEKEURD',
       'statusPaid': 'BETAALD',

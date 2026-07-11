@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/app_language_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dailyReminderEnabled = true;
   bool _isLoading = true;
   bool _isSaving = false;
+  String _selectedLanguageCode = AppLanguageService.automaticValue;
 
   @override
   void initState() {
@@ -29,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
+    _selectedLanguageCode =
+        AppLanguageService.instance.selectedLanguageCodeOrAuto;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       if (mounted) setState(() => _isLoading = false);
@@ -64,6 +68,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         notificationsEnabled: _notificationsEnabled,
         dailyReminderEnabled: _dailyReminderEnabled,
       );
+      await AppLanguageService.instance.setPreferredLanguageCode(
+        _selectedLanguageCode == AppLanguageService.automaticValue
+            ? null
+            : _selectedLanguageCode,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsSaved)),
@@ -81,11 +90,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final languageOptions = AppLanguageService.instance.supportedLanguageOptions;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.appLanguage,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.appLanguageSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  value: _selectedLanguageCode,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.language_outlined),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: AppLanguageService.automaticValue,
+                      child: Text(l10n.automaticLanguage),
+                    ),
+                    ...languageOptions.map(
+                      (option) => DropdownMenuItem(
+                        value: option.code,
+                        child: Text(option.label),
+                      ),
+                    ),
+                  ],
+                  onChanged: _isSaving
+                      ? null
+                      : (value) {
+                          if (value == null) return;
+                          setState(() => _selectedLanguageCode = value);
+                        },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -179,7 +237,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 Text(
-                  '1.0.1+5',
+                  '1.0.1+6',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],

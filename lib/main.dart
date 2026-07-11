@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'app_routes.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'services/app_language_service.dart';
 import 'services/notification_service.dart';
 import 'services/rewarded_ad_service.dart';
 import 'theme/app_theme.dart';
@@ -26,6 +27,7 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
   late final Future<void> _initializeFuture = _initialize();
 
   Future<void> _initialize() async {
+    await AppLanguageService.instance.initialize();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -36,29 +38,36 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (context) => context.l10n.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme(),
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      home: FutureBuilder<void>(
-        future: _initializeFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const _StartupStatusScreen(showLoader: true);
-          }
+    return AnimatedBuilder(
+      animation: AppLanguageService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          onGenerateTitle: (context) => context.l10n.appName,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.darkTheme(),
+          locale: AppLanguageService.instance.localeOverride,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: FutureBuilder<void>(
+            future: _initializeFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const _StartupStatusScreen(showLoader: true);
+              }
 
-          if (snapshot.hasError) {
-            return _StartupStatusScreen(
-              message: snapshot.error.toString().replaceFirst('Exception: ', ''),
-              isError: true,
-            );
-          }
+              if (snapshot.hasError) {
+                return _StartupStatusScreen(
+                  message:
+                      snapshot.error.toString().replaceFirst('Exception: ', ''),
+                  isError: true,
+                );
+              }
 
-          return const VideoMoneyApp();
-        },
-      ),
+              return const VideoMoneyApp();
+            },
+          ),
+        );
+      },
     );
   }
 }
