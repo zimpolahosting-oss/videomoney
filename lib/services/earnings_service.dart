@@ -13,6 +13,13 @@ class EarningsService {
   final FirestoreService _firestoreService;
   final RewardedAdService _rewardedAdService;
 
+  ValueListenable<RewardedAdDebugState> get rewardedAdDebugListenable =>
+      _rewardedAdService.debugListenable;
+
+  Future<void> setSkipDirectAdMobForTesting(bool value) {
+    return _rewardedAdService.setSkipDirectAdMobForTesting(value);
+  }
+
   Future<void> preloadRewardedVideo() {
     return _rewardedAdService.preloadRewardedAd();
   }
