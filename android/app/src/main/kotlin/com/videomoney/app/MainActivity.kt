@@ -12,6 +12,16 @@ import com.appodeal.ads.Appodeal
 import com.appodeal.ads.RewardedVideoCallbacks
 import com.appodeal.ads.initializing.ApdInitializationCallback
 import com.appodeal.ads.initializing.ApdInitializationError
+import com.facebook.ads.Ad
+import com.facebook.ads.AdError
+import com.facebook.ads.AdListener
+import com.facebook.ads.AdSize
+import com.facebook.ads.AdView
+import com.facebook.ads.AudienceNetworkAds
+import com.facebook.ads.InterstitialAd
+import com.facebook.ads.InterstitialAdListener
+import com.facebook.ads.RewardedInterstitialAd
+import com.facebook.ads.RewardedInterstitialAdListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,10 +29,14 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var rewardedVideoChannel: MethodChannel? = null
     private var appnextRewardedVideo: RewardedVideo? = null
+    private var metaRewardedInterstitialAd: RewardedInterstitialAd? = null
+    private var metaInterstitialAd: InterstitialAd? = null
+    private var metaBannerAdView: AdView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureRewardedVideoCallbacks()
+        initializeMetaAudienceNetwork()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
     }
@@ -87,6 +101,12 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         rewardedVideoChannel?.setMethodCallHandler(null)
         rewardedVideoChannel = null
+        metaRewardedInterstitialAd?.destroy()
+        metaRewardedInterstitialAd = null
+        metaInterstitialAd?.destroy()
+        metaInterstitialAd = null
+        metaBannerAdView?.destroy()
+        metaBannerAdView = null
         super.onDestroy()
     }
 
@@ -157,6 +177,115 @@ class MainActivity : FlutterActivity() {
                 }
             },
         )
+    }
+
+    private fun initializeMetaAudienceNetwork() {
+        AudienceNetworkAds.initialize(this)
+        Log.d(LOG_TAG, "Meta Audience Network SDK initialized for app ID ${BuildConfig.META_APP_ID}")
+        preloadMetaRewardedInterstitial()
+        preloadMetaInterstitial()
+        preloadMetaBanner()
+    }
+
+    private fun preloadMetaRewardedInterstitial() {
+        val placementId = BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID
+        if (placementId.isBlank()) {
+            Log.w(LOG_TAG, "Meta rewarded interstitial placement ID is missing.")
+            return
+        }
+
+        metaRewardedInterstitialAd?.destroy()
+        metaRewardedInterstitialAd = RewardedInterstitialAd(this, placementId).apply {
+            loadAd(
+                buildLoadAdConfig()
+                    .withAdListener(object : RewardedInterstitialAdListener {
+                        override fun onError(ad: Ad?, adError: AdError) {
+                            Log.w(LOG_TAG, "Meta rewarded interstitial load failed: ${adError.errorMessage}")
+                        }
+
+                        override fun onAdLoaded(ad: Ad?) {
+                            Log.d(LOG_TAG, "Meta rewarded interstitial loaded.")
+                        }
+
+                        override fun onAdClicked(ad: Ad?) = Unit
+
+                        override fun onLoggingImpression(ad: Ad?) = Unit
+
+                        override fun onRewardedInterstitialCompleted() {
+                            Log.d(LOG_TAG, "Meta rewarded interstitial completed.")
+                        }
+
+                        override fun onRewardedInterstitialClosed() {
+                            Log.d(LOG_TAG, "Meta rewarded interstitial closed.")
+                        }
+                    })
+                    .build(),
+            )
+        }
+    }
+
+    private fun preloadMetaInterstitial() {
+        val placementId = BuildConfig.META_INTERSTITIAL_PLACEMENT_ID
+        if (placementId.isBlank()) {
+            Log.w(LOG_TAG, "Meta interstitial placement ID is missing.")
+            return
+        }
+
+        metaInterstitialAd?.destroy()
+        metaInterstitialAd = InterstitialAd(this, placementId).apply {
+            loadAd(
+                buildLoadAdConfig()
+                    .withAdListener(object : InterstitialAdListener {
+                        override fun onInterstitialDisplayed(ad: Ad?) = Unit
+
+                        override fun onInterstitialDismissed(ad: Ad?) {
+                            Log.d(LOG_TAG, "Meta interstitial dismissed.")
+                        }
+
+                        override fun onError(ad: Ad?, adError: AdError) {
+                            Log.w(LOG_TAG, "Meta interstitial load failed: ${adError.errorMessage}")
+                        }
+
+                        override fun onAdLoaded(ad: Ad?) {
+                            Log.d(LOG_TAG, "Meta interstitial loaded.")
+                        }
+
+                        override fun onAdClicked(ad: Ad?) = Unit
+
+                        override fun onLoggingImpression(ad: Ad?) = Unit
+                    })
+                    .build(),
+            )
+        }
+    }
+
+    private fun preloadMetaBanner() {
+        val placementId = BuildConfig.META_BANNER_PLACEMENT_ID
+        if (placementId.isBlank()) {
+            Log.w(LOG_TAG, "Meta banner placement ID is missing.")
+            return
+        }
+
+        metaBannerAdView?.destroy()
+        metaBannerAdView = AdView(this, placementId, AdSize.BANNER_HEIGHT_50).apply {
+            loadAd(
+                buildLoadAdConfig()
+                    .withAdListener(object : AdListener {
+                        override fun onError(ad: Ad?, adError: AdError) {
+                            Log.w(LOG_TAG, "Meta banner load failed: ${adError.errorMessage}")
+                        }
+
+                        override fun onAdLoaded(ad: Ad?) {
+                            Log.d(LOG_TAG, "Meta banner loaded.")
+                        }
+
+                        override fun onAdClicked(ad: Ad?) = Unit
+
+                        override fun onLoggingImpression(ad: Ad?) = Unit
+                    })
+                    .build(),
+            )
+        }
     }
 
     private fun initializeAppnextIfNeeded() {

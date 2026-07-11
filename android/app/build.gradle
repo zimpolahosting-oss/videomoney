@@ -32,6 +32,26 @@ def appnextPlacementId = (
                 ?: System.getenv('APPNEXT_PLACEMENT_ID')
                 ?: ''
 ).trim()
+def metaAppId = (
+        localProperties.getProperty('meta.appId')
+                ?: System.getenv('META_APP_ID')
+                ?: '1741013560433241'
+).trim()
+def metaRewardedInterstitialPlacementId = (
+        localProperties.getProperty('meta.rewardedInterstitialPlacementId')
+                ?: System.getenv('META_REWARDED_INTERSTITIAL_PLACEMENT_ID')
+                ?: '1741013560433241_1741019903765940'
+).trim()
+def metaInterstitialPlacementId = (
+        localProperties.getProperty('meta.interstitialPlacementId')
+                ?: System.getenv('META_INTERSTITIAL_PLACEMENT_ID')
+                ?: '1741013560433241_1741019900432607'
+).trim()
+def metaBannerPlacementId = (
+        localProperties.getProperty('meta.bannerPlacementId')
+                ?: System.getenv('META_BANNER_PLACEMENT_ID')
+                ?: '1741013560433241_1741019897099274'
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -60,6 +80,10 @@ android {
         buildConfigField "String", "APPODEAL_APP_KEY", "\"${appodealAppKey}\""
         buildConfigField "String", "APPNEXT_APP_ID", "\"${appnextAppId}\""
         buildConfigField "String", "APPNEXT_PLACEMENT_ID", "\"${appnextPlacementId}\""
+        buildConfigField "String", "META_APP_ID", "\"${metaAppId}\""
+        buildConfigField "String", "META_REWARDED_INTERSTITIAL_PLACEMENT_ID", "\"${metaRewardedInterstitialPlacementId}\""
+        buildConfigField "String", "META_INTERSTITIAL_PLACEMENT_ID", "\"${metaInterstitialPlacementId}\""
+        buildConfigField "String", "META_BANNER_PLACEMENT_ID", "\"${metaBannerPlacementId}\""
     }
     signingConfigs {
         release {
@@ -89,6 +113,7 @@ flutter {
 
 dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.1.2")
+    implementation "com.facebook.android:audience-network-sdk:6.+"
     implementation "com.appnext.sdk:ads:2.7.6.473"
     implementation "com.appodeal.ads.sdk:core:4.2.0"
     implementation "com.appodeal.ads.sdk.adapters:admob:24.7.0.0"
