@@ -1,3 +1,4 @@
 sdk.dir=/path/to/android/sdk
 flutter.sdk=/path/to/flutter
 appodeal.appKey=APPODEAL_APP_KEY
+appnext.appId=1106737

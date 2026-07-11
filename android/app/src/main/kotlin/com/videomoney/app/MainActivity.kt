@@ -2,6 +2,7 @@ package com.videomoney.app
 
 import android.os.Bundle
 import android.util.Log
+import com.appnext.core.Appnext
 import com.appodeal.ads.Appodeal
 import com.appodeal.ads.RewardedVideoCallbacks
 import com.appodeal.ads.initializing.ApdInitializationCallback
@@ -16,6 +17,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureRewardedVideoCallbacks()
+        initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
     }
 
@@ -129,6 +131,11 @@ class MainActivity : FlutterActivity() {
                 }
             },
         )
+    }
+
+    private fun initializeAppnextIfNeeded() {
+        Appnext.init(this)
+        Log.d(LOG_TAG, "Appnext SDK initialized for app ID ${BuildConfig.APPNEXT_APP_ID}")
     }
 
     private fun cacheRewardedVideo() {
