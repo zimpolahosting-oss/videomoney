@@ -3,7 +3,6 @@ package com.videomoney.app
 import android.os.Bundle
 import android.util.Log
 import com.appnext.ads.fullscreen.RewardedVideo
-import com.appnext.core.Appnext
 import com.appnext.core.callbacks.OnAdClosed
 import com.appnext.core.callbacks.OnAdError
 import com.appnext.core.callbacks.OnAdOpened
@@ -289,8 +288,6 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun initializeAppnextIfNeeded() {
-        Appnext.init(this)
-        Log.d(LOG_TAG, "Appnext SDK initialized for app ID ${BuildConfig.APPNEXT_APP_ID}")
         createAppnextRewardedIfNeeded()
     }
 
