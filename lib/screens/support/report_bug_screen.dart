@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -26,6 +27,7 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -42,7 +44,7 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
       _titleController.clear();
       _descController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bug report submitted.')),
+        SnackBar(content: Text(l10n.bugReportSubmitted)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -56,8 +58,9 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Report Bug')),
+      appBar: AppBar(title: Text(l10n.reportBug)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
@@ -72,20 +75,20 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tell us what happened',
+                  l10n.tellUsWhatHappened,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Include steps to reproduce and what you expected to see.',
+                  l10n.includeStepsExpected,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Short summary',
+                  decoration: InputDecoration(
+                    labelText: l10n.title,
+                    hintText: l10n.shortSummary,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -93,9 +96,9 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
                   controller: _descController,
                   minLines: 5,
                   maxLines: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'Describe the bug...',
+                  decoration: InputDecoration(
+                    labelText: l10n.description,
+                    hintText: l10n.describeBug,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -104,7 +107,7 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
                     Expanded(
                       child: FilledButton(
                         onPressed: _isSubmitting ? null : _submit,
-                        child: Text(_isSubmitting ? 'Submitting...' : 'Submit'),
+                        child: Text(_isSubmitting ? l10n.sending : l10n.submit),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -114,7 +117,7 @@ class _ReportBugScreenState extends State<ReportBugScreen> {
                           Navigator.of(context).pushNamed(AppRoutes.inbox);
                         },
                         icon: const Icon(Icons.inbox_outlined),
-                        label: const Text('Open inbox'),
+                        label: Text(l10n.openInbox),
                       ),
                     ),
                   ],

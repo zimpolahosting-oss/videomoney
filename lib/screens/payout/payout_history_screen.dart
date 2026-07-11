@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
@@ -11,17 +12,18 @@ class PayoutHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Payout History')),
+      appBar: AppBar(title: Text(l10n.payoutHistoryTitle)),
       body: StreamBuilder<List<PayoutRequest>>(
         stream: firestoreService.watchPayouts(user.uid),
         builder: (context, snapshot) {
@@ -30,20 +32,20 @@ class PayoutHistoryScreen extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Unable to load payout history right now.'),
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.unableLoadPayoutHistory),
               ),
             );
           }
 
           final payouts = snapshot.data ?? const <PayoutRequest>[];
           if (payouts.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('No payout requests yet.'),
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.noPayoutRequestsYet),
               ),
             );
           }
@@ -54,7 +56,7 @@ class PayoutHistoryScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final payout = payouts[index];
               final formattedDate = payout.createdAt == null
-                  ? 'Pending timestamp'
+                  ? l10n.pendingTimestamp
                   : DateFormat.yMMMd().add_jm().format(payout.createdAt!);
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -72,12 +74,12 @@ class PayoutHistoryScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
+                            '${NumberFormat.decimalPattern().format(payout.viewsRequested)} ${l10n.viewsUnit}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Currency: ${payout.normalizedCurrency}',
+                            l10n.currencyLabel(payout.normalizedCurrency),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
@@ -87,7 +89,11 @@ class PayoutHistoryScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Account holder: ${payout.accountHolderName.isEmpty ? 'Not provided' : payout.accountHolderName}',
+                            l10n.accountHolderLabel(
+                              payout.accountHolderName.isEmpty
+                                  ? l10n.notProvided
+                                  : payout.accountHolderName,
+                            ),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
@@ -134,7 +140,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.28)),
       ),
       child: Text(
-        status.toUpperCase(),
+        context.l10n.payoutStatus(status),
         style: TextStyle(
           color: color,
           fontSize: 12,

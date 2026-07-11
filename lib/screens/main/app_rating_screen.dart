@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/app_rating.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
@@ -19,6 +20,7 @@ class _AppRatingScreenState extends State<AppRatingScreen> {
   bool _initializedFromExistingRating = false;
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -31,7 +33,7 @@ class _AppRatingScreenState extends State<AppRatingScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanks for your rating.')),
+        SnackBar(content: Text(l10n.thanksForRating)),
       );
       Navigator.of(context).pop();
     } catch (error) {
@@ -46,15 +48,16 @@ class _AppRatingScreenState extends State<AppRatingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rate App')),
+      appBar: AppBar(title: Text(l10n.rateApp)),
       body: StreamBuilder<AppRating?>(
         stream: _firestoreService.watchUserRating(user.uid),
         builder: (context, snapshot) {
@@ -78,12 +81,12 @@ class _AppRatingScreenState extends State<AppRatingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'How would you rate VideoMoney?',
+                      l10n.rateAppQuestion,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Choose between 1 and 5 stars. You can update your rating later.',
+                      l10n.choose1to5,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 20),
@@ -115,7 +118,7 @@ class _AppRatingScreenState extends State<AppRatingScreen> {
                       width: double.infinity,
                       child: FilledButton(
                         onPressed: _isSubmitting ? null : _submit,
-                        child: Text(_isSubmitting ? 'Saving...' : 'Save rating'),
+                        child: Text(_isSubmitting ? l10n.saving : l10n.saveRating),
                       ),
                     ),
                   ],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _watchVideo() async {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || _isLoading) return;
 
@@ -49,11 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (rewardGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reward confirmed. Views added.')),
+        SnackBar(content: Text(l10n.rewardConfirmedViewsAdded)),
       );
     } else if (lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rewarded ad was not completed.')),
+        SnackBar(content: Text(l10n.rewardedAdNotCompleted)),
       );
     }
     setState(() => _isLoading = false);
@@ -61,11 +63,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
@@ -98,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
               children: [
-                const _TopTitle(title: 'Home'),
+                _TopTitle(title: l10n.home),
                 const SizedBox(height: 14),
                 SizedBox(
                   height: 264,
@@ -181,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            'Welcome back,',
+                            l10n.welcomeBackShort,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -189,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            user.email ?? 'Signed-in user',
+                            user.email ?? l10n.signedInUser,
                             style: Theme.of(context).textTheme.titleMedium,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -199,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 235),
                           child: Text(
-                            'Watch videos, earn views, and get paid.',
+                            l10n.watchVideosEarnPaid,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -210,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: _MiniStatCard(
                                 icon: Icons.visibility_outlined,
-                                title: 'Current Views',
+                                title: l10n.currentViews,
                                 value: NumberFormat.decimalPattern().format(views),
                               ),
                             ),
@@ -218,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: _MiniStatCard(
                                 icon: Icons.ondemand_video_outlined,
-                                title: 'Videos Watched',
+                                title: l10n.videosWatched,
                                 value: NumberFormat.decimalPattern().format(
                                   videosWatched,
                                 ),
@@ -242,12 +245,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Progress to payout',
+                        l10n.progressToPayout,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "You're on your way.",
+                        l10n.youAreOnYourWay,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 12),
@@ -255,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${NumberFormat.decimalPattern().format(views)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)} views',
+                              '${NumberFormat.decimalPattern().format(views)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)} ${l10n.viewsUnit}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
@@ -286,21 +289,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? Icons.hourglass_top_rounded
                                 : Icons.play_arrow_rounded,
                           ),
-                          label: Text(_isLoading ? 'Loading...' : 'Watch Video'),
+                          label: Text(_isLoading ? l10n.loading : l10n.watchVideo),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Center(
                         child: Text(
-                          'Earn views now.',
+                          l10n.earnViewsNow,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         isReadyForPayout
-                            ? 'Payout unlocked. You can request payout in the Wallet.'
-                            : '${NumberFormat.decimalPattern().format(viewsRemaining)} more views until payout.',
+                            ? l10n.payoutUnlocked
+                            : l10n.moreViewsUntilPayout(
+                                NumberFormat.decimalPattern().format(
+                                  viewsRemaining,
+                                ),
+                              ),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -326,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Daily Bonus',
+                              l10n.dailyBonus,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
@@ -355,7 +362,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Watch ${FirestoreService.dailyBonusTargetVideos} videos daily to get bonus views.',
+                        l10n.watchDailyVideosBonus(
+                          '${FirestoreService.dailyBonusTargetVideos}',
+                        ),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 14),
@@ -363,12 +372,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} videos watched',
+                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} ${l10n.videosWatched.toLowerCase()}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
                           Text(
-                            dailyBonusAwarded ? 'Bonus claimed' : 'Bonus',
+                            dailyBonusAwarded
+                                ? l10n.bonusClaimed
+                                : l10n.bonus,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],

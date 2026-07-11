@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -204,7 +205,7 @@ class NotificationService {
       await _localNotifications.zonedSchedule(
         _dailyReminderId,
         'VideoMoney',
-        'Vergeet je daily bonus niet.',
+        _dailyReminderBody(),
         scheduled,
         const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -261,6 +262,27 @@ class NotificationService {
       );
     } catch (_) {
       _localNotificationsReady = false;
+    }
+  }
+
+  String _dailyReminderBody() {
+    switch (PlatformDispatcher.instance.locale.languageCode.toLowerCase()) {
+      case 'nl':
+        return 'Vergeet je daily bonus niet.';
+      case 'hi':
+        return 'अपना डेली बोनस लेना मत भूलिए।';
+      case 'de':
+        return 'Vergiss deinen täglichen Bonus nicht.';
+      case 'es':
+        return 'No olvides tu bono diario.';
+      case 'fr':
+        return 'N\'oubliez pas votre bonus quotidien.';
+      case 'ru':
+        return 'Не забудьте получить ежедневный бонус.';
+      case 'el':
+        return 'Μην ξεχάσετε το ημερήσιο μπόνους σας.';
+      default:
+        return 'Don\'t forget your daily bonus.';
     }
   }
 }

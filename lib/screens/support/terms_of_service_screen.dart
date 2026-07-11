@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
 
 class TermsOfServiceScreen extends StatelessWidget {
@@ -7,64 +8,45 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Terms of Service')),
+      appBar: AppBar(title: Text(l10n.termsOfService)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
           _SectionCard(
-            title: 'Using VideoMoney',
-            children: const [
-              _BulletLine('You must use accurate account information.'),
-              _BulletLine(
-                'One person may not abuse multiple accounts, bots, scripts, VPN rotation, or emulator farms to generate extra views.',
-              ),
-              _BulletLine(
-                'Rewarded ads, Firebase authentication, and payout review remain protected by the existing platform setup.',
-              ),
+            title: l10n.termsUsingTitle,
+            children: [
+              _BulletLine(l10n.termsUsingBullet1),
+              _BulletLine(l10n.termsUsingBullet2),
+              _BulletLine(l10n.termsUsingBullet3),
             ],
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: 'Views and rewards',
-            children: const [
-              _BulletLine(
-                'Views shown in the app are promotional reward units used inside VideoMoney.',
-              ),
-              _BulletLine(
-                'Estimated earnings are informational only and can change based on platform performance, policy, fraud checks, and payout review.',
-              ),
-              _BulletLine(
-                'Daily bonus rewards are limited to eligible activity and can be removed if abuse is detected.',
-              ),
+            title: l10n.termsViewsTitle,
+            children: [
+              _BulletLine(l10n.termsViewsBullet1),
+              _BulletLine(l10n.termsViewsBullet2),
+              _BulletLine(l10n.termsViewsBullet3),
             ],
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: 'Payouts and review',
-            children: const [
-              _BulletLine('Minimum payout remains 10,000 views.'),
-              _BulletLine(
-                'All payout requests require manual admin approval and can be approved, rejected, or marked paid.',
-              ),
-              _BulletLine(
-                'Rejected payout requests may be refunded back to the user balance when allowed by the admin workflow.',
-              ),
+            title: l10n.termsPayoutsTitle,
+            children: [
+              _BulletLine(l10n.termsPayoutsBullet1),
+              _BulletLine(l10n.termsPayoutsBullet2),
+              _BulletLine(l10n.termsPayoutsBullet3),
             ],
           ),
           const SizedBox(height: 14),
           _SectionCard(
-            title: 'Support and messages',
-            children: const [
-              _BulletLine(
-                'Help & Support, bug reports, admin replies, and push notifications can be stored in your in-app inbox.',
-              ),
-              _BulletLine(
-                'By enabling notifications, you allow VideoMoney to send app updates, support replies, and daily reminder messages to your device.',
-              ),
-              _BulletLine(
-                'Serious misuse, harassment, or fraudulent activity can lead to restriction of app access.',
-              ),
+            title: l10n.termsSupportTitle,
+            children: [
+              _BulletLine(l10n.termsSupportBullet1),
+              _BulletLine(l10n.termsSupportBullet2),
+              _BulletLine(l10n.termsSupportBullet3),
             ],
           ),
         ],

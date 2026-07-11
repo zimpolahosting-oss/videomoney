@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -55,6 +56,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
 
     final user = FirebaseAuth.instance.currentUser;
@@ -85,7 +87,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payout request submitted.')),
+        SnackBar(content: Text(l10n.payoutRequestSubmitted)),
       );
       Navigator.of(context).pop();
     } catch (error) {
@@ -102,8 +104,9 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Request Payout')),
+      appBar: AppBar(title: Text(l10n.requestPayoutTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         child: Form(
@@ -122,45 +125,46 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Payout rules',
+                      l10n.payoutRules,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 12),
                     _RuleLine(
                       icon: Icons.flag_circle_outlined,
-                      text:
-                          'Minimum payout is ${FirestoreService.minimumPayoutCoins} views.',
+                        text: l10n.minimumPayoutIs(
+                          '${FirestoreService.minimumPayoutCoins}',
+                        ),
                     ),
                     _RuleLine(
                       icon: Icons.schedule_outlined,
-                      text:
-                          'Processing can take up to ${FirestoreService.payoutProcessingDays} days after admin approval.',
+                        text: l10n.processingCanTake(
+                          '${FirestoreService.payoutProcessingDays}',
+                        ),
                     ),
-                    const _RuleLine(
+                    _RuleLine(
                       icon: Icons.verified_user_outlined,
-                      text: 'Every request is reviewed by admin before it is paid.',
+                      text: l10n.everyRequestReviewed,
                     ),
-                    const _RuleLine(
+                    _RuleLine(
                       icon: Icons.account_balance_outlined,
-                      text:
-                          'Use Bank for manual transfer and add your IBAN or bank account number.',
+                      text: l10n.useBankAddIban,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
               Text(
-                'Submit a payout request using your view balance.',
+                l10n.submitUsingBalance,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                'Estimated earnings only. 50 completed views ≈ €0.01 and this is not a guaranteed payout promise.',
+                l10n.estimatedEarningsNotGuaranteed,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
               Text(
-                'Payout currency',
+                l10n.payoutCurrency,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
@@ -197,7 +201,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ),
               const SizedBox(height: 18),
               Text(
-                'Payout method',
+                l10n.payoutMethod,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
@@ -239,21 +243,23 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               TextFormField(
                 controller: _viewsController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Views to request',
-                  helperText: 'Minimum 10,000 views',
+                decoration: InputDecoration(
+                  labelText: l10n.viewsToRequest,
+                  helperText: l10n.minimumViewsHelper,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Enter an amount.';
+                    return l10n.enterAmount;
                   }
 
                   final number = int.tryParse(value.trim());
                   if (number == null || number <= 0) {
-                    return 'Enter a valid positive number.';
+                    return l10n.enterValidPositiveNumber;
                   }
                   if (number < FirestoreService.minimumPayoutCoins) {
-                    return 'Minimum payout is ${FirestoreService.minimumPayoutCoins} views.';
+                    return l10n.minimumPayoutIs(
+                      '${FirestoreService.minimumPayoutCoins}',
+                    );
                   }
                   return null;
                 },
@@ -261,12 +267,12 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _accountHolderController,
-                decoration: const InputDecoration(
-                  labelText: 'Account holder name',
+                decoration: InputDecoration(
+                  labelText: l10n.accountHolderName,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Enter the account holder name.';
+                    return l10n.enterAccountHolderName;
                   }
                   return null;
                 },
@@ -276,16 +282,16 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 TextFormField(
                   controller: _payPalController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'PayPal email',
+                  decoration: InputDecoration(
+                    labelText: l10n.paypalEmail,
                   ),
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
-                      return 'Enter a PayPal email.';
+                      return l10n.enterPaypalEmail;
                     }
                     if (!trimmed.contains('@')) {
-                      return 'Enter a valid PayPal email.';
+                      return l10n.enterValidPaypalEmail;
                     }
                     return null;
                   },
@@ -293,14 +299,14 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ] else if (_method == _PayoutMethod.revolut) ...[
                 TextFormField(
                   controller: _revolutController,
-                  decoration: const InputDecoration(
-                    labelText: 'Revolut username',
-                    helperText: 'Example: @yourname',
+                  decoration: InputDecoration(
+                    labelText: l10n.revolutUsername,
+                    helperText: l10n.revolutExample,
                   ),
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
-                      return 'Enter your Revolut username.';
+                      return l10n.enterRevolutUsername;
                     }
                     return null;
                   },
@@ -308,13 +314,13 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ] else ...[
                 TextFormField(
                   controller: _bankNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bank name',
+                  decoration: InputDecoration(
+                    labelText: l10n.bankName,
                   ),
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
-                      return 'Enter your bank name.';
+                      return l10n.enterBankName;
                     }
                     return null;
                   },
@@ -322,23 +328,23 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _ibanController,
-                  decoration: const InputDecoration(
-                    labelText: 'IBAN',
-                    helperText: 'Optional if you provide a bank account number',
+                  decoration: InputDecoration(
+                    labelText: l10n.iban,
+                    helperText: l10n.ibanOptional,
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _bankAccountNumberController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bank account number',
-                    helperText: 'Required if you do not enter an IBAN',
+                  decoration: InputDecoration(
+                    labelText: l10n.bankAccountNumber,
+                    helperText: l10n.bankRequiredIfNoIban,
                   ),
                   validator: (value) {
                     final iban = _ibanController.text.trim();
                     final accountNumber = value?.trim() ?? '';
                     if (iban.isEmpty && accountNumber.isEmpty) {
-                      return 'Enter an IBAN or bank account number.';
+                      return l10n.enterIbanOrBank;
                     }
                     return null;
                   },
@@ -350,7 +356,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 child: FilledButton(
                   onPressed: _isSubmitting ? null : _submit,
                   child: Text(
-                    _isSubmitting ? 'Submitting...' : 'Submit Request',
+                    _isSubmitting ? l10n.sending : l10n.submitRequest,
                   ),
                 ),
               ),

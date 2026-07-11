@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/brand_logo.dart';
 import '../main/home_shell.dart';
@@ -23,8 +24,8 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return const Scaffold(
-            body: Center(child: Text('Unable to restore your session right now.')),
+          return Scaffold(
+            body: Center(child: Text(context.l10n.unableRestoreSession)),
           );
         }
 
@@ -63,7 +64,7 @@ class _AuthLoadingView extends StatelessWidget {
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            'Loading your wallet...',
+            context.l10n.loadingWallet,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],

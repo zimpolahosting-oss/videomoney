@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_logo.dart';
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -48,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Authentication failed.')),
+        SnackBar(content: Text(error.message ?? l10n.authenticationFailed)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -64,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _sendPasswordReset() async {
     final email = _emailController.text.trim();
+    final l10n = context.l10n;
 
     try {
       await _authService.sendPasswordResetEmail(email: email);
@@ -71,14 +74,14 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Password reset email sent to $email.',
+            l10n.passwordResetEmailSent(email),
           ),
         ),
       );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Unable to send reset email.')),
+        SnackBar(content: Text(error.message ?? l10n.unableSendResetEmail)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -90,24 +93,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _showPasswordResetDialog() async {
     final emailController = TextEditingController(text: _emailController.text);
+    final l10n = context.l10n;
 
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Reset password'),
+          title: Text(l10n.resetPassword),
           content: TextField(
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: 'name@example.com',
+            decoration: InputDecoration(
+              labelText: l10n.email,
+              hintText: l10n.emailHint,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -115,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.of(dialogContext).pop();
                 await _sendPasswordReset();
               },
-              child: const Text('Send reset link'),
+              child: Text(l10n.sendResetLink),
             ),
           ],
         );
@@ -127,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -185,14 +190,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _isLogin ? 'Welcome back' : 'Create your account',
+                                  _isLogin ? l10n.welcomeBack : l10n.createYourAccount,
                                   style: Theme.of(context).textTheme.headlineMedium,
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   _isLogin
-                                      ? 'Sign in to keep earning views and managing payouts.'
-                                      : 'Register to start watching rewarded videos and building your balance.',
+                                      ? l10n.signInBody
+                                      : l10n.signUpBody,
                                   style: Theme.of(context).textTheme.bodyLarge,
                                 ),
                               ],
@@ -224,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           : Colors.white,
                                       elevation: 0,
                                     ),
-                                    child: const Text('Login'),
+                                    child: Text(l10n.login),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -242,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           : Colors.white,
                                       elevation: 0,
                                     ),
-                                    child: const Text('Sign up'),
+                                    child: Text(l10n.signUp),
                                   ),
                                 ),
                               ],
@@ -252,16 +257,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              hintText: 'name@example.com',
+                            decoration: InputDecoration(
+                              labelText: l10n.email,
+                              hintText: l10n.emailHint,
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Enter your email.';
+                                return l10n.enterYourEmail;
                               }
                               if (!value.contains('@')) {
-                                return 'Enter a valid email address.';
+                                return l10n.enterValidEmail;
                               }
                               return null;
                             },
@@ -270,16 +275,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Password',
-                              hintText: 'Minimum 6 characters',
+                            decoration: InputDecoration(
+                              labelText: l10n.password,
+                              hintText: l10n.useAtLeast6Chars,
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Enter your password.';
+                                return l10n.enterYourPassword;
                               }
                               if (value.trim().length < 6) {
-                                return 'Use at least 6 characters.';
+                                return l10n.useAtLeast6Chars;
                               }
                               return null;
                             },
@@ -291,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: TextButton(
                                 onPressed:
                                     _isLoading ? null : _showPasswordResetDialog,
-                                child: const Text('Forgot password?'),
+                                child: Text(l10n.forgotPassword),
                               ),
                             ),
                           ],
@@ -315,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'Firebase Authentication stays unchanged. This redesign only updates the presentation layer.',
+                                    l10n.firebaseAuthNotice,
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ),
@@ -336,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     )
                                   : Text(
-                                      _isLogin ? 'Login' : 'Create account',
+                                      _isLogin ? l10n.login : l10n.createAccount,
                                     ),
                             ),
                           ),
@@ -344,8 +349,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Center(
                             child: Text(
                               _isLogin
-                                  ? 'Secure access to your earning dashboard'
-                                  : 'Your payout history and reward balance are stored in Firestore',
+                                  ? l10n.secureAccessDashboard
+                                  : l10n.firestoreBalanceStored,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),

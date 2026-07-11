@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
@@ -13,13 +14,14 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
     final authService = AuthService();
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
@@ -31,7 +33,7 @@ class ProfileScreen extends StatelessWidget {
             .substring(0, 1)
             .toUpperCase();
         final createdAt = appUser?.createdAt == null
-            ? 'Not available yet'
+            ? l10n.notAvailableYet
             : DateFormat.yMMMd().format(appUser!.createdAt!);
         final emailVerified = user.emailVerified || (appUser?.appVerified ?? false);
 
@@ -40,7 +42,7 @@ class ProfileScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
               children: [
-                const _TopTitle(title: 'Profile'),
+                _TopTitle(title: l10n.profile),
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(18),
@@ -109,17 +111,19 @@ class ProfileScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user.email ?? 'Unknown user',
+                                  user.email ?? l10n.signedInUser,
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Member since: $createdAt',
+                                  l10n.memberSince(createdAt),
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  emailVerified ? 'Email Verified' : 'Email not verified',
+                                  emailVerified
+                                      ? l10n.emailVerified
+                                      : l10n.emailNotVerified,
                                   style: TextStyle(
                                     color: emailVerified
                                         ? AppTheme.primarySoft
@@ -154,26 +158,26 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       _InfoRow(
                         icon: Icons.visibility_outlined,
-                        title: 'Current Views',
+                        title: l10n.currentViews,
                         value: NumberFormat.decimalPattern()
                             .format(appUser?.views ?? 0),
                       ),
                       _InfoRow(
                         icon: Icons.ondemand_video_outlined,
-                        title: 'Videos Watched',
+                        title: l10n.videosWatched,
                         value: NumberFormat.decimalPattern()
                             .format(appUser?.videosWatched ?? 0),
                       ),
-                      const _InfoRow(
+                      _InfoRow(
                         icon: Icons.security_outlined,
-                        title: 'Security',
-                        value: 'Firebase Protected',
+                        title: l10n.security,
+                        value: l10n.firebaseProtected,
                         valueColor: AppTheme.primarySoft,
                       ),
-                      const _InfoRow(
+                      _InfoRow(
                         icon: Icons.verified_user_outlined,
-                        title: 'Payout Review',
-                        value: 'Admin Approval',
+                        title: l10n.payoutReview,
+                        value: l10n.adminApproval,
                         valueColor: AppTheme.primarySoft,
                       ),
                     ],
@@ -191,8 +195,8 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       _MenuTile(
                         icon: Icons.inbox_outlined,
-                        title: 'Inbox',
-                        subtitle: 'Read admin replies and notifications',
+                        title: l10n.inbox,
+                        subtitle: l10n.readAdminReplies,
                         trailing: StreamBuilder<int>(
                           stream: firestoreService.watchUnreadInboxCount(user.uid),
                           builder: (context, snapshot) {
@@ -229,40 +233,40 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       _MenuTile(
                         icon: Icons.settings_outlined,
-                        title: 'Settings',
-                        subtitle: 'Notifications, privacy, and app settings',
+                        title: l10n.settingsTitle,
+                        subtitle: l10n.notificationsPrivacy,
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRoutes.settings);
                         },
                       ),
                       _MenuTile(
                         icon: Icons.help_outline_rounded,
-                        title: 'Help & Support',
-                        subtitle: 'Contact admin and send messages',
+                        title: l10n.helpSupport,
+                        subtitle: l10n.contactAdmin,
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRoutes.helpSupport);
                         },
                       ),
                       _MenuTile(
                         icon: Icons.bug_report_outlined,
-                        title: 'Report Bug',
-                        subtitle: 'Report a problem or a bug',
+                        title: l10n.reportBug,
+                        subtitle: l10n.reportProblemBug,
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRoutes.reportBug);
                         },
                       ),
                       _MenuTile(
                         icon: Icons.star_rate_outlined,
-                        title: 'Rate App',
-                        subtitle: 'Send your in-app rating from 1 to 5 stars',
+                        title: l10n.rateApp,
+                        subtitle: l10n.sendInAppRating,
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRoutes.appRating);
                         },
                       ),
                       _MenuTile(
                         icon: Icons.info_outline,
-                        title: 'About VideoMoney',
-                        subtitle: 'App details, policies, and contact',
+                        title: l10n.aboutVideoMoney,
+                        subtitle: l10n.estimatedEarningsOnlyPolicies,
                         onTap: () {
                           Navigator.of(context).pushNamed(AppRoutes.about);
                         },
@@ -271,7 +275,7 @@ class ProfileScreen extends StatelessWidget {
                         _MenuTile(
                           icon: Icons.admin_panel_settings_outlined,
                           title: 'Admin Dashboard',
-                          subtitle: 'Review payout requests',
+                          subtitle: l10n.reviewPayoutRequests,
                           onTap: () {
                             Navigator.of(context)
                                 .pushNamed(AppRoutes.adminDashboard);
@@ -292,7 +296,7 @@ class ProfileScreen extends StatelessWidget {
                       await authService.signOut();
                     },
                     icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
+                    label: Text(l10n.logout),
                   ),
                 ),
               ],

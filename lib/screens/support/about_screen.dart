@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -8,8 +9,9 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('About VideoMoney')),
+      appBar: AppBar(title: Text(l10n.aboutVideoMoney)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
@@ -33,17 +35,17 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Premium dark theme • Neon green UI',
+                  l10n.aboutTagline,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
-                const _Line(label: 'Version', value: '1.0.1+3'),
-                const _Line(label: 'Minimum payout', value: '10,000 views'),
-                const _Line(label: 'Processing time', value: '30 days'),
-                const _Line(label: 'Review', value: 'Admin approval required'),
+                _Line(label: l10n.version, value: '1.0.1+5'),
+                _Line(label: l10n.minimumPayoutLabel, value: '10,000 ${l10n.viewsUnit}'),
+                _Line(label: l10n.processingTimeLabel, value: '30 days'),
+                _Line(label: l10n.reviewLabel, value: l10n.adminApproval),
                 const SizedBox(height: 14),
                 Text(
-                  'Estimated earnings only. Actual earnings may vary based on ad performance and policy rules.',
+                  l10n.estimatedEarningsOnlyPolicies,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
@@ -56,7 +58,7 @@ class AboutScreen extends StatelessWidget {
                         Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
                       },
                       icon: const Icon(Icons.privacy_tip_outlined),
-                      label: const Text('Privacy Policy'),
+                      label: Text(l10n.privacyPolicy),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
@@ -64,7 +66,7 @@ class AboutScreen extends StatelessWidget {
                             .pushNamed(AppRoutes.termsOfService);
                       },
                       icon: const Icon(Icons.description_outlined),
-                      label: const Text('Terms of Service'),
+                      label: Text(l10n.termsOfService),
                     ),
                   ],
                 ),

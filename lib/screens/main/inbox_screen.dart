@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/inbox_message.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
@@ -11,22 +12,23 @@ class InboxScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inbox'),
+        title: Text(l10n.inbox),
         actions: [
           TextButton(
             onPressed: () => firestoreService.markAllInboxMessagesRead(user.uid),
-            child: const Text('Mark all read'),
+            child: Text(l10n.markAllRead),
           ),
         ],
       ),
@@ -39,10 +41,10 @@ class InboxScreen extends StatelessWidget {
 
           final messages = snapshot.data ?? const <InboxMessage>[];
           if (messages.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('No inbox messages yet.'),
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.noInboxMessagesYet),
               ),
             );
           }
@@ -53,7 +55,7 @@ class InboxScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final message = messages[index];
               final formattedDate = message.createdAt == null
-                  ? 'Pending timestamp'
+                  ? l10n.pendingTimestamp
                   : DateFormat.yMMMd().add_jm().format(message.createdAt!);
 
               return InkWell(
@@ -94,8 +96,8 @@ class InboxScreen extends StatelessWidget {
                                 color: AppTheme.primary.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(999),
                               ),
-                              child: const Text(
-                                'NEW',
+                              child: Text(
+                                l10n.newBadge,
                                 style: TextStyle(
                                   color: AppTheme.primarySoft,
                                   fontWeight: FontWeight.w800,
@@ -112,7 +114,7 @@ class InboxScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        '${message.type.toUpperCase()} • $formattedDate',
+                        '${l10n.supportType(message.type)} • $formattedDate',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],

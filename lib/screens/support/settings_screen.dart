@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
@@ -52,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -64,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved.')),
+        SnackBar(content: Text(l10n.settingsSaved)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -78,8 +80,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
@@ -94,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Notifications',
+                  l10n.notifications,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 10),
@@ -104,8 +107,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: _isLoading ? null : (value) {
                     setState(() => _notificationsEnabled = value);
                   },
-                  title: const Text('Enable notifications'),
-                  subtitle: const Text('General app notifications'),
+                  title: Text(l10n.enableNotifications),
+                  subtitle: Text(l10n.generalAppNotifications),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
@@ -113,8 +116,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: _isLoading ? null : (value) {
                     setState(() => _dailyReminderEnabled = value);
                   },
-                  title: const Text('Daily reminder'),
-                  subtitle: const Text('Get a reminder to complete daily bonus'),
+                  title: Text(l10n.dailyReminder),
+                  subtitle: Text(l10n.dailyReminderSubtitle),
                 ),
                 if (_isLoading) ...[
                   const SizedBox(height: 8),
@@ -135,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Privacy',
+                  l10n.privacy,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 10),
@@ -144,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
                   },
                   icon: const Icon(Icons.privacy_tip_outlined),
-                  label: const Text('Privacy Policy'),
+                  label: Text(l10n.privacyPolicy),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
@@ -152,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.of(context).pushNamed(AppRoutes.termsOfService);
                   },
                   icon: const Icon(Icons.description_outlined),
-                  label: const Text('Terms of Service'),
+                  label: Text(l10n.termsOfService),
                 ),
               ],
             ),
@@ -171,12 +174,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'App version',
+                    l10n.appVersion,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
                 Text(
-                  '1.0.1+3',
+                  '1.0.1+5',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -187,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _isSaving || _isLoading ? null : _save,
-              child: Text(_isSaving ? 'Saving...' : 'Save'),
+              child: Text(_isSaving ? l10n.saving : l10n.save),
             ),
           ),
         ],

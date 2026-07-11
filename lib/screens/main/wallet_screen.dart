@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
@@ -14,12 +15,13 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
@@ -28,7 +30,7 @@ class WalletScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
           children: [
-            const _TopTitle(title: 'Wallet'),
+            _TopTitle(title: l10n.wallet),
             const SizedBox(height: 14),
             StreamBuilder<AppUser?>(
               stream: firestoreService.watchUser(user.uid),
@@ -74,8 +76,8 @@ class WalletScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Your Wallet',
+                        Text(
+                          l10n.yourWallet,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -86,7 +88,7 @@ class WalletScreen extends StatelessWidget {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            'Available Views',
+                            l10n.availableViews,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -104,22 +106,22 @@ class WalletScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _SmallStat(
-                                label: 'Estimated Payout',
+                                label: l10n.estimatedPayout,
                                 value: '€${estimatedEarnings.toStringAsFixed(2)}',
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: _SmallStat(
-                                label: 'Remaining to Payout',
-                                value: '${NumberFormat.decimalPattern().format(remaining)} views',
+                                label: l10n.remainingToPayout,
+                                value: '${NumberFormat.decimalPattern().format(remaining)} ${l10n.viewsUnit}',
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
+                          l10n.estimateOnly,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 12),
@@ -131,7 +133,7 @@ class WalletScreen extends StatelessWidget {
                                   .pushNamed(AppRoutes.payoutRequest);
                             },
                             icon: const Icon(Icons.request_quote_outlined),
-                            label: const Text('Request Payout'),
+                            label: Text(l10n.requestPayout),
                           ),
                         ),
                       ],
@@ -146,17 +148,17 @@ class WalletScreen extends StatelessWidget {
                 Expanded(
                   child: _RuleMiniCard(
                     icon: Icons.flag_circle_outlined,
-                    title: 'Min. Payout',
+                    title: l10n.minPayout,
                     value: NumberFormat.decimalPattern()
                         .format(FirestoreService.minimumPayoutCoins),
-                    suffix: 'views',
+                    suffix: l10n.viewsUnit,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _RuleMiniCard(
                     icon: Icons.schedule_outlined,
-                    title: 'Processing Time',
+                    title: l10n.processingTime,
                     value: '${FirestoreService.payoutProcessingDays}',
                     suffix: 'days',
                   ),
@@ -165,7 +167,7 @@ class WalletScreen extends StatelessWidget {
                 const Expanded(
                   child: _RuleMiniCard(
                     icon: Icons.verified_user_outlined,
-                    title: 'Approval',
+                    title: l10n.approval,
                     value: 'Admin',
                     suffix: 'review',
                   ),
@@ -173,12 +175,12 @@ class WalletScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const _SectionTitle(title: 'Payout Methods'),
+            _SectionTitle(title: l10n.payoutMethods),
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.payments_outlined,
               title: 'PayPal',
-              subtitle: 'Request payout in EUR, GBP, or USD',
+              subtitle: l10n.paypalSubtitle,
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -190,7 +192,7 @@ class WalletScreen extends StatelessWidget {
             _MethodTile(
               icon: Icons.account_balance_wallet_outlined,
               title: 'Revolut',
-              subtitle: 'Fast wallet payout with chosen currency',
+              subtitle: l10n.revolutSubtitle,
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -201,8 +203,8 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.account_balance_outlined,
-              title: 'Bank Transfer',
-              subtitle: 'Add IBAN or bank account number for manual payout',
+              title: l10n.bankTransferTitle,
+              subtitle: l10n.bankTransferSubtitle,
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -211,7 +213,7 @@ class WalletScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            const _SectionTitle(title: 'Payout History'),
+            _SectionTitle(title: l10n.payoutHistory),
             const SizedBox(height: 10),
             StreamBuilder<List<PayoutRequest>>(
               stream: firestoreService.watchPayouts(user.uid),
@@ -222,10 +224,10 @@ class WalletScreen extends StatelessWidget {
 
                 final payouts = snapshot.data ?? const <PayoutRequest>[];
                 if (payouts.isEmpty) {
-                  return const Card(
+                  return Card(
                     child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text('No payout requests yet.'),
+                      padding: const EdgeInsets.all(20),
+                      child: Text(l10n.noPayoutRequestsYet),
                     ),
                   );
                 }
@@ -235,7 +237,7 @@ class WalletScreen extends StatelessWidget {
                   children: [
                     ...preview.map((payout) {
                       final formattedDate = payout.createdAt == null
-                          ? 'Pending timestamp'
+                          ? l10n.pendingTimestamp
                           : DateFormat.yMMMd().format(payout.createdAt!);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -252,7 +254,7 @@ class WalletScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
+                                    '${NumberFormat.decimalPattern().format(payout.viewsRequested)} ${l10n.viewsUnit}',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
@@ -285,7 +287,7 @@ class WalletScreen extends StatelessWidget {
                           onPressed: () {
                             Navigator.of(context).pushNamed(AppRoutes.payoutHistory);
                           },
-                          child: const Text('View full history'),
+                          child: Text(l10n.viewFullHistory),
                         ),
                       ),
                   ],
@@ -500,7 +502,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.28)),
       ),
       child: Text(
-        status.toUpperCase(),
+        context.l10n.payoutStatus(status),
         style: TextStyle(
           color: color,
           fontSize: 12,

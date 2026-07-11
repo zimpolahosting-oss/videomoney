@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
@@ -28,6 +29,7 @@ class _EarnScreenState extends State<EarnScreen> {
   }
 
   Future<void> _watchVideo() async {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || _isLoading) return;
 
@@ -49,13 +51,11 @@ class _EarnScreenState extends State<EarnScreen> {
 
     if (rewardGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reward confirmed. Views added.')),
+        SnackBar(content: Text(l10n.rewardConfirmedViewsAdded)),
       );
     } else if (lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rewarded ad was not completed.'),
-        ),
+        SnackBar(content: Text(l10n.rewardedAdNotCompleted)),
       );
     }
 
@@ -64,11 +64,12 @@ class _EarnScreenState extends State<EarnScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('No user session found.')),
+      return Scaffold(
+        body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
 
@@ -90,7 +91,7 @@ class _EarnScreenState extends State<EarnScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
               children: [
-                const _TopTitle(title: 'Earn'),
+                _TopTitle(title: l10n.earn),
                 const SizedBox(height: 14),
                 SizedBox(
                   height: 230,
@@ -127,7 +128,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            'Earn Views',
+                            l10n.earnViewsTitle,
                             style: Theme.of(context).textTheme.headlineMedium,
                           ),
                         ),
@@ -135,7 +136,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 235),
                           child: Text(
-                            'Watch rewarded videos and earn views instantly.',
+                            l10n.watchRewardedEarnViews,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -151,13 +152,13 @@ class _EarnScreenState extends State<EarnScreen> {
                                   : Icons.play_arrow_rounded,
                             ),
                             label:
-                                Text(_isLoading ? 'Loading...' : 'Watch Video'),
+                                Text(_isLoading ? l10n.loading : l10n.watchVideo),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Center(
                           child: Text(
-                            'Earn views',
+                            l10n.earnViews,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -177,33 +178,33 @@ class _EarnScreenState extends State<EarnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'How it works',
+                        l10n.howItWorks,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 14),
                       Row(
-                        children: const [
+                        children: [
                           Expanded(
                             child: _HowStep(
                               icon: Icons.play_circle_outline,
-                              title: 'Watch',
-                              subtitle: 'Watch a short\nvideo',
+                              title: l10n.watch,
+                              subtitle: l10n.watchShortVideo.replaceFirst(' ', '\n'),
                             ),
                           ),
-                          _HowArrow(),
+                          const _HowArrow(),
                           Expanded(
                             child: _HowStep(
                               icon: Icons.visibility_outlined,
-                              title: 'Earn',
-                              subtitle: 'Get views as\nreward',
+                              title: l10n.earnStep,
+                              subtitle: l10n.getViewsReward.replaceFirst(' as ', ' as\n'),
                             ),
                           ),
-                          _HowArrow(),
+                          const _HowArrow(),
                           Expanded(
                             child: _HowStep(
                               icon: Icons.account_balance_wallet_outlined,
-                              title: 'Cash Out',
-                              subtitle: 'Reach 10,000\nviews',
+                              title: l10n.cashOut,
+                              subtitle: l10n.reachViews('10,000').replaceFirst(' ', '\n'),
                             ),
                           ),
                         ],
@@ -229,7 +230,7 @@ class _EarnScreenState extends State<EarnScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Daily Challenge',
+                              l10n.dailyChallenge,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
@@ -256,7 +257,9 @@ class _EarnScreenState extends State<EarnScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Watch ${FirestoreService.dailyBonusTargetVideos} videos today and get bonus views!',
+                        l10n.watchTodayVideosBonus(
+                          '${FirestoreService.dailyBonusTargetVideos}',
+                        ),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 14),
@@ -264,13 +267,13 @@ class _EarnScreenState extends State<EarnScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} videos watched',
+                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} ${l10n.videosWatched.toLowerCase()}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
-                          const Text(
-                            'Bonus',
-                            style: TextStyle(color: AppTheme.textMuted),
+                          Text(
+                            l10n.bonus,
+                            style: const TextStyle(color: AppTheme.textMuted),
                           ),
                         ],
                       ),
@@ -303,7 +306,7 @@ class _EarnScreenState extends State<EarnScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Total videos watched',
+                          l10n.totalVideosWatched,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),

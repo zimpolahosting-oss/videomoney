@@ -1,9 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'app_routes.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'services/notification_service.dart';
 import 'services/rewarded_ad_service.dart';
 import 'theme/app_theme.dart';
@@ -35,24 +37,22 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VideoMoney',
+      onGenerateTitle: (context) => context.l10n.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme(),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: FutureBuilder<void>(
         future: _initializeFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const _StartupStatusScreen(
-              title: 'Starting VideoMoney',
-              message: 'Preparing Firebase, wallet data, and rewarded ads...',
-              showLoader: true,
-            );
+            return const _StartupStatusScreen(showLoader: true);
           }
 
           if (snapshot.hasError) {
             return _StartupStatusScreen(
-              title: 'Startup failed',
               message: snapshot.error.toString().replaceFirst('Exception: ', ''),
+              isError: true,
             );
           }
 
@@ -77,14 +77,14 @@ class VideoMoneyApp extends StatelessWidget {
 
 class _StartupStatusScreen extends StatelessWidget {
   const _StartupStatusScreen({
-    required this.title,
-    required this.message,
+    this.message,
     this.showLoader = false,
+    this.isError = false,
   });
 
-  final String title;
-  final String message;
+  final String? message;
   final bool showLoader;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
@@ -103,13 +103,13 @@ class _StartupStatusScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                   ],
                   Text(
-                    title,
+                    isError ? context.l10n.startupFailed : context.l10n.startingApp,
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    message,
+                    message ?? context.l10n.preparingStartup,
                     style: Theme.of(context).textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
