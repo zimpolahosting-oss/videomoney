@@ -44,37 +44,21 @@ class WalletScreen extends StatelessWidget {
                     : FirestoreService.minimumPayoutCoins - currentViews;
 
                 return WatermarkHeroCard(
-                  height: 330,
+                  height: 294,
                   imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
                   imageOpacity: 0.17,
                   imageScale: 1.42,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'VideoMoney',
-                                style: TextStyle(
-                                  color: AppTheme.primarySoft,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                Navigator.of(context)
-                                    .pushNamed(AppRoutes.payoutHistory);
-                              },
-                              icon: const Icon(
-                                Icons.history_toggle_off,
-                                color: AppTheme.primarySoft,
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        'VideoMoney',
+                        style: TextStyle(
+                          color: AppTheme.primarySoft,
+                          fontWeight: FontWeight.w800,
                         ),
-                        const SizedBox(height: 4),
+                      ),
+                      const SizedBox(height: 4),
                         Text(
                           l10n.yourWallet,
                           maxLines: 2,
