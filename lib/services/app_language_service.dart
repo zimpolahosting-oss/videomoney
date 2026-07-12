@@ -12,18 +12,22 @@ class AppLanguageService extends ChangeNotifier {
   static const String defaultLanguageCode = 'en';
 
   String? _preferredLanguageCode;
+  String? _deviceLanguageCode;
 
   String? get preferredLanguageCode => _preferredLanguageCode;
-  Locale get localeOverride => Locale(_preferredLanguageCode ?? defaultLanguageCode);
+  Locale? get localeOverride =>
+      _preferredLanguageCode == null ? null : Locale(_preferredLanguageCode!);
 
   String get selectedLanguageCode =>
-      _preferredLanguageCode ?? defaultLanguageCode;
+      _preferredLanguageCode ?? _deviceLanguageCode ?? defaultLanguageCode;
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final savedValue = prefs.getString(_preferenceKey);
+    _deviceLanguageCode = _resolveSupportedDeviceLanguageCode();
+
     if (savedValue == null || savedValue.trim().isEmpty) {
-      _preferredLanguageCode = defaultLanguageCode;
+      _preferredLanguageCode = null;
       return;
     }
 
@@ -33,7 +37,7 @@ class AppLanguageService extends ChangeNotifier {
       return;
     }
 
-    _preferredLanguageCode = defaultLanguageCode;
+    _preferredLanguageCode = null;
     await prefs.remove(_preferenceKey);
   }
 
@@ -43,7 +47,7 @@ class AppLanguageService extends ChangeNotifier {
 
     if (normalizedValue.isEmpty ||
         !_supportedLanguageCodes.contains(normalizedValue)) {
-      _preferredLanguageCode = defaultLanguageCode;
+      _preferredLanguageCode = null;
       await prefs.remove(_preferenceKey);
     } else {
       _preferredLanguageCode = normalizedValue;
@@ -56,6 +60,17 @@ class AppLanguageService extends ChangeNotifier {
   static final Set<String> _supportedLanguageCodes = {
     for (final locale in AppLocalizations.supportedLocales) locale.languageCode,
   };
+
+  String? _resolveSupportedDeviceLanguageCode() {
+    final normalizedLanguageCode = WidgetsBinding
+        .instance.platformDispatcher.locale.languageCode
+        .toLowerCase()
+        .trim();
+    if (_supportedLanguageCodes.contains(normalizedLanguageCode)) {
+      return normalizedLanguageCode;
+    }
+    return null;
+  }
 
   static const Map<String, String> _nativeLanguageNames = {
     'en': 'English',
