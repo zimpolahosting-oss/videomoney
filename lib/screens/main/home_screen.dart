@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _TopTitle(title: l10n.home),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 264,
+                  height: 290,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/home_movie_v2.jpg',
                     imageOpacity: 0.18,
@@ -186,6 +186,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             l10n.welcomeBackShort,
                             style: Theme.of(context).textTheme.bodyMedium,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -204,6 +206,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             l10n.watchVideosEarnPaid,
                             style: Theme.of(context).textTheme.bodyMedium,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(height: 14),

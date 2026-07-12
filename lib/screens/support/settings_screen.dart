@@ -87,10 +87,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _currentLanguageLabel(AppLocalizations l10n) {
+    if (_selectedLanguageCode == AppLanguageService.automaticValue) {
+      return l10n.automaticLanguage;
+    }
+
+    for (final option in AppLanguageService.instance.supportedLanguageOptions) {
+      if (option.code == _selectedLanguageCode) {
+        return option.label;
+      }
+    }
+
+    return l10n.automaticLanguage;
+  }
+
+  Future<void> _showLanguagePicker(AppLocalizations l10n) async {
+    if (_isSaving) return;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final languageOptions =
+            AppLanguageService.instance.supportedLanguageOptions;
+
+        return SafeArea(
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.72,
+            minChildSize: 0.45,
+            maxChildSize: 0.92,
+            builder: (context, scrollController) {
+              return ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Text(
+                      l10n.appLanguage,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    leading: Icon(
+                      _selectedLanguageCode == AppLanguageService.automaticValue
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off,
+                    ),
+                    title: Text(l10n.automaticLanguage),
+                    onTap: () {
+                      Navigator.of(sheetContext)
+                          .pop(AppLanguageService.automaticValue);
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                  ...languageOptions.map(
+                    (option) => ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      leading: Icon(
+                        _selectedLanguageCode == option.code
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                      ),
+                      title: Text(
+                        option.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        Navigator.of(sheetContext).pop(option.code);
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+    setState(() => _selectedLanguageCode = selected);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final languageOptions = AppLanguageService.instance.supportedLanguageOptions;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
@@ -116,29 +206,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  value: _selectedLanguageCode,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.language_outlined),
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _isSaving ? null : () => _showLanguagePicker(l10n),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.language_outlined),
+                      suffixIcon: Icon(Icons.arrow_drop_down_rounded),
+                    ),
+                    child: Text(
+                      _currentLanguageLabel(l10n),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: AppLanguageService.automaticValue,
-                      child: Text(l10n.automaticLanguage),
-                    ),
-                    ...languageOptions.map(
-                      (option) => DropdownMenuItem(
-                        value: option.code,
-                        child: Text(option.label),
-                      ),
-                    ),
-                  ],
-                  onChanged: _isSaving
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          setState(() => _selectedLanguageCode = value);
-                        },
                 ),
               ],
             ),

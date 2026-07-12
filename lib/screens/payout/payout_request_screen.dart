@@ -168,34 +168,37 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
-              SegmentedButton<_PayoutCurrency>(
-                segments: const [
-                  ButtonSegment(
-                    value: _PayoutCurrency.eur,
-                    label: Text('EUR'),
-                  ),
-                  ButtonSegment(
-                    value: _PayoutCurrency.gbp,
-                    label: Text('GBP'),
-                  ),
-                  ButtonSegment(
-                    value: _PayoutCurrency.usd,
-                    label: Text('USD'),
-                  ),
-                ],
-                selected: {_currency},
-                onSelectionChanged: (value) {
-                  setState(() => _currency = value.first);
-                },
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return AppTheme.primary.withOpacity(0.12);
-                    }
-                    return Theme.of(context).colorScheme.surface;
-                  }),
-                  side: MaterialStateProperty.all(
-                    BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<_PayoutCurrency>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _PayoutCurrency.eur,
+                      label: Text('EUR'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutCurrency.gbp,
+                      label: Text('GBP'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutCurrency.usd,
+                      label: Text('USD'),
+                    ),
+                  ],
+                  selected: {_currency},
+                  onSelectionChanged: (value) {
+                    setState(() => _currency = value.first);
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return AppTheme.primary.withOpacity(0.12);
+                      }
+                      return Theme.of(context).colorScheme.surface;
+                    }),
+                    side: MaterialStateProperty.all(
+                      BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+                    ),
                   ),
                 ),
               ),
@@ -205,37 +208,40 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
-              SegmentedButton<_PayoutMethod>(
-                segments: const [
-                  ButtonSegment(
-                    value: _PayoutMethod.paypal,
-                    icon: Icon(Icons.payments_outlined),
-                    label: Text('PayPal'),
-                  ),
-                  ButtonSegment(
-                    value: _PayoutMethod.revolut,
-                    icon: Icon(Icons.account_balance_wallet_outlined),
-                    label: Text('Revolut'),
-                  ),
-                  ButtonSegment(
-                    value: _PayoutMethod.bank,
-                    icon: Icon(Icons.account_balance_outlined),
-                    label: Text('Bank'),
-                  ),
-                ],
-                selected: {_method},
-                onSelectionChanged: (value) {
-                  setState(() => _method = value.first);
-                },
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return AppTheme.primary.withOpacity(0.12);
-                    }
-                    return Theme.of(context).colorScheme.surface;
-                  }),
-                  side: MaterialStateProperty.all(
-                    BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<_PayoutMethod>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _PayoutMethod.paypal,
+                      icon: Icon(Icons.payments_outlined),
+                      label: Text('PayPal'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutMethod.revolut,
+                      icon: Icon(Icons.account_balance_wallet_outlined),
+                      label: Text('Revolut'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutMethod.bank,
+                      icon: Icon(Icons.account_balance_outlined),
+                      label: Text('Bank'),
+                    ),
+                  ],
+                  selected: {_method},
+                  onSelectionChanged: (value) {
+                    setState(() => _method = value.first);
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return AppTheme.primary.withOpacity(0.12);
+                      }
+                      return Theme.of(context).colorScheme.surface;
+                    }),
+                    side: MaterialStateProperty.all(
+                      BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+                    ),
                   ),
                 ),
               ),

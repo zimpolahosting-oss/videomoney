@@ -43,15 +43,14 @@ class WalletScreen extends StatelessWidget {
                     ? 0
                     : FirestoreService.minimumPayoutCoins - currentViews;
 
-                return SizedBox(
-                  height: 294,
-                  child: WatermarkHeroCard(
-                    imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
-                    imageOpacity: 0.17,
-                    imageScale: 1.42,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                return WatermarkHeroCard(
+                  height: 330,
+                  imageAsset: 'assets/illustrations/wallet_purse_v2.jpg',
+                  imageOpacity: 0.17,
+                  imageScale: 1.42,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                         Row(
                           children: [
                             const Expanded(
@@ -78,7 +77,9 @@ class WalletScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           l10n.yourWallet,
-                          style: TextStyle(
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -123,6 +124,8 @@ class WalletScreen extends StatelessWidget {
                         Text(
                           l10n.estimateOnly,
                           style: Theme.of(context).textTheme.bodyMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -136,43 +139,54 @@ class WalletScreen extends StatelessWidget {
                             label: Text(l10n.requestPayout),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 );
               },
             ),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _RuleMiniCard(
-                    icon: Icons.flag_circle_outlined,
-                    title: l10n.minPayout,
-                    value: NumberFormat.decimalPattern()
-                        .format(FirestoreService.minimumPayoutCoins),
-                    suffix: l10n.viewsUnit,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _RuleMiniCard(
-                    icon: Icons.schedule_outlined,
-                    title: l10n.processingTime,
-                    value: '${FirestoreService.payoutProcessingDays}',
-                    suffix: 'days',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _RuleMiniCard(
-                    icon: Icons.verified_user_outlined,
-                    title: l10n.approval,
-                    value: 'Admin',
-                    suffix: 'review',
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 420;
+                final cardWidth = isWide
+                    ? (constraints.maxWidth - 24) / 3
+                    : (constraints.maxWidth - 12) / 2;
+
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: cardWidth,
+                      child: _RuleMiniCard(
+                        icon: Icons.flag_circle_outlined,
+                        title: l10n.minPayout,
+                        value: NumberFormat.decimalPattern()
+                            .format(FirestoreService.minimumPayoutCoins),
+                        suffix: l10n.viewsUnit,
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      child: _RuleMiniCard(
+                        icon: Icons.schedule_outlined,
+                        title: l10n.processingTime,
+                        value: '${FirestoreService.payoutProcessingDays}',
+                        suffix: 'days',
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      child: _RuleMiniCard(
+                        icon: Icons.verified_user_outlined,
+                        title: l10n.approval,
+                        value: 'Admin',
+                        suffix: 'review',
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             _SectionTitle(title: l10n.payoutMethods),
@@ -261,11 +275,15 @@ class WalletScreen extends StatelessWidget {
                                   Text(
                                     '${payout.payoutMethodLabel} • ${payout.normalizedCurrency}',
                                     style: Theme.of(context).textTheme.bodyMedium,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     payout.destinationSummary,
                                     style: Theme.of(context).textTheme.bodyMedium,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -402,7 +420,12 @@ class _RuleMiniCard extends StatelessWidget {
         children: [
           Icon(icon, color: AppTheme.primarySoft, size: 18),
           const SizedBox(height: 10),
-          Text(title, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyMedium,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 6),
           Text(
             '$value $suffix',
@@ -411,6 +434,8 @@ class _RuleMiniCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -462,11 +487,15 @@ class _MethodTile extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

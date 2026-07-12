@@ -43,6 +43,8 @@ class _HomeShellState extends State<HomeShell> {
           borderRadius: BorderRadius.circular(28),
           child: NavigationBar(
             height: 74,
+            labelBehavior:
+                NavigationDestinationLabelBehavior.onlyShowSelected,
             selectedIndex: _currentIndex,
             onDestinationSelected: (index) {
               setState(() => _currentIndex = index);

@@ -113,11 +113,15 @@ class ProfileScreen extends StatelessWidget {
                                 Text(
                                   user.email ?? l10n.signedInUser,
                                   style: Theme.of(context).textTheme.titleMedium,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   l10n.memberSince(createdAt),
                                   style: Theme.of(context).textTheme.bodyMedium,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -347,17 +351,29 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: AppTheme.primarySoft, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.bodyMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? Colors.white,
-              fontWeight: FontWeight.w800,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: valueColor ?? Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -405,18 +421,30 @@ class _MenuTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
                       style: Theme.of(context).textTheme.bodyMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
               ),
             ),
-            trailing ?? const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+            const SizedBox(width: 8),
+            trailing ??
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppTheme.textMuted,
+                ),
           ],
         ),
       ),
