@@ -9,7 +9,7 @@ class WatermarkHeroCard extends StatelessWidget {
     required this.imageAsset,
     this.height = 220,
     this.imageAlignment = Alignment.centerRight,
-    this.imageOpacity = 0.16,
+    this.imageOpacity = 0.22,
     this.imageScale = 1.18,
     this.padding = const EdgeInsets.all(18),
   });
@@ -60,6 +60,8 @@ class WatermarkHeroCard extends StatelessWidget {
                     child: Image.asset(
                       imageAsset,
                       fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        isAntiAlias: true,
                     ),
                   ),
                 ),
@@ -72,9 +74,9 @@ class WatermarkHeroCard extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      Color(0xF40A140F),
-                      Color(0xDE09110D),
-                      Color(0x8C07100B),
+                      Color(0xD80A140F),
+                      Color(0xB809110D),
+                      Color(0x5C07100B),
                     ],
                   ),
                 ),

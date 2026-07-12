@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/app_language_service.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_logo.dart';
@@ -129,6 +130,16 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
   }
 
+  String _currentLanguageLabel() {
+    final currentCode = AppLanguageService.instance.selectedLanguageCode;
+    for (final option in AppLanguageService.instance.supportedLanguageOptions) {
+      if (option.code == currentCode) {
+        return option.label;
+      }
+    }
+    return 'English';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -181,6 +192,93 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: PopupMenuButton<String>(
+                              tooltip: l10n.appLanguage,
+                              onSelected: (value) async {
+                                await AppLanguageService.instance
+                                    .setPreferredLanguageCode(value);
+                                if (mounted) {
+                                  setState(() {});
+                                }
+                              },
+                              itemBuilder: (context) {
+                                final selectedCode = AppLanguageService
+                                    .instance
+                                    .selectedLanguageCode;
+                                return AppLanguageService.instance
+                                    .supportedLanguageOptions
+                                    .map(
+                                      (option) => PopupMenuItem<String>(
+                                        value: option.code,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              selectedCode == option.code
+                                                  ? Icons.radio_button_checked
+                                                  : Icons.radio_button_off,
+                                              size: 18,
+                                              color: AppTheme.primarySoft,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                option.label,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(growable: false);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.04),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: AppTheme.outline.withOpacity(0.7),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.language_outlined,
+                                      size: 18,
+                                      color: AppTheme.primarySoft,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 122),
+                                      child: Text(
+                                        _currentLanguageLabel(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.arrow_drop_down_rounded,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
                           const Center(child: BrandLogo(height: 76)),
                           const SizedBox(height: 24),
                           AnimatedSwitcher(
