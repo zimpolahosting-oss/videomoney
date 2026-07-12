@@ -293,17 +293,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? Icons.hourglass_top_rounded
                                 : Icons.play_arrow_rounded,
                           ),
-                          label: Text(_isLoading ? l10n.loading : l10n.watchVideo),
+                          label: Text(
+                            _isLoading ? l10n.loading : l10n.watchVideo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          l10n.earnViewsNow,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       Text(
                         isReadyForPayout
                             ? l10n.payoutUnlocked
@@ -313,6 +310,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                         style: Theme.of(context).textTheme.bodyMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -453,6 +452,7 @@ class _MiniStatCard extends StatelessWidget {
         border: Border.all(color: AppTheme.outline.withOpacity(0.6)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: AppTheme.primarySoft, size: 18),
           const SizedBox(width: 8),
@@ -474,6 +474,8 @@ class _MiniStatCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

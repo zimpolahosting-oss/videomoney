@@ -94,7 +94,7 @@ class _EarnScreenState extends State<EarnScreen> {
                 _TopTitle(title: l10n.earn),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 230,
+                  height: 214,
                   child: WatermarkHeroCard(
                     imageAsset: 'assets/illustrations/earn_phone.jpg',
                     imageOpacity: 0.17,
@@ -151,15 +151,11 @@ class _EarnScreenState extends State<EarnScreen> {
                                   ? Icons.hourglass_top_rounded
                                   : Icons.play_arrow_rounded,
                             ),
-                            label:
-                                Text(_isLoading ? l10n.loading : l10n.watchVideo),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Center(
-                          child: Text(
-                            l10n.earnViews,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            label: Text(
+                              _isLoading ? l10n.loading : l10n.watchVideo,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ],
@@ -393,12 +389,16 @@ class _HowStep extends StatelessWidget {
           title,
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 6),
         Text(
           subtitle,
           style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
