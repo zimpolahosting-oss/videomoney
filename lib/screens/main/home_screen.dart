@@ -78,11 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
         final appUser = snapshot.data;
         final views = appUser?.views ?? 0;
         final videosWatched = appUser?.videosWatched ?? 0;
-        final viewsRemaining = views >= FirestoreService.minimumPayoutCoins
-            ? 0
-            : FirestoreService.minimumPayoutCoins - views;
-        final isReadyForPayout = views >= FirestoreService.minimumPayoutCoins;
-
         final todayKey = FirestoreService.formatLocalDateKey(DateTime.now());
         final dailyCount = (appUser?.dailyProgressDate == todayKey)
             ? (appUser?.dailyVideosWatched ?? 0)
@@ -299,19 +294,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        isReadyForPayout
-                            ? l10n.payoutUnlocked
-                            : l10n.moreViewsUntilPayout(
-                                NumberFormat.decimalPattern().format(
-                                  viewsRemaining,
-                                ),
-                              ),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

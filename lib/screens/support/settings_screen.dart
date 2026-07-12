@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dailyReminderEnabled = true;
   bool _isLoading = true;
   bool _isSaving = false;
-  String _selectedLanguageCode = AppLanguageService.automaticValue;
+  String _selectedLanguageCode = AppLanguageService.defaultLanguageCode;
 
   @override
   void initState() {
@@ -31,8 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    _selectedLanguageCode =
-        AppLanguageService.instance.selectedLanguageCodeOrAuto;
+    _selectedLanguageCode = AppLanguageService.instance.selectedLanguageCode;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       if (mounted) setState(() => _isLoading = false);
@@ -68,11 +67,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         notificationsEnabled: _notificationsEnabled,
         dailyReminderEnabled: _dailyReminderEnabled,
       );
-      await AppLanguageService.instance.setPreferredLanguageCode(
-        _selectedLanguageCode == AppLanguageService.automaticValue
-            ? null
-            : _selectedLanguageCode,
-      );
+      await AppLanguageService.instance
+          .setPreferredLanguageCode(_selectedLanguageCode);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsSaved)),
@@ -88,17 +84,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _currentLanguageLabel(AppLocalizations l10n) {
-    if (_selectedLanguageCode == AppLanguageService.automaticValue) {
-      return l10n.automaticLanguage;
-    }
-
     for (final option in AppLanguageService.instance.supportedLanguageOptions) {
       if (option.code == _selectedLanguageCode) {
         return option.label;
       }
     }
-
-    return l10n.automaticLanguage;
+    return 'English';
   }
 
   Future<void> _showLanguagePicker(AppLocalizations l10n) async {
@@ -130,22 +121,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  ListTile(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    leading: Icon(
-                      _selectedLanguageCode == AppLanguageService.automaticValue
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                    ),
-                    title: Text(l10n.automaticLanguage),
-                    onTap: () {
-                      Navigator.of(sheetContext)
-                          .pop(AppLanguageService.automaticValue);
-                    },
-                  ),
-                  const SizedBox(height: 6),
                   ...languageOptions.map(
                     (option) => ListTile(
                       shape: RoundedRectangleBorder(
@@ -199,11 +174,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   l10n.appLanguage,
                   style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.appLanguageSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 14),
                 InkWell(

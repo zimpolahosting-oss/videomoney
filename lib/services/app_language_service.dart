@@ -9,24 +9,21 @@ class AppLanguageService extends ChangeNotifier {
   static final AppLanguageService instance = AppLanguageService._();
 
   static const String _preferenceKey = 'preferred_app_language_code';
-  static const String automaticValue = 'auto';
+  static const String defaultLanguageCode = 'en';
 
   String? _preferredLanguageCode;
 
   String? get preferredLanguageCode => _preferredLanguageCode;
-  bool get isAutomatic => _preferredLanguageCode == null;
+  Locale get localeOverride => Locale(_preferredLanguageCode ?? defaultLanguageCode);
 
-  Locale? get localeOverride =>
-      _preferredLanguageCode == null ? null : Locale(_preferredLanguageCode!);
-
-  String get selectedLanguageCodeOrAuto =>
-      _preferredLanguageCode ?? automaticValue;
+  String get selectedLanguageCode =>
+      _preferredLanguageCode ?? defaultLanguageCode;
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final savedValue = prefs.getString(_preferenceKey);
     if (savedValue == null || savedValue.trim().isEmpty) {
-      _preferredLanguageCode = null;
+      _preferredLanguageCode = defaultLanguageCode;
       return;
     }
 
@@ -36,18 +33,17 @@ class AppLanguageService extends ChangeNotifier {
       return;
     }
 
-    _preferredLanguageCode = null;
+    _preferredLanguageCode = defaultLanguageCode;
     await prefs.remove(_preferenceKey);
   }
 
-  Future<void> setPreferredLanguageCode(String? languageCode) async {
+  Future<void> setPreferredLanguageCode(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
-    final normalizedValue = languageCode?.toLowerCase().trim();
+    final normalizedValue = languageCode.toLowerCase().trim();
 
-    if (normalizedValue == null ||
-        normalizedValue.isEmpty ||
+    if (normalizedValue.isEmpty ||
         !_supportedLanguageCodes.contains(normalizedValue)) {
-      _preferredLanguageCode = null;
+      _preferredLanguageCode = defaultLanguageCode;
       await prefs.remove(_preferenceKey);
     } else {
       _preferredLanguageCode = normalizedValue;

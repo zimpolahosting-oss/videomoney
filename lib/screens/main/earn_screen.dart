@@ -130,6 +130,8 @@ class _EarnScreenState extends State<EarnScreen> {
                           child: Text(
                             l10n.earnViewsTitle,
                             style: Theme.of(context).textTheme.headlineMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -138,6 +140,8 @@ class _EarnScreenState extends State<EarnScreen> {
                           child: Text(
                             l10n.watchRewardedEarnViews,
                             style: Theme.of(context).textTheme.bodyMedium,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const Spacer(),
@@ -178,29 +182,33 @@ class _EarnScreenState extends State<EarnScreen> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 14),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 14,
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
-                          Expanded(
+                          SizedBox(
+                            width: 92,
                             child: _HowStep(
                               icon: Icons.play_circle_outline,
                               title: l10n.watch,
-                              subtitle: l10n.watchShortVideo.replaceFirst(' ', '\n'),
+                              subtitle: l10n.watchVideo,
                             ),
                           ),
-                          const _HowArrow(),
-                          Expanded(
+                          SizedBox(
+                            width: 92,
                             child: _HowStep(
                               icon: Icons.visibility_outlined,
                               title: l10n.earnStep,
-                              subtitle: l10n.getViewsReward.replaceFirst(' as ', ' as\n'),
+                              subtitle: l10n.earnViews,
                             ),
                           ),
-                          const _HowArrow(),
-                          Expanded(
+                          SizedBox(
+                            width: 92,
                             child: _HowStep(
                               icon: Icons.account_balance_wallet_outlined,
                               title: l10n.cashOut,
-                              subtitle: l10n.reachViews('10,000').replaceFirst(' ', '\n'),
+                              subtitle: '10,000 ${l10n.viewsUnit}',
                             ),
                           ),
                         ],
@@ -338,22 +346,6 @@ class _TopTitle extends StatelessWidget {
           fontSize: 18,
           letterSpacing: 0.4,
         ),
-      ),
-    );
-  }
-}
-
-class _HowArrow extends StatelessWidget {
-  const _HowArrow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Icon(
-        Icons.arrow_forward_rounded,
-        color: AppTheme.outline.withOpacity(0.9),
-        size: 18,
       ),
     );
   }

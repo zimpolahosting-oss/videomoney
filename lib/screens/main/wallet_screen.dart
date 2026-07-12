@@ -111,18 +111,6 @@ class WalletScreen extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              Navigator.of(context)
-                                  .pushNamed(AppRoutes.payoutRequest);
-                            },
-                            icon: const Icon(Icons.request_quote_outlined),
-                            label: Text(l10n.requestPayout),
-                          ),
-                        ),
                     ],
                   ),
                 );
