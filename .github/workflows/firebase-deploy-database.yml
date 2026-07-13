@@ -22,10 +22,27 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Authenticate to Google Cloud (service account key)
+      - id: auth
+        name: Authenticate to Google Cloud (service account key)
         uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ secrets.FIREBASE_PROJECT_ID }}
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure gcloud project
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "Missing secret FIREBASE_PROJECT_ID"
+            exit 1
+          fi
+          gcloud config set project "$FIREBASE_PROJECT_ID"
 
       - name: Install Firebase Tools
         run: npm install -g firebase-tools
@@ -33,6 +50,10 @@ jobs:
       - name: Deploy Realtime Database rules
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+          CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: ${{ steps.auth.outputs.credentials_file_path }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GCLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" ]; then
             echo "Missing secret FIREBASE_SERVICE_ACCOUNT_JSON"
@@ -40,6 +61,10 @@ jobs:
           fi
           if [ -z "$FIREBASE_PROJECT_ID" ]; then
             echo "Missing secret FIREBASE_PROJECT_ID"
+            exit 1
+          fi
+          if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "Missing credentials file path from auth step"
             exit 1
           fi
           firebase deploy --only database --project "$FIREBASE_PROJECT_ID"
