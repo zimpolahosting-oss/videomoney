@@ -7,7 +7,7 @@ class PresenceService {
 
   static final PresenceService instance = PresenceService._();
 
-  static const String onlineUsersCountPath = 'onlineUsersCount';
+  static const String statusPath = 'status';
 
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
@@ -16,12 +16,18 @@ class PresenceService {
   String? _activeUid;
 
   Stream<int> watchOnlineUsersCount() {
-    return _database.ref(onlineUsersCountPath).onValue.map((event) {
+    return _database.ref(statusPath).onValue.map((event) {
       final value = event.snapshot.value;
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      if (value is String) return int.tryParse(value) ?? 0;
-      return 0;
+      if (value is! Map) return 0;
+
+      var onlineUsers = 0;
+      for (final entry in value.entries) {
+        final connections = entry.value;
+        if (connections is Map && connections.isNotEmpty) {
+          onlineUsers += 1;
+        }
+      }
+      return onlineUsers;
     });
   }
 
@@ -31,7 +37,7 @@ class PresenceService {
 
     _activeUid = uid;
     final connectedRef = _database.ref('.info/connected');
-    final userConnectionsRef = _database.ref('status/$uid');
+    final userConnectionsRef = _database.ref('$statusPath/$uid');
 
     _connectedSubscription = connectedRef.onValue.listen((event) async {
       final connected = event.snapshot.value == true;
