@@ -1,11 +1,10 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'app_routes.dart';
-import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'services/app_language_service.dart';
+import 'services/firebase_bootstrap.dart';
 import 'services/notification_service.dart';
 import 'services/presence_service.dart';
 import 'services/rewarded_ad_service.dart';
@@ -28,11 +27,7 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
 
   Future<void> _initialize() async {
     await AppLanguageService.instance.initialize();
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    }
+    await FirebaseBootstrap.ensureInitialized();
     await PresenceService.instance.initialize();
     await NotificationService.instance.initialize();
     await MobileAds.instance.initialize();
