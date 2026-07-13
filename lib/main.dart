@@ -28,9 +28,11 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
 
   Future<void> _initialize() async {
     await AppLanguageService.instance.initialize();
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     await PresenceService.instance.initialize();
     await NotificationService.instance.initialize();
     await MobileAds.instance.initialize();

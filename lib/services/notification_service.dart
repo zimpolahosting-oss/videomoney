@@ -14,9 +14,11 @@ import 'firestore_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 }
 
 class NotificationService {
@@ -80,8 +82,8 @@ class NotificationService {
       _localNotificationsReady = false;
     }
 
-    _foregroundMessageSubscription =
-        FirebaseMessaging.onMessage.listen(_showRemoteMessageAsLocalNotification);
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage
+        .listen(_showRemoteMessageAsLocalNotification);
 
     _authSubscription =
         FirebaseAuth.instance.authStateChanges().listen(_handleAuthStateChange);
