@@ -245,39 +245,6 @@ exports.dispatchAdminNotification = functions
     }
   });
 
-exports.cleanupExpiredActiveUsers = functions
-  .region("europe-west1")
-  .pubsub.schedule("every 1 minutes")
-  .onRun(async () => {
-    const now = admin.firestore.Timestamp.now();
-    const maxBatchSize = 400;
-    let deletedCount = 0;
-
-    while (true) {
-      const snapshot = await db
-        .collection("activeUsers")
-        .where("expiresAt", "<=", now)
-        .limit(maxBatchSize)
-        .get();
-
-      if (snapshot.empty) {
-        break;
-      }
-
-      const batch = db.batch();
-      for (const doc of snapshot.docs) {
-        batch.delete(doc.ref);
-      }
-      await batch.commit();
-      deletedCount += snapshot.size;
-    }
-
-    logger.info("cleanupExpiredActiveUsers completed", {
-      deletedCount,
-    });
-    return null;
-  });
-
 const rtdb = admin.database();
 
 function onlineCountRef() {
