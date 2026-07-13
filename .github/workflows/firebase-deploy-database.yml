@@ -22,21 +22,24 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Authenticate to Google Cloud (service account key)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
       - name: Install Firebase Tools
         run: npm install -g firebase-tools
 
       - name: Deploy Realtime Database rules
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
-          if [ -z "$FIREBASE_TOKEN" ]; then
-            echo "Missing secret FIREBASE_TOKEN"
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo "Missing secret FIREBASE_SERVICE_ACCOUNT_JSON"
             exit 1
           fi
           if [ -z "$FIREBASE_PROJECT_ID" ]; then
             echo "Missing secret FIREBASE_PROJECT_ID"
             exit 1
           fi
-          firebase deploy --only database --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN"
-
+          firebase deploy --only database --project "$FIREBASE_PROJECT_ID"
