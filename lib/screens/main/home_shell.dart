@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
+import '../../services/presence_service.dart';
 import 'earn_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -25,10 +26,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   final FirestoreService _firestoreService = FirestoreService();
   int _currentIndex = 0;
-  Timer? _presenceHeartbeatTimer;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
       _payoutNotificationSubscription;
-  String? _activeUserId;
   String? _lastSeenPayoutNotificationId;
   bool _isInForeground = true;
 
@@ -43,19 +42,15 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startPresenceHeartbeat();
+    _startPresence();
     unawaited(_initializePayoutNotifications());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _presenceHeartbeatTimer?.cancel();
     _payoutNotificationSubscription?.cancel();
-    final uid = _activeUserId;
-    if (uid != null) {
-      unawaited(_firestoreService.clearUserPresence(uid: uid));
-    }
+    unawaited(PresenceService.instance.stop());
     super.dispose();
   }
 
@@ -64,7 +59,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         _isInForeground = true;
-        _startPresenceHeartbeat();
+        _startPresence();
         break;
       case AppLifecycleState.inactive:
         break;
@@ -72,7 +67,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         _isInForeground = false;
-        _stopPresenceHeartbeat(clearPresence: true);
+        unawaited(PresenceService.instance.stop());
         break;
     }
   }
@@ -95,36 +90,14 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     await prefs.setString(_lastSeenPayoutNotificationKey, notificationId);
   }
 
-  void _startPresenceHeartbeat() {
+  void _startPresence() {
     final user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid;
-    _activeUserId = uid;
 
-    _presenceHeartbeatTimer?.cancel();
     if (!_isInForeground || uid == null) {
       return;
     }
-
-    unawaited(_firestoreService.updateUserPresence(uid: uid));
-    _presenceHeartbeatTimer = Timer.periodic(
-      const Duration(seconds: FirestoreService.presenceHeartbeatSeconds),
-      (_) {
-        final activeUid = _activeUserId;
-        if (!_isInForeground || activeUid == null) {
-          return;
-        }
-        unawaited(_firestoreService.updateUserPresence(uid: activeUid));
-      },
-    );
-  }
-
-  void _stopPresenceHeartbeat({bool clearPresence = false}) {
-    _presenceHeartbeatTimer?.cancel();
-    _presenceHeartbeatTimer = null;
-    final uid = _activeUserId;
-    if (clearPresence && uid != null) {
-      unawaited(_firestoreService.clearUserPresence(uid: uid));
-    }
+    unawaited(PresenceService.instance.start(uid: uid));
   }
 
   void _listenForPayoutNotifications() {

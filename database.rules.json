@@ -1,0 +1,23 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "onlineUsersCount": {
+      ".read": "auth != null",
+      ".write": "false"
+    },
+    "status": {
+      "$uid": {
+        "$connId": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "statusMeta": {
+      ".read": "false",
+      ".write": "false"
+    }
+  }
+}
+

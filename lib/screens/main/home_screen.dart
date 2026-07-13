@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/presence_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/watermark_hero_card.dart';
 
@@ -21,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
   late final Stream<int> _onlineUsersCountStream =
-      _firestoreService.watchOnlineUsersCount();
+      PresenceService.instance.watchOnlineUsersCount();
   bool _isLoading = false;
 
   @override

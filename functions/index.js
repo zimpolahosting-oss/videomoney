@@ -277,3 +277,55 @@ exports.cleanupExpiredActiveUsers = functions
     });
     return null;
   });
+
+const rtdb = admin.database();
+
+function onlineCountRef() {
+  return rtdb.ref("onlineUsersCount");
+}
+
+function statusMetaConnectionsRef(uid) {
+  return rtdb.ref(`statusMeta/${uid}/connections`);
+}
+
+exports.trackPresenceConnection = functions
+  .region("europe-west1")
+  .database.ref("/status/{uid}/{connId}")
+  .onWrite(async (change, context) => {
+    const { uid } = context.params;
+    const beforeExists = change.before.exists();
+    const afterExists = change.after.exists();
+
+    if (beforeExists === afterExists) {
+      return null;
+    }
+
+    if (!beforeExists && afterExists) {
+      const tx = await statusMetaConnectionsRef(uid).transaction((current) => {
+        const base = typeof current === "number" ? current : 0;
+        return base + 1;
+      });
+      const connections = tx.snapshot.val() || 0;
+      if (connections === 1) {
+        await onlineCountRef().transaction((current) => {
+          const base = typeof current === "number" ? current : 0;
+          return base + 1;
+        });
+      }
+      return null;
+    }
+
+    const tx = await statusMetaConnectionsRef(uid).transaction((current) => {
+      const base = typeof current === "number" ? current : 0;
+      return base <= 1 ? 0 : base - 1;
+    });
+    const connections = tx.snapshot.val() || 0;
+    if (connections === 0) {
+      await statusMetaConnectionsRef(uid).parent.remove();
+      await onlineCountRef().transaction((current) => {
+        const base = typeof current === "number" ? current : 0;
+        return base <= 0 ? 0 : base - 1;
+      });
+    }
+    return null;
+  });
