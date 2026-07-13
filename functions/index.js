@@ -84,14 +84,10 @@ async function resolveRecipients(audience, targetUserId) {
   }
 
   const userSnapshot = await db.collection("users").get();
-  return userSnapshot.docs
-    .map((doc) => ({
-      uid: doc.id,
-      ...doc.data(),
-    }))
-    .filter(
-      (user) => Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0
-    );
+  return userSnapshot.docs.map((doc) => ({
+    uid: doc.id,
+    ...doc.data(),
+  }));
 }
 
 function buildTokenOwners(users) {
@@ -164,12 +160,6 @@ exports.dispatchAdminNotification = functions
         throw new Error("No recipient users found with valid fcmTokens.");
       }
 
-      const tokenOwners = buildTokenOwners(recipients);
-      const tokens = tokenOwners.map((item) => item.token);
-      if (tokens.length === 0) {
-        throw new Error("No valid fcmTokens found for the selected recipients.");
-      }
-
       await writeInboxMessages(
         recipients,
         title,
@@ -178,54 +168,54 @@ exports.dispatchAdminNotification = functions
         notificationId
       );
 
+      const tokenOwners = buildTokenOwners(recipients);
+      const tokens = tokenOwners.map((item) => item.token);
       let successCount = 0;
       let failureCount = 0;
       const invalidTokens = [];
 
-      for (const tokenChunk of chunk(tokens, 500)) {
-        const chunkOwners = tokenOwners.filter((owner) =>
-          tokenChunk.includes(owner.token)
-        );
+      if (tokens.length > 0) {
+        for (const tokenChunk of chunk(tokens, 500)) {
+          const chunkOwners = tokenOwners.filter((owner) =>
+            tokenChunk.includes(owner.token)
+          );
 
-        const response = await admin.messaging().sendEachForMulticast({
-          tokens: tokenChunk,
-          notification: {
-            title,
-            body: message,
-          },
-          data: {
-            title,
-            message,
-            type,
-            notificationId,
-            audience,
-          },
-          android: {
-            priority: "high",
+          const response = await admin.messaging().sendEachForMulticast({
+            tokens: tokenChunk,
             notification: {
-              channelId: "videomoney_general",
+              title,
+              body: message,
             },
-          },
-        });
+            data: {
+              title,
+              message,
+              type,
+              notificationId,
+              audience,
+            },
+            android: {
+              priority: "high",
+              notification: {
+                channelId: "videomoney_general",
+              },
+            },
+          });
 
-        successCount += response.successCount;
-        failureCount += response.failureCount;
+          successCount += response.successCount;
+          failureCount += response.failureCount;
 
-        response.responses.forEach((result, index) => {
-          if (!result.success && shouldRemoveToken(result.error?.code)) {
-            const owner = chunkOwners[index];
-            if (owner) {
-              invalidTokens.push(owner);
+          response.responses.forEach((result, index) => {
+            if (!result.success && shouldRemoveToken(result.error?.code)) {
+              const owner = chunkOwners[index];
+              if (owner) {
+                invalidTokens.push(owner);
+              }
             }
-          }
-        });
+          });
+        }
       }
 
       await removeInvalidTokens(invalidTokens);
-
-      if (successCount <= 0) {
-        throw new Error("FCM send failed for all selected recipients.");
-      }
 
       await snapshot.ref.set(
         {
@@ -235,6 +225,7 @@ exports.dispatchAdminNotification = functions
           tokenCount: tokens.length,
           successCount,
           failureCount,
+          inboxOnly: tokens.length === 0,
           sentAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -252,4 +243,37 @@ exports.dispatchAdminNotification = functions
         { merge: true }
       );
     }
+  });
+
+exports.cleanupExpiredActiveUsers = functions
+  .region("europe-west1")
+  .pubsub.schedule("every 1 minutes")
+  .onRun(async () => {
+    const now = admin.firestore.Timestamp.now();
+    const maxBatchSize = 400;
+    let deletedCount = 0;
+
+    while (true) {
+      const snapshot = await db
+        .collection("activeUsers")
+        .where("expiresAt", "<=", now)
+        .limit(maxBatchSize)
+        .get();
+
+      if (snapshot.empty) {
+        break;
+      }
+
+      const batch = db.batch();
+      for (const doc of snapshot.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+      deletedCount += snapshot.size;
+    }
+
+    logger.info("cleanupExpiredActiveUsers completed", {
+      deletedCount,
+    });
+    return null;
   });

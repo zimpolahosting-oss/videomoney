@@ -20,6 +20,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
+  late final Stream<int> _onlineUsersCountStream =
+      _firestoreService.watchOnlineUsersCount();
   bool _isLoading = false;
 
   @override
@@ -85,11 +87,13 @@ class _HomeScreenState extends State<HomeScreen> {
         final dailyBonusAwarded = (appUser?.dailyProgressDate == todayKey)
             ? (appUser?.dailyBonusAwarded ?? false)
             : false;
-        final dailyProgress = (dailyCount / FirestoreService.dailyBonusTargetVideos)
+        final dailyProgress =
+            (dailyCount / FirestoreService.dailyBonusTargetVideos)
+                .clamp(0, 1)
+                .toDouble();
+        final payoutProgress = (views / FirestoreService.minimumPayoutCoins)
             .clamp(0, 1)
             .toDouble();
-        final payoutProgress =
-            (views / FirestoreService.minimumPayoutCoins).clamp(0, 1).toDouble();
 
         return Scaffold(
           body: SafeArea(
@@ -97,6 +101,42 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
               children: [
                 _TopTitle(title: l10n.home),
+                const SizedBox(height: 14),
+                StreamBuilder<int>(
+                  stream: _onlineUsersCountStream,
+                  builder: (context, onlineSnapshot) {
+                    final onlineUsers = onlineSnapshot.data ?? 0;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(
+                          color: AppTheme.outline.withOpacity(0.55),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.circle,
+                            color: AppTheme.primary,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '${NumberFormat.decimalPattern().format(onlineUsers)} users online',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 14),
                 SizedBox(
                   height: 290,
@@ -119,8 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             StreamBuilder<int>(
-                              stream:
-                                  _firestoreService.watchUnreadInboxCount(user.uid),
+                              stream: _firestoreService
+                                  .watchUnreadInboxCount(user.uid),
                               builder: (context, inboxSnapshot) {
                                 final unread = inboxSnapshot.data ?? 0;
                                 return Stack(
@@ -166,7 +206,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             IconButton(
                               onPressed: () {
-                                Navigator.of(context).pushNamed(AppRoutes.settings);
+                                Navigator.of(context)
+                                    .pushNamed(AppRoutes.settings);
                               },
                               icon: const Icon(
                                 Icons.settings_outlined,
@@ -213,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: _MiniStatCard(
                                 icon: Icons.visibility_outlined,
                                 title: l10n.currentViews,
-                                value: NumberFormat.decimalPattern().format(views),
+                                value:
+                                    NumberFormat.decimalPattern().format(views),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -238,7 +280,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(24),
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                    border:
+                        Border.all(color: AppTheme.outline.withOpacity(0.55)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +347,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(24),
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                    border:
+                        Border.all(color: AppTheme.outline.withOpacity(0.55)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,9 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           Text(
-                            dailyBonusAwarded
-                                ? l10n.bonusClaimed
-                                : l10n.bonus,
+                            dailyBonusAwarded ? l10n.bonusClaimed : l10n.bonus,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],

@@ -17,6 +17,8 @@ class FirestoreService {
   static const int minimumPayoutCoins = 10000;
   static const int payoutProcessingDays = 30;
   static const int estimatedViewsPerCent = 50;
+  static const int presenceHeartbeatSeconds = 30;
+  static const int presenceTtlSeconds = 90;
   static const String rewardBalanceResetAppliedField =
       'rewardBalanceResetApplied';
   static const Set<String> allowedPayoutStatuses = {
@@ -63,6 +65,12 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _ratings =>
       _firestore.collection('ratings');
+
+  CollectionReference<Map<String, dynamic>> get _activeUsers =>
+      _firestore.collection('activeUsers');
+
+  CollectionReference<Map<String, dynamic>> get _payoutLiveNotifications =>
+      _firestore.collection('payoutLiveNotifications');
 
   CollectionReference<Map<String, dynamic>> get _adminNotifications =>
       _firestore.collection('adminNotifications');
@@ -180,15 +188,55 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  Future<void> updateUserPresence({
+    required String uid,
+  }) async {
+    final now = DateTime.now();
+    await _activeUsers.doc(uid).set({
+      'uid': uid,
+      'lastSeenAt': FieldValue.serverTimestamp(),
+      'expiresAt': Timestamp.fromDate(
+        now.add(const Duration(seconds: presenceTtlSeconds)),
+      ),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> clearUserPresence({
+    required String uid,
+  }) async {
+    await _activeUsers.doc(uid).delete();
+  }
+
+  Stream<int> watchOnlineUsersCount({
+    Duration refreshInterval = const Duration(
+      seconds: presenceHeartbeatSeconds,
+    ),
+  }) async* {
+    while (true) {
+      yield await _getOnlineUsersCount();
+      await Future<void>.delayed(refreshInterval);
+    }
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>>
+      watchLatestPayoutLiveNotifications({
+    int limit = 1,
+  }) {
+    return _payoutLiveNotifications
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots();
+  }
+
   Stream<List<InboxMessage>> watchUserInbox(String uid) {
     return _inboxMessages
         .where('userId', isEqualTo: uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(InboxMessage.fromDoc)
-              .toList(growable: false),
+          (snapshot) =>
+              snapshot.docs.map(InboxMessage.fromDoc).toList(growable: false),
         );
   }
 
@@ -197,9 +245,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(InboxMessage.fromDoc)
-              .toList(growable: false),
+          (snapshot) =>
+              snapshot.docs.map(InboxMessage.fromDoc).toList(growable: false),
         );
   }
 
@@ -268,8 +315,7 @@ class FirestoreService {
 
       transaction.update(userRef, {
         'coins': FieldValue.increment(
-          coinsReward +
-              (bonusTriggered ? FirestoreService.dailyBonusViews : 0),
+          coinsReward + (bonusTriggered ? FirestoreService.dailyBonusViews : 0),
         ),
         'videosWatched': FieldValue.increment(1),
         'dailyProgressDate': todayKey,
@@ -286,9 +332,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(PayoutRequest.fromDoc)
-              .toList(growable: false),
+          (snapshot) =>
+              snapshot.docs.map(PayoutRequest.fromDoc).toList(growable: false),
         );
   }
 
@@ -375,8 +420,9 @@ class FirestoreService {
         'payoutCurrency': trimmedCurrency,
         'status': 'pending',
         'payPalEmail': trimmedPayPalEmail,
-        'ibanOrBankAccount':
-            trimmedMethod == 'revolut' ? trimmedRevolutUsername : legacyBankValue,
+        'ibanOrBankAccount': trimmedMethod == 'revolut'
+            ? trimmedRevolutUsername
+            : legacyBankValue,
         'revolutUsername': trimmedRevolutUsername,
         'accountHolderName': trimmedAccountHolderName,
         'bankName': trimmedBankName,
@@ -395,9 +441,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      final payouts = snapshot.docs
-          .map(PayoutRequest.fromDoc)
-          .toList(growable: false);
+      final payouts =
+          snapshot.docs.map(PayoutRequest.fromDoc).toList(growable: false);
       if (trimmedStatus.isEmpty || trimmedStatus == 'all') return payouts;
       return payouts
           .where((payout) => payout.status.toLowerCase() == trimmedStatus)
@@ -429,11 +474,10 @@ class FirestoreService {
         return;
       }
 
-      final isValidTransition =
-          (currentStatus == 'pending' &&
-                  (normalized == 'approved' || normalized == 'rejected')) ||
-              (currentStatus == 'approved' &&
-                  (normalized == 'paid' || normalized == 'rejected'));
+      final isValidTransition = (currentStatus == 'pending' &&
+              (normalized == 'approved' || normalized == 'rejected')) ||
+          (currentStatus == 'approved' &&
+              (normalized == 'paid' || normalized == 'rejected'));
 
       if (!isValidTransition) {
         throw Exception(
@@ -452,6 +496,68 @@ class FirestoreService {
       if (normalized == 'paid') {
         updates['paidAt'] = FieldValue.serverTimestamp();
         updates['paymentHandledManually'] = true;
+
+        final userId = payoutData['userId'] as String? ?? '';
+        final accountHolderName =
+            payoutData['accountHolderName'] as String? ?? '';
+        final userEmail = payoutData['userEmail'] as String? ?? '';
+        final payoutCurrency =
+            (payoutData['payoutCurrency'] as String? ?? 'EUR').toUpperCase();
+        final coinsRequested =
+            (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
+
+        String userCountry = '';
+        if (userId.isNotEmpty) {
+          final userSnapshot = await transaction.get(_users.doc(userId));
+          final userData = userSnapshot.data() ?? <String, dynamic>{};
+          final rawCountry = (userData['country'] ??
+                  userData['countryName'] ??
+                  userData['locationCountry'] ??
+                  '')
+              .toString();
+          userCountry = rawCountry.trim();
+        }
+
+        final privacyName = _buildPrivacyDisplayName(
+          accountHolderName: accountHolderName,
+          userEmail: userEmail,
+        );
+        final amountLabel = _formatPayoutAmountLabel(
+          coinsRequested: coinsRequested,
+          currencyCode: payoutCurrency,
+        );
+        final payoutMessage = _buildPayoutAnnouncementMessage(
+          privacyName: privacyName,
+          userCountry: userCountry,
+          amountLabel: amountLabel,
+        );
+
+        transaction.set(_payoutLiveNotifications.doc(), {
+          'payoutId': payoutId,
+          'userId': userId,
+          'title': 'New payout completed',
+          'privacyName': privacyName,
+          'country': userCountry,
+          'amountLabel': amountLabel,
+          'message': payoutMessage,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        transaction.set(_adminNotifications.doc(), {
+          'createdByUid': 'system',
+          'createdByEmail': 'system@videomoney.app',
+          'audience': 'all',
+          'targetUserId': null,
+          'type': 'payout',
+          'title': 'New payout completed',
+          'message': payoutMessage,
+          'status': 'pending',
+          'errorMessage': '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'source': 'payout_paid',
+          'sourcePayoutId': payoutId,
+        });
       }
       if (normalized == 'rejected') {
         updates['rejectedAt'] = FieldValue.serverTimestamp();
@@ -536,9 +642,8 @@ class FirestoreService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(SupportTicket.fromDoc)
-              .toList(growable: false),
+          (snapshot) =>
+              snapshot.docs.map(SupportTicket.fromDoc).toList(growable: false),
         );
   }
 
@@ -547,9 +652,8 @@ class FirestoreService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(SupportTicket.fromDoc)
-              .toList(growable: false),
+          (snapshot) =>
+              snapshot.docs.map(SupportTicket.fromDoc).toList(growable: false),
         );
   }
 
@@ -582,14 +686,17 @@ class FirestoreService {
       final subject = ticketData['subject'] as String? ?? 'Support update';
       final type = ticketData['type'] as String? ?? 'support';
 
-      transaction.set(ticketRef, {
-        'status': normalizedStatus,
-        'latestReply': trimmedReply,
-        'latestReplyAt': FieldValue.serverTimestamp(),
-        'latestReplyBy': adminUserId,
-        'latestReplyEmail': adminEmail.trim(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      transaction.set(
+          ticketRef,
+          {
+            'status': normalizedStatus,
+            'latestReply': trimmedReply,
+            'latestReplyAt': FieldValue.serverTimestamp(),
+            'latestReplyBy': adminUserId,
+            'latestReplyEmail': adminEmail.trim(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       transaction.set(inboxRef, {
         'userId': userId,
@@ -684,13 +791,9 @@ class FirestoreService {
   }
 
   Stream<List<AppRating>> watchAllRatings() {
-    return _ratings
-        .orderBy('updatedAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(AppRating.fromDoc)
-              .toList(growable: false),
+    return _ratings.orderBy('updatedAt', descending: true).snapshots().map(
+          (snapshot) =>
+              snapshot.docs.map(AppRating.fromDoc).toList(growable: false),
         );
   }
 
@@ -746,5 +849,102 @@ class FirestoreService {
     return _adminNotifications
         .orderBy('createdAt', descending: true)
         .snapshots();
+  }
+
+  Future<int> _getOnlineUsersCount() async {
+    final snapshot = await _activeUsers.get();
+    final now = DateTime.now();
+    final expiredRefs = <DocumentReference<Map<String, dynamic>>>[];
+    var count = 0;
+
+    for (final doc in snapshot.docs) {
+      final expiresAt = (doc.data()['expiresAt'] as Timestamp?)?.toDate();
+      if (expiresAt != null && expiresAt.isAfter(now)) {
+        count += 1;
+      } else {
+        expiredRefs.add(doc.reference);
+      }
+    }
+
+    if (expiredRefs.isNotEmpty) {
+      final batch = _firestore.batch();
+      for (final ref in expiredRefs) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
+
+    return count;
+  }
+
+  String _buildPrivacyDisplayName({
+    required String accountHolderName,
+    required String userEmail,
+  }) {
+    final trimmedName = accountHolderName.trim();
+    if (trimmedName.isNotEmpty) {
+      final nameParts = trimmedName
+          .split(RegExp(r'\s+'))
+          .map((part) => part.trim())
+          .where((part) => part.isNotEmpty)
+          .toList(growable: false);
+      if (nameParts.isNotEmpty) {
+        final firstName = _capitalizeWord(nameParts.first);
+        if (nameParts.length > 1) {
+          final lastInitial = nameParts[1][0].toUpperCase();
+          return '$firstName $lastInitial.';
+        }
+        return firstName;
+      }
+    }
+
+    final localPart = userEmail.split('@').first.trim();
+    if (localPart.isNotEmpty) {
+      final token = localPart
+          .split(RegExp(r'[._\-+]'))
+          .firstWhere((part) => part.trim().isNotEmpty, orElse: () => '');
+      if (token.isNotEmpty) {
+        return _capitalizeWord(token);
+      }
+    }
+    return 'Someone';
+  }
+
+  String _capitalizeWord(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.length == 1) return trimmed.toUpperCase();
+    return '${trimmed[0].toUpperCase()}${trimmed.substring(1).toLowerCase()}';
+  }
+
+  String _formatPayoutAmountLabel({
+    required int coinsRequested,
+    required String currencyCode,
+  }) {
+    final symbol = switch (currencyCode.toUpperCase()) {
+      'GBP' => '£',
+      'USD' => r'$',
+      _ => '€',
+    };
+
+    final amount = estimateEarningsEuro(coinsRequested);
+    final normalizedAmount = amount.toStringAsFixed(2);
+    final compactAmount = normalizedAmount.endsWith('.00')
+        ? normalizedAmount.substring(0, normalizedAmount.length - 3)
+        : normalizedAmount.endsWith('0')
+            ? normalizedAmount.substring(0, normalizedAmount.length - 1)
+            : normalizedAmount;
+    return '$symbol$compactAmount';
+  }
+
+  String _buildPayoutAnnouncementMessage({
+    required String privacyName,
+    required String userCountry,
+    required String amountLabel,
+  }) {
+    if (userCountry.trim().isNotEmpty) {
+      return '🎉 $privacyName from ${userCountry.trim()} just received $amountLabel.';
+    }
+    return '💸 $privacyName just received a $amountLabel payout.';
   }
 }
