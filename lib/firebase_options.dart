@@ -30,6 +30,7 @@ class DefaultFirebaseOptions {
       appId: '1:280202502782:android:05393df2acf4ea1fad6e2f',
       messagingSenderId: '280202502782',
       projectId: 'videomoney-efb89',
+      databaseURL: 'https://videomoney-efb89-default-rtdb.firebaseio.com',
       storageBucket: 'videomoney-efb89.firebasestorage.app',
     );
   }

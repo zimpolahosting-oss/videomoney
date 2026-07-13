@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'app_routes.dart';
@@ -8,6 +7,7 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'services/app_language_service.dart';
 import 'services/notification_service.dart';
+import 'services/presence_service.dart';
 import 'services/rewarded_ad_service.dart';
 import 'theme/app_theme.dart';
 
@@ -31,6 +31,7 @@ class _VideoMoneyBootstrapState extends State<VideoMoneyBootstrap> {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await PresenceService.instance.initialize();
     await NotificationService.instance.initialize();
     await MobileAds.instance.initialize();
     await RewardedAdService().preloadRewardedAd();
@@ -112,7 +113,9 @@ class _StartupStatusScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                   ],
                   Text(
-                    isError ? context.l10n.startupFailed : context.l10n.startingApp,
+                    isError
+                        ? context.l10n.startupFailed
+                        : context.l10n.startingApp,
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),

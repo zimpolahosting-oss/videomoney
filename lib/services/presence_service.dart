@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/widgets.dart';
 
-class PresenceService {
+class PresenceService with WidgetsBindingObserver {
   PresenceService._();
 
   static final PresenceService instance = PresenceService._();
@@ -12,8 +14,11 @@ class PresenceService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
   StreamSubscription<DatabaseEvent>? _connectedSubscription;
+  StreamSubscription<User?>? _authSubscription;
   DatabaseReference? _connectionRef;
   String? _activeUid;
+  bool _isInitialized = false;
+  bool _isInForeground = true;
 
   Stream<int> watchOnlineUsersCount() {
     return _database.ref(statusPath).onValue.map((event) {
@@ -29,6 +34,53 @@ class PresenceService {
       }
       return onlineUsers;
     });
+  }
+
+  /// Initializes presence tracking.
+  ///
+  /// This ensures presence starts automatically after login and stops on logout,
+  /// without relying on specific screens being mounted.
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    WidgetsBinding.instance.addObserver(this);
+
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((user) async {
+      final uid = user?.uid;
+      if (uid == null || !_isInForeground) {
+        await stop();
+        return;
+      }
+      await start(uid: uid);
+    });
+
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid != null && _isInForeground) {
+      await start(uid: currentUid);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _isInForeground = true;
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid != null) {
+          unawaited(start(uid: uid));
+        }
+        break;
+      case AppLifecycleState.inactive:
+        break;
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _isInForeground = false;
+        unawaited(stop());
+        break;
+    }
   }
 
   Future<void> start({required String uid}) async {
@@ -54,6 +106,7 @@ class PresenceService {
     await _connectedSubscription?.cancel();
     _connectedSubscription = null;
 
+    // Keep auth subscription active; stop() is called on logout/background.
     final ref = _connectionRef;
     _connectionRef = null;
     if (ref != null) {
@@ -64,5 +117,12 @@ class PresenceService {
       }
     }
     _activeUid = null;
+  }
+
+  Future<void> dispose() async {
+    WidgetsBinding.instance.removeObserver(this);
+    await _authSubscription?.cancel();
+    _authSubscription = null;
+    await stop();
   }
 }
