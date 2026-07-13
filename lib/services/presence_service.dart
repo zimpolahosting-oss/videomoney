@@ -1,8 +1,12 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/widgets.dart';
+
+import '../firebase_options.dart';
+import 'firebase_bootstrap.dart';
 
 class PresenceService with WidgetsBindingObserver {
   PresenceService._();
@@ -11,14 +15,17 @@ class PresenceService with WidgetsBindingObserver {
 
   static const String statusPath = 'status';
 
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
-
   StreamSubscription<DatabaseEvent>? _connectedSubscription;
   StreamSubscription<User?>? _authSubscription;
   DatabaseReference? _connectionRef;
   String? _activeUid;
   bool _isInitialized = false;
   bool _isInForeground = true;
+
+  FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: DefaultFirebaseOptions.currentPlatform.databaseURL,
+      );
 
   Stream<int> watchOnlineUsersCount() {
     return _database.ref(statusPath).onValue.map((event) {
@@ -43,6 +50,8 @@ class PresenceService with WidgetsBindingObserver {
   Future<void> initialize() async {
     if (_isInitialized) return;
     _isInitialized = true;
+
+    await FirebaseBootstrap.ensureInitialized();
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -86,6 +95,7 @@ class PresenceService with WidgetsBindingObserver {
   Future<void> start({required String uid}) async {
     if (_activeUid == uid && _connectedSubscription != null) return;
     await stop();
+    await FirebaseBootstrap.ensureInitialized();
 
     _activeUid = uid;
     final connectedRef = _database.ref('.info/connected');
