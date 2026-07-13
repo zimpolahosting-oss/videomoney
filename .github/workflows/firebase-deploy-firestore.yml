@@ -1,0 +1,46 @@
+name: Deploy Firestore Rules
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "firebase.json"
+      - "firestore.rules"
+      - ".github/workflows/firebase-deploy-firestore.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy-firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Authenticate to Google Cloud (service account key)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Install Firebase Tools
+        run: npm install -g firebase-tools
+
+      - name: Deploy Firestore rules
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo "Missing secret FIREBASE_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "Missing secret FIREBASE_PROJECT_ID"
+            exit 1
+          fi
+          firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID"
+
