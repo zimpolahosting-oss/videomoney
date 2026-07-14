@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_rating.dart';
 import '../models/app_user.dart';
 import '../models/inbox_message.dart';
+import '../models/leaderboard_entry.dart';
 import '../models/payout_request.dart';
 import '../models/support_ticket.dart';
 
@@ -75,6 +76,9 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _adminNotifications =>
       _firestore.collection('adminNotifications');
 
+  CollectionReference<Map<String, dynamic>> get _leaderboard =>
+      _firestore.collection('leaderboard');
+
   static double estimateEarningsEuro(int views) {
     return views / estimatedViewsPerCent / 100;
   }
@@ -131,13 +135,24 @@ class FirestoreService {
       if (!data.containsKey('createdAt')) {
         updates['createdAt'] = FieldValue.serverTimestamp();
       }
+      if (!data.containsKey('leaderboardDisplayName')) {
+        updates['leaderboardDisplayName'] = '';
+      }
       await docRef.set(updates, SetOptions(merge: true));
+      await _syncLeaderboardDoc(
+        uid: user.uid,
+        email: user.email ?? '',
+        customName: (data['leaderboardDisplayName'] as String? ?? '').trim(),
+        views: (data['coins'] as num?)?.toInt() ?? 0,
+        videosWatched: (data['videosWatched'] as num?)?.toInt() ?? 0,
+      );
       return;
     }
 
     await docRef.set({
       'uid': user.uid,
       'email': user.email ?? '',
+      'leaderboardDisplayName': '',
       'coins': 0,
       'videosWatched': 0,
       'dailyProgressDate': todayKey,
@@ -154,6 +169,13 @@ class FirestoreService {
       rewardBalanceResetAppliedField: true,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    await _syncLeaderboardDoc(
+      uid: user.uid,
+      email: user.email ?? '',
+      customName: '',
+      views: 0,
+      videosWatched: 0,
+    );
   }
 
   Stream<AppUser?> watchUser(String uid) {
@@ -186,6 +208,24 @@ class FirestoreService {
         .where('read', isEqualTo: false)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
+  }
+
+  Stream<List<LeaderboardEntry>> watchLeaderboard({int limit = 10}) {
+    return _leaderboard
+        .orderBy('views', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) {
+      final entries = snapshot.docs.map(LeaderboardEntry.fromDoc).toList();
+      entries.sort((a, b) {
+        final byViews = b.views.compareTo(a.views);
+        if (byViews != 0) return byViews;
+        final byVideos = b.videosWatched.compareTo(a.videosWatched);
+        if (byVideos != 0) return byVideos;
+        return a.publicName.compareTo(b.publicName);
+      });
+      return entries;
+    });
   }
 
   Future<void> updateUserPresence({
@@ -312,6 +352,11 @@ class FirestoreService {
       final newDailyCount = baseDailyCount + 1;
       final bonusTriggered = !baseBonusAwarded &&
           newDailyCount >= FirestoreService.dailyBonusTargetVideos;
+      final newViews = ((data['coins'] as num?)?.toInt() ?? 0) +
+          coinsReward +
+          (bonusTriggered ? FirestoreService.dailyBonusViews : 0);
+      final newVideosWatched =
+          ((data['videosWatched'] as num?)?.toInt() ?? 0) + 1;
 
       transaction.update(userRef, {
         'coins': FieldValue.increment(
@@ -323,6 +368,17 @@ class FirestoreService {
         'dailyBonusAwarded': bonusTriggered ? true : baseBonusAwarded,
         if (bonusTriggered) 'dailyBonusAwardedAt': FieldValue.serverTimestamp(),
       });
+      transaction.set(
+        _leaderboard.doc(uid),
+        _leaderboardPayload(
+          uid: uid,
+          email: data['email'] as String? ?? '',
+          customName: data['leaderboardDisplayName'] as String? ?? '',
+          views: newViews,
+          videosWatched: newVideosWatched,
+        ),
+        SetOptions(merge: true),
+      );
     });
   }
 
@@ -407,10 +463,26 @@ class FirestoreService {
       }
 
       final userEmail = userData['email'] as String? ?? '';
+      final customName =
+          (userData['leaderboardDisplayName'] as String? ?? '').trim();
+      final currentVideosWatched =
+          (userData['videosWatched'] as num?)?.toInt() ?? 0;
+      final remainingViews = currentCoins - coinsRequested;
 
       transaction.update(userRef, {
         'coins': currentCoins - coinsRequested,
       });
+      transaction.set(
+        _leaderboard.doc(uid),
+        _leaderboardPayload(
+          uid: uid,
+          email: userEmail,
+          customName: customName,
+          views: remainingViews,
+          videosWatched: currentVideosWatched,
+        ),
+        SetOptions(merge: true),
+      );
 
       transaction.set(payoutRef, {
         'userId': uid,
@@ -575,10 +647,28 @@ class FirestoreService {
           if (!userSnapshot.exists) {
             throw Exception('User profile not found for refund.');
           }
+          final userData = userSnapshot.data() ?? <String, dynamic>{};
+          final email = userData['email'] as String? ?? '';
+          final customName =
+              (userData['leaderboardDisplayName'] as String? ?? '').trim();
+          final currentViews = (userData['coins'] as num?)?.toInt() ?? 0;
+          final videosWatched =
+              (userData['videosWatched'] as num?)?.toInt() ?? 0;
 
           transaction.update(userRef, {
             'coins': FieldValue.increment(coinsRequested),
           });
+          transaction.set(
+            _leaderboard.doc(userId),
+            _leaderboardPayload(
+              uid: userId,
+              email: email,
+              customName: customName,
+              views: currentViews + coinsRequested,
+              videosWatched: videosWatched,
+            ),
+            SetOptions(merge: true),
+          );
           updates['refundApplied'] = true;
           updates['refundedAt'] = FieldValue.serverTimestamp();
         }
@@ -738,6 +828,47 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  Future<void> updateLeaderboardDisplayName({
+    required String uid,
+    required String displayName,
+  }) async {
+    final trimmedName = displayName.trim();
+    final normalizedName =
+        trimmedName.length > 18 ? trimmedName.substring(0, 18) : trimmedName;
+    final userRef = _users.doc(uid);
+    final leaderboardRef = _leaderboard.doc(uid);
+
+    await _firestore.runTransaction((transaction) async {
+      final userSnapshot = await transaction.get(userRef);
+      final userData = userSnapshot.data();
+      if (userData == null) {
+        throw Exception('User profile not found.');
+      }
+
+      final email = userData['email'] as String? ?? '';
+      final views = (userData['coins'] as num?)?.toInt() ?? 0;
+      final videosWatched = (userData['videosWatched'] as num?)?.toInt() ?? 0;
+
+      transaction.set(
+          userRef,
+          {
+            'leaderboardDisplayName': normalizedName,
+          },
+          SetOptions(merge: true));
+      transaction.set(
+        leaderboardRef,
+        _leaderboardPayload(
+          uid: uid,
+          email: email,
+          customName: normalizedName,
+          views: views,
+          videosWatched: videosWatched,
+        ),
+        SetOptions(merge: true),
+      );
+    });
+  }
+
   Future<void> saveUserFcmToken({
     required String uid,
     required String token,
@@ -851,6 +982,47 @@ class FirestoreService {
         .snapshots();
   }
 
+  Future<void> _syncLeaderboardDoc({
+    required String uid,
+    required String email,
+    required String customName,
+    required int views,
+    required int videosWatched,
+  }) async {
+    await _leaderboard.doc(uid).set(
+          _leaderboardPayload(
+            uid: uid,
+            email: email,
+            customName: customName,
+            views: views,
+            videosWatched: videosWatched,
+          ),
+          SetOptions(merge: true),
+        );
+  }
+
+  Map<String, dynamic> _leaderboardPayload({
+    required String uid,
+    required String email,
+    required String customName,
+    required int views,
+    required int videosWatched,
+  }) {
+    final trimmedCustomName = customName.trim();
+    return {
+      'uid': uid,
+      'customName': trimmedCustomName,
+      'publicName': _buildLeaderboardPublicName(
+        email: email,
+        customName: trimmedCustomName,
+      ),
+      'views': views,
+      'videosWatched': videosWatched,
+      'estimatedEarnings': estimateEarningsEuro(views),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+
   Future<int> _getOnlineUsersCount() async {
     final snapshot = await _activeUsers.get();
     final now = DateTime.now();
@@ -908,6 +1080,28 @@ class FirestoreService {
       }
     }
     return 'Someone';
+  }
+
+  String _buildLeaderboardPublicName({
+    required String email,
+    required String customName,
+  }) {
+    final trimmedCustomName = customName.trim();
+    if (trimmedCustomName.isNotEmpty) {
+      return trimmedCustomName;
+    }
+    return _maskEmailForLeaderboard(email);
+  }
+
+  String _maskEmailForLeaderboard(String email) {
+    final localPart = email.split('@').first.trim();
+    if (localPart.isEmpty) return 'Gebruiker';
+    final safeLocalPart = localPart.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (safeLocalPart.isEmpty) return 'Gebruiker';
+    final visible = safeLocalPart.length <= 3
+        ? safeLocalPart
+        : safeLocalPart.substring(0, 3);
+    return '${visible.toUpperCase()}***';
   }
 
   String _capitalizeWord(String value) {

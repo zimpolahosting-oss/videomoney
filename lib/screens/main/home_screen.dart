@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
+import '../../models/leaderboard_entry.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
@@ -276,6 +277,72 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                StreamBuilder<List<LeaderboardEntry>>(
+                  stream: _firestoreService.watchLeaderboard(),
+                  builder: (context, leaderboardSnapshot) {
+                    final entries =
+                        leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
+                    return Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(
+                          color: AppTheme.outline.withOpacity(0.55),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.emoji_events_outlined,
+                                color: AppTheme.primarySoft,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Leaderboard',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Top views en geschatte inkomsten van spelers.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 14),
+                          if (entries.isEmpty)
+                            Text(
+                              'Nog geen leaderboard-data beschikbaar.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            )
+                          else
+                            ...entries.asMap().entries.map(
+                                  (entry) => Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: entry.key == entries.length - 1
+                                          ? 0
+                                          : 10,
+                                    ),
+                                    child: _LeaderboardTile(
+                                      rank: entry.key + 1,
+                                      entry: entry.value,
+                                      isCurrentUser:
+                                          entry.value.uid == user.uid,
+                                    ),
+                                  ),
+                                ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -504,6 +571,105 @@ class _MiniStatCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaderboardTile extends StatelessWidget {
+  const _LeaderboardTile({
+    required this.rank,
+    required this.entry,
+    required this.isCurrentUser,
+  });
+
+  final int rank;
+  final LeaderboardEntry entry;
+  final bool isCurrentUser;
+
+  @override
+  Widget build(BuildContext context) {
+    final earnings = FirestoreService.estimateEarningsEuro(entry.views);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: isCurrentUser
+            ? AppTheme.primary.withOpacity(0.12)
+            : Theme.of(context).colorScheme.surface.withOpacity(0.45),
+        border: Border.all(
+          color: isCurrentUser
+              ? AppTheme.primary.withOpacity(0.35)
+              : AppTheme.outline.withOpacity(0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: rank <= 3
+                  ? AppTheme.coin.withOpacity(0.18)
+                  : AppTheme.primarySoft.withOpacity(0.12),
+            ),
+            child: Text(
+              '$rank',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCurrentUser
+                      ? '${entry.publicName} (jij)'
+                      : entry.publicName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${NumberFormat.decimalPattern().format(entry.views)} views • ${NumberFormat.decimalPattern().format(entry.videosWatched)} video\'s',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '€${earnings.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: AppTheme.primarySoft,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'inkomen',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ],
       ),

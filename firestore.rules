@@ -27,6 +27,7 @@ service cloud.firestore {
         && request.resource.data.isAdmin == resource.data.isAdmin
         && request.resource.data.diff(resource.data).changedKeys().hasOnly([
           'email',
+          'leaderboardDisplayName',
           'coins',
           'videosWatched',
           'dailyProgressDate',
@@ -75,6 +76,36 @@ service cloud.firestore {
         isOwner(userId) && request.resource.data.userId == request.auth.uid
       );
       allow delete: if isAdmin();
+    }
+
+    match /leaderboard/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || (
+        isOwner(userId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'customName',
+          'publicName',
+          'views',
+          'videosWatched',
+          'estimatedEarnings',
+          'updatedAt'
+        ])
+      );
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'customName',
+          'publicName',
+          'views',
+          'videosWatched',
+          'estimatedEarnings',
+          'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin() || isOwner(userId);
     }
 
     match /adminNotifications/{notificationId} {

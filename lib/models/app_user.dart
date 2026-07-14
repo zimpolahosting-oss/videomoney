@@ -4,6 +4,7 @@ class AppUser {
   const AppUser({
     required this.uid,
     required this.email,
+    required this.leaderboardDisplayName,
     required this.coins,
     required this.videosWatched,
     required this.dailyVideosWatched,
@@ -19,9 +20,11 @@ class AppUser {
 
   final String uid;
   final String email;
+  final String leaderboardDisplayName;
   final int coins;
   final int videosWatched;
   final int dailyVideosWatched;
+
   /// Format: `YYYY-MM-DD` in the device local timezone.
   final String dailyProgressDate;
   final bool dailyBonusAwarded;
@@ -39,6 +42,7 @@ class AppUser {
     return AppUser(
       uid: map['uid'] as String? ?? '',
       email: map['email'] as String? ?? '',
+      leaderboardDisplayName: map['leaderboardDisplayName'] as String? ?? '',
       coins: (map['coins'] as num?)?.toInt() ?? 0,
       videosWatched: (map['videosWatched'] as num?)?.toInt() ?? 0,
       dailyVideosWatched: (map['dailyVideosWatched'] as num?)?.toInt() ?? 0,
@@ -60,6 +64,7 @@ class AppUser {
     return {
       'uid': uid,
       'email': email,
+      'leaderboardDisplayName': leaderboardDisplayName,
       'coins': coins,
       'videosWatched': videosWatched,
       'dailyVideosWatched': dailyVideosWatched,

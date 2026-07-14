@@ -17,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _firestoreService = FirestoreService();
+  final _leaderboardNameController = TextEditingController();
 
   bool _notificationsEnabled = true;
   bool _dailyReminderEnabled = true;
@@ -30,6 +31,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _leaderboardNameController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSettings() async {
     _selectedLanguageCode = AppLanguageService.instance.selectedLanguageCode;
     final user = FirebaseAuth.instance.currentUser;
@@ -40,10 +47,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       final settings = await _firestoreService.getUserSettings(user.uid);
+      final appUser = await _firestoreService.getUser(user.uid);
       if (!mounted) return;
       setState(() {
         _notificationsEnabled = settings['notificationsEnabled'] ?? true;
         _dailyReminderEnabled = settings['dailyReminderEnabled'] ?? true;
+        _leaderboardNameController.text = appUser?.leaderboardDisplayName ?? '';
         _isLoading = false;
       });
     } catch (e) {
@@ -66,6 +75,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         uid: user.uid,
         notificationsEnabled: _notificationsEnabled,
         dailyReminderEnabled: _dailyReminderEnabled,
+      );
+      await _firestoreService.updateLeaderboardDisplayName(
+        uid: user.uid,
+        displayName: _leaderboardNameController.text,
       );
       await AppLanguageService.instance
           .setPreferredLanguageCode(_selectedLanguageCode);
@@ -206,6 +219,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'Leaderboard-naam',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Deze naam wordt in de leaderboard getoond. Laat leeg om een paar letters van je e-mail te gebruiken.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _leaderboardNameController,
+                  enabled: !_isSaving && !_isLoading,
+                  maxLength: 18,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.emoji_events_outlined),
+                    labelText: 'Naam voor leaderboard',
+                    hintText: 'Bijv. Sam of Sam V.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   l10n.notifications,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -213,18 +260,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _notificationsEnabled,
-                  onChanged: _isLoading ? null : (value) {
-                    setState(() => _notificationsEnabled = value);
-                  },
+                  onChanged: _isLoading
+                      ? null
+                      : (value) {
+                          setState(() => _notificationsEnabled = value);
+                        },
                   title: Text(l10n.enableNotifications),
                   subtitle: Text(l10n.generalAppNotifications),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _dailyReminderEnabled,
-                  onChanged: _isLoading ? null : (value) {
-                    setState(() => _dailyReminderEnabled = value);
-                  },
+                  onChanged: _isLoading
+                      ? null
+                      : (value) {
+                          setState(() => _dailyReminderEnabled = value);
+                        },
                   title: Text(l10n.dailyReminder),
                   subtitle: Text(l10n.dailyReminderSubtitle),
                 ),
