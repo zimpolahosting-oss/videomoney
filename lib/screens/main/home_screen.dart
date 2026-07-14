@@ -277,72 +277,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                StreamBuilder<List<LeaderboardEntry>>(
-                  stream: _firestoreService.watchLeaderboard(),
-                  builder: (context, leaderboardSnapshot) {
-                    final entries =
-                        leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
-                    return Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        color: Theme.of(context).colorScheme.surface,
-                        border: Border.all(
-                          color: AppTheme.outline.withOpacity(0.55),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.emoji_events_outlined,
-                                color: AppTheme.primarySoft,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Leaderboard',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Top views en geschatte inkomsten van spelers.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 14),
-                          if (entries.isEmpty)
-                            Text(
-                              'Nog geen leaderboard-data beschikbaar.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            )
-                          else
-                            ...entries.asMap().entries.map(
-                                  (entry) => Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: entry.key == entries.length - 1
-                                          ? 0
-                                          : 10,
-                                    ),
-                                    child: _LeaderboardTile(
-                                      rank: entry.key + 1,
-                                      entry: entry.value,
-                                      isCurrentUser:
-                                          entry.value.uid == user.uid,
-                                    ),
-                                  ),
-                                ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -492,6 +426,72 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 14),
+                StreamBuilder<List<LeaderboardEntry>>(
+                  stream: _firestoreService.watchLeaderboard(),
+                  builder: (context, leaderboardSnapshot) {
+                    final entries =
+                        leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
+                    return Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(
+                          color: AppTheme.outline.withOpacity(0.55),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.emoji_events_outlined,
+                                color: AppTheme.primarySoft,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Leaderboard',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Top views en geschatte inkomsten van spelers.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 14),
+                          if (entries.isEmpty)
+                            Text(
+                              'Nog geen leaderboard-data beschikbaar.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            )
+                          else
+                            ...entries.asMap().entries.map(
+                                  (entry) => Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: entry.key == entries.length - 1
+                                          ? 0
+                                          : 10,
+                                    ),
+                                    child: _LeaderboardTile(
+                                      rank: entry.key + 1,
+                                      entry: entry.value,
+                                      isCurrentUser:
+                                          entry.value.uid == user.uid,
+                                    ),
+                                  ),
+                                ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
