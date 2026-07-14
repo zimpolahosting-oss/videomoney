@@ -635,8 +635,6 @@ class _LeaderboardTile extends StatelessWidget {
                       ? '${entry.publicName} (jij)'
                       : entry.publicName,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                   maxLines: 1,
@@ -644,7 +642,7 @@ class _LeaderboardTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${NumberFormat.decimalPattern().format(entry.views)} views • ${NumberFormat.decimalPattern().format(entry.videosWatched)} video\'s',
+                  '${NumberFormat.decimalPattern().format(entry.views)} views',
                   style: Theme.of(context).textTheme.bodyMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
