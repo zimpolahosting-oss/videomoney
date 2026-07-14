@@ -433,63 +433,74 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (context, leaderboardSnapshot) {
                     final entries =
                         leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
-                    return Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        color: Theme.of(context).colorScheme.surface,
-                        border: Border.all(
-                          color: AppTheme.outline.withOpacity(0.55),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                    return StreamBuilder<Set<String>>(
+                      stream: PresenceService.instance.watchOnlineUserIds(),
+                      builder: (context, onlineSnapshot) {
+                        final onlineUserIds =
+                            onlineSnapshot.data ?? const <String>{};
+                        return Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            color: Theme.of(context).colorScheme.surface,
+                            border: Border.all(
+                              color: AppTheme.outline.withOpacity(0.55),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.emoji_events_outlined,
-                                color: AppTheme.primarySoft,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Leaderboard',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Top views en geschatte inkomsten van spelers.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 14),
-                          if (entries.isEmpty)
-                            Text(
-                              'Nog geen leaderboard-data beschikbaar.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            )
-                          else
-                            ...entries.asMap().entries.map(
-                                  (entry) => Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: entry.key == entries.length - 1
-                                          ? 0
-                                          : 10,
-                                    ),
-                                    child: _LeaderboardTile(
-                                      rank: entry.key + 1,
-                                      entry: entry.value,
-                                      isCurrentUser:
-                                          entry.value.uid == user.uid,
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.emoji_events_outlined,
+                                    color: AppTheme.primarySoft,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Leaderboard',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
                                     ),
                                   ),
-                                ),
-                        ],
-                      ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Top views en geschatte inkomsten van spelers.',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 14),
+                              if (entries.isEmpty)
+                                Text(
+                                  'Nog geen leaderboard-data beschikbaar.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                )
+                              else
+                                ...entries.asMap().entries.map(
+                                      (entry) => Padding(
+                                        padding: EdgeInsets.only(
+                                          bottom: entry.key == entries.length - 1
+                                              ? 0
+                                              : 10,
+                                        ),
+                                        child: _LeaderboardTile(
+                                          rank: entry.key + 1,
+                                          entry: entry.value,
+                                          isCurrentUser:
+                                              entry.value.uid == user.uid,
+                                          isOnline: onlineUserIds.contains(
+                                            entry.value.uid,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -583,11 +594,13 @@ class _LeaderboardTile extends StatelessWidget {
     required this.rank,
     required this.entry,
     required this.isCurrentUser,
+    required this.isOnline,
   });
 
   final int rank;
   final LeaderboardEntry entry;
   final bool isCurrentUser;
+  final bool isOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -641,11 +654,28 @@ class _LeaderboardTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${NumberFormat.decimalPattern().format(entry.views)} views',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isOnline
+                            ? const Color(0xFF35E06A)
+                            : Colors.white.withOpacity(0.22),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${NumberFormat.decimalPattern().format(entry.views)} views',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

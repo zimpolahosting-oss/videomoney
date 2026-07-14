@@ -43,6 +43,23 @@ class PresenceService with WidgetsBindingObserver {
     });
   }
 
+  Stream<Set<String>> watchOnlineUserIds() {
+    return _database.ref(statusPath).onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value is! Map) return <String>{};
+
+      final onlineUserIds = <String>{};
+      for (final entry in value.entries) {
+        final uid = entry.key?.toString() ?? '';
+        final connections = entry.value;
+        if (uid.isNotEmpty && connections is Map && connections.isNotEmpty) {
+          onlineUserIds.add(uid);
+        }
+      }
+      return onlineUserIds;
+    });
+  }
+
   /// Initializes presence tracking.
   ///
   /// This ensures presence starts automatically after login and stops on logout,
