@@ -483,32 +483,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                   constraints: const BoxConstraints(
                                     maxHeight: 360,
                                   ),
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      children: entries.asMap().entries.map(
-                                        (entry) {
-                                          return Padding(
-                                            padding: EdgeInsets.only(
-                                              bottom:
-                                                  entry.key == entries.length - 1
-                                                  ? 0
-                                                  : 10,
-                                            ),
-                                            child: _LeaderboardTile(
-                                              rank: entry.key + 1,
-                                              entry: entry.value,
-                                              isCurrentUser:
-                                                  entry.value.uid == user.uid,
-                                              isOnline: onlineUserIds.contains(
-                                                entry.value.uid,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ).toList(),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: true,
+                                      physics: entries.length > 5
+                                          ? const ClampingScrollPhysics()
+                                          : const NeverScrollableScrollPhysics(),
+                                      itemCount: entries.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(height: 10),
+                                      itemBuilder: (context, index) {
+                                        final entry = entries[index];
+                                        return _LeaderboardTile(
+                                          rank: index + 1,
+                                          entry: entry,
+                                          isCurrentUser: entry.uid == user.uid,
+                                          isOnline: onlineUserIds.contains(
+                                            entry.uid,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                    ),
+                                ),
                             ],
                           ),
                         );
