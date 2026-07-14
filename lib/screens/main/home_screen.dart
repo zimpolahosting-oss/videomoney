@@ -133,7 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              '${NumberFormat.decimalPattern().format(onlineUsers)} users online',
+                              l10n.usersOnline(
+                                NumberFormat.decimalPattern().format(
+                                  onlineUsers,
+                                ),
+                              ),
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
@@ -470,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Leaderboard',
+                                      l10n.leaderboardTitle,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleMedium,
@@ -480,13 +484,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Top views en geschatte inkomsten van spelers.',
+                                l10n.leaderboardSubtitle,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               const SizedBox(height: 14),
                               if (entries.isEmpty)
                                 Text(
-                                  'Nog geen leaderboard-data beschikbaar.',
+                                  l10n.leaderboardEmpty,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 )
                               else
@@ -668,7 +672,7 @@ class _LeaderboardTile extends StatelessWidget {
               children: [
                 Text(
                   isCurrentUser
-                      ? '${entry.publicName} (jij)'
+                      ? '${entry.publicName} ${context.l10n.leaderboardYou}'
                       : entry.publicName,
                   style: const TextStyle(
                     fontSize: 14,
@@ -692,7 +696,9 @@ class _LeaderboardTile extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${NumberFormat.decimalPattern().format(entry.views)} views',
+                        context.l10n.leaderboardViews(
+                          NumberFormat.decimalPattern().format(entry.views),
+                        ),
                         style: Theme.of(context).textTheme.bodyMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -717,7 +723,7 @@ class _LeaderboardTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'inkomen',
+                context.l10n.leaderboardIncome,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

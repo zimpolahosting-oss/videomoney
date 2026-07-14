@@ -152,6 +152,14 @@ class AppLocalizations {
   String get estimatedPayout => _text('estimatedPayout');
   String get remainingToPayout => _text('remainingToPayout');
   String get viewsUnit => _text('viewsUnit');
+  String usersOnline(String count) => _format('usersOnline', {'count': count});
+  String get leaderboardTitle => _text('leaderboardTitle');
+  String get leaderboardSubtitle => _text('leaderboardSubtitle');
+  String get leaderboardEmpty => _text('leaderboardEmpty');
+  String get leaderboardYou => _text('leaderboardYou');
+  String leaderboardViews(String count) =>
+      _format('leaderboardViews', {'count': count});
+  String get leaderboardIncome => _text('leaderboardIncome');
   String get estimateOnly => _text('estimateOnly');
   String get requestPayout => _text('requestPayout');
   String get minPayout => _text('minPayout');
@@ -425,6 +433,13 @@ class AppLocalizations {
       'estimatedPayout': 'Estimated Payout',
       'remainingToPayout': 'Remaining to Payout',
       'viewsUnit': 'views',
+      'usersOnline': '{count} users online',
+      'leaderboardTitle': 'Leaderboard',
+      'leaderboardSubtitle': 'Top views and estimated earnings from players.',
+      'leaderboardEmpty': 'No leaderboard data available yet.',
+      'leaderboardYou': '(you)',
+      'leaderboardViews': '{count} views',
+      'leaderboardIncome': 'income',
       'estimateOnly':
           'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
       'requestPayout': 'Request Payout',
@@ -679,6 +694,13 @@ class AppLocalizations {
       'estimatedPayout': 'Geschatte uitbetaling',
       'remainingToPayout': 'Nog nodig voor uitbetaling',
       'viewsUnit': 'views',
+      'usersOnline': '{count} gebruikers online',
+      'leaderboardTitle': 'Leaderboard',
+      'leaderboardSubtitle': 'Top views en geschatte inkomsten van spelers.',
+      'leaderboardEmpty': 'Nog geen leaderboard-data beschikbaar.',
+      'leaderboardYou': '(jij)',
+      'leaderboardViews': '{count} views',
+      'leaderboardIncome': 'inkomen',
       'estimateOnly':
           'Alleen een schatting. 50 views ≈ €0,01 en de werkelijke opbrengst kan afwijken.',
       'requestPayout': 'Uitbetaling aanvragen',
