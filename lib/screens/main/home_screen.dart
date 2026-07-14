@@ -99,9 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           body: SafeArea(
-            child: ListView(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 _TopTitle(title: l10n.home),
                 const SizedBox(height: 14),
                 StreamBuilder<int>(
@@ -140,139 +143,147 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  height: 290,
-                  child: WatermarkHeroCard(
-                    imageAsset: 'assets/illustrations/home_movie_v2.jpg',
-                    imageOpacity: 0.18,
-                    imageScale: 1.42,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'VideoMoney',
-                                style: TextStyle(
-                                  color: AppTheme.primarySoft,
-                                  fontWeight: FontWeight.w800,
+                RepaintBoundary(
+                  child: SizedBox(
+                    height: 290,
+                    child: WatermarkHeroCard(
+                      key: const ValueKey('home-top-hero-card'),
+                      imageAsset: 'assets/illustrations/home_movie_v2.jpg',
+                      imageOpacity: 0.18,
+                      imageScale: 1.42,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'VideoMoney',
+                                  style: TextStyle(
+                                    color: AppTheme.primarySoft,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
-                            ),
-                            StreamBuilder<int>(
-                              stream: _firestoreService
-                                  .watchUnreadInboxCount(user.uid),
-                              builder: (context, inboxSnapshot) {
-                                final unread = inboxSnapshot.data ?? 0;
-                                return Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    IconButton(
-                                      onPressed: () {
-                                        Navigator.of(context)
-                                            .pushNamed(AppRoutes.inbox);
-                                      },
-                                      icon: const Icon(
-                                        Icons.mail_outline_rounded,
-                                        color: AppTheme.primarySoft,
+                              StreamBuilder<int>(
+                                stream: _firestoreService.watchUnreadInboxCount(
+                                  user.uid,
+                                ),
+                                builder: (context, inboxSnapshot) {
+                                  final unread = inboxSnapshot.data ?? 0;
+                                  return Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      IconButton(
+                                        onPressed: () {
+                                          Navigator.of(
+                                            context,
+                                          ).pushNamed(AppRoutes.inbox);
+                                        },
+                                        icon: const Icon(
+                                          Icons.mail_outline_rounded,
+                                          color: AppTheme.primarySoft,
+                                        ),
                                       ),
-                                    ),
-                                    if (unread > 0)
-                                      Positioned(
-                                        right: 4,
-                                        top: 4,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primary,
-                                            borderRadius:
-                                                BorderRadius.circular(999),
-                                          ),
-                                          child: Text(
-                                            unread > 99 ? '99+' : '$unread',
-                                            style: const TextStyle(
-                                              color: Color(0xFF04110A),
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
+                                      if (unread > 0)
+                                        Positioned(
+                                          right: 4,
+                                          top: 4,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primary,
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: Text(
+                                              unread > 99 ? '99+' : '$unread',
+                                              style: const TextStyle(
+                                                color: Color(0xFF04110A),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                );
-                              },
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                Navigator.of(context)
-                                    .pushNamed(AppRoutes.settings);
-                              },
-                              icon: const Icon(
-                                Icons.settings_outlined,
-                                color: AppTheme.primarySoft,
+                                    ],
+                                  );
+                                },
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 230),
-                          child: Text(
-                            l10n.welcomeBackShort,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 230),
-                          child: Text(
-                            user.email ?? l10n.signedInUser,
-                            style: Theme.of(context).textTheme.titleMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 235),
-                          child: Text(
-                            l10n.watchVideosEarnPaid,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _MiniStatCard(
-                                icon: Icons.visibility_outlined,
-                                title: l10n.currentViews,
-                                value:
-                                    NumberFormat.decimalPattern().format(views),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _MiniStatCard(
-                                icon: Icons.ondemand_video_outlined,
-                                title: l10n.videosWatched,
-                                value: NumberFormat.decimalPattern().format(
-                                  videosWatched,
+                              IconButton(
+                                onPressed: () {
+                                  Navigator.of(
+                                    context,
+                                  ).pushNamed(AppRoutes.settings);
+                                },
+                                icon: const Icon(
+                                  Icons.settings_outlined,
+                                  color: AppTheme.primarySoft,
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 230),
+                            child: Text(
+                              l10n.welcomeBackShort,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 4),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 230),
+                            child: Text(
+                              user.email ?? l10n.signedInUser,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 235),
+                            child: Text(
+                              l10n.watchVideosEarnPaid,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _MiniStatCard(
+                                  icon: Icons.visibility_outlined,
+                                  title: l10n.currentViews,
+                                  value:
+                                      NumberFormat.decimalPattern().format(
+                                        views,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MiniStatCard(
+                                  icon: Icons.ondemand_video_outlined,
+                                  title: l10n.videosWatched,
+                                  value: NumberFormat.decimalPattern().format(
+                                    videosWatched,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
