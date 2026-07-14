@@ -429,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 14),
                 StreamBuilder<List<LeaderboardEntry>>(
-                  stream: _firestoreService.watchLeaderboard(),
+                  stream: _firestoreService.watchLeaderboard(limit: 50),
                   builder: (context, leaderboardSnapshot) {
                     final entries =
                         leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
@@ -479,23 +479,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 )
                               else
-                                ...entries.asMap().entries.map(
-                                      (entry) => Padding(
-                                        padding: EdgeInsets.only(
-                                          bottom: entry.key == entries.length - 1
-                                              ? 0
-                                              : 10,
-                                        ),
-                                        child: _LeaderboardTile(
-                                          rank: entry.key + 1,
-                                          entry: entry.value,
-                                          isCurrentUser:
-                                              entry.value.uid == user.uid,
-                                          isOnline: onlineUserIds.contains(
-                                            entry.value.uid,
-                                          ),
-                                        ),
-                                      ),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 360,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      children: entries.asMap().entries.map(
+                                        (entry) {
+                                          return Padding(
+                                            padding: EdgeInsets.only(
+                                              bottom:
+                                                  entry.key == entries.length - 1
+                                                  ? 0
+                                                  : 10,
+                                            ),
+                                            child: _LeaderboardTile(
+                                              rank: entry.key + 1,
+                                              entry: entry.value,
+                                              isCurrentUser:
+                                                  entry.value.uid == user.uid,
+                                              isOnline: onlineUserIds.contains(
+                                                entry.value.uid,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ).toList(),
+                                    ),
+                                  ),
                                     ),
                             ],
                           ),
