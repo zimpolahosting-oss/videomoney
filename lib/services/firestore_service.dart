@@ -272,22 +272,36 @@ class FirestoreService {
   Stream<List<InboxMessage>> watchUserInbox(String uid) {
     return _inboxMessages
         .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map(InboxMessage.fromDoc).toList(growable: false),
-        );
+        .map((snapshot) {
+      final messages = snapshot.docs.map(InboxMessage.fromDoc).toList();
+      messages.sort((a, b) {
+        final aCreated = a.createdAt;
+        final bCreated = b.createdAt;
+        if (aCreated == null && bCreated == null) return 0;
+        if (aCreated == null) return 1;
+        if (bCreated == null) return -1;
+        return bCreated.compareTo(aCreated);
+      });
+      return messages;
+    });
   }
 
   Stream<List<InboxMessage>> watchAllInboxMessages() {
     return _inboxMessages
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map(InboxMessage.fromDoc).toList(growable: false),
-        );
+        .map((snapshot) {
+      final messages = snapshot.docs.map(InboxMessage.fromDoc).toList();
+      messages.sort((a, b) {
+        final aCreated = a.createdAt;
+        final bCreated = b.createdAt;
+        if (aCreated == null && bCreated == null) return 0;
+        if (aCreated == null) return 1;
+        if (bCreated == null) return -1;
+        return bCreated.compareTo(aCreated);
+      });
+      return messages;
+    });
   }
 
   Future<void> markInboxMessageRead(String messageId) async {
