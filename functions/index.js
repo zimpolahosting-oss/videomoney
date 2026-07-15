@@ -1,8 +1,10 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions/v1");
 const logger = require("firebase-functions/logger");
+const {setGlobalOptions} = require("firebase-functions/v2");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 
 admin.initializeApp();
+setGlobalOptions({region: "europe-west1"});
 
 const db = admin.firestore();
 
@@ -191,11 +193,16 @@ async function sendPushToUsers(users, payload) {
   };
 }
 
-exports.dispatchAdminNotification = functions
-  .region("europe-west1")
-  .firestore.document("adminNotifications/{notificationId}")
-  .onCreate(async (snapshot) => {
-    const notificationId = snapshot.id;
+exports.dispatchAdminNotification = onDocumentCreated(
+  "adminNotifications/{notificationId}",
+  async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+      logger.warn("dispatchAdminNotification received no snapshot data", event);
+      return;
+    }
+
+    const notificationId = event.params.notificationId;
     const data = snapshot.data() || {};
     const title = String(data.title || "").trim();
     const message = String(data.message || "").trim();
@@ -264,13 +271,19 @@ exports.dispatchAdminNotification = functions
         { merge: true }
       );
     }
-  });
+  }
+);
 
-exports.dispatchInboxPush = functions
-  .region("europe-west1")
-  .firestore.document("inboxMessages/{messageId}")
-  .onCreate(async (snapshot) => {
-    const messageId = snapshot.id;
+exports.dispatchInboxPush = onDocumentCreated(
+  "inboxMessages/{messageId}",
+  async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+      logger.warn("dispatchInboxPush received no snapshot data", event);
+      return;
+    }
+
+    const messageId = event.params.messageId;
     const data = snapshot.data() || {};
     const userId = String(data.userId || "").trim();
     const title = String(data.title || "VideoMoney").trim();
@@ -317,7 +330,8 @@ exports.dispatchInboxPush = functions
         { merge: true }
       );
     }
-  });
+  }
+);
 
 // Presence counter is implemented client-side via Realtime Database `/status`.
 // We intentionally do not use RTDB-triggered functions so the online counter
