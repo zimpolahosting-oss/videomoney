@@ -83,7 +83,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     User adminUser,
   ) async {
     final replyController = TextEditingController(text: ticket.latestReply);
-    var selectedStatus = ticket.status;
+    var selectedStatus = ticket.status.toLowerCase() == 'pending'
+        ? 'processing'
+        : ticket.status;
 
     await showModalBottomSheet<void>(
       context: context,
