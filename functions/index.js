@@ -90,6 +90,18 @@ async function resolveRecipients(audience, targetUserId) {
   }));
 }
 
+async function getUserById(userId) {
+  const userDoc = await db.collection("users").doc(userId).get();
+  if (!userDoc.exists) {
+    throw new Error(`Target user not found: ${userId}`);
+  }
+
+  return {
+    uid: userDoc.id,
+    ...userDoc.data(),
+  };
+}
+
 function buildTokenOwners(users) {
   const entries = [];
   for (const user of users) {
@@ -119,6 +131,64 @@ function buildTokenOwners(users) {
     seen.add(key);
     return true;
   });
+}
+
+async function sendPushToUsers(users, payload) {
+  const tokenOwners = buildTokenOwners(users);
+  const tokens = tokenOwners.map((item) => item.token);
+  let successCount = 0;
+  let failureCount = 0;
+  const invalidTokens = [];
+
+  if (tokens.length > 0) {
+    for (const tokenChunk of chunk(tokens, 500)) {
+      const chunkOwners = tokenOwners.filter((owner) =>
+        tokenChunk.includes(owner.token)
+      );
+
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: tokenChunk,
+        notification: {
+          title: payload.title,
+          body: payload.message,
+        },
+        data: {
+          title: payload.title,
+          message: payload.message,
+          type: payload.type,
+          notificationId: payload.notificationId || "",
+          ticketId: payload.ticketId || "",
+          audience: payload.audience || "",
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "videomoney_general",
+          },
+        },
+      });
+
+      successCount += response.successCount;
+      failureCount += response.failureCount;
+
+      response.responses.forEach((result, index) => {
+        if (!result.success && shouldRemoveToken(result.error?.code)) {
+          const owner = chunkOwners[index];
+          if (owner) {
+            invalidTokens.push(owner);
+          }
+        }
+      });
+    }
+  }
+
+  await removeInvalidTokens(invalidTokens);
+  return {
+    successCount,
+    failureCount,
+    tokenCount: tokens.length,
+    inboxOnly: tokens.length === 0,
+  };
 }
 
 exports.dispatchAdminNotification = functions
@@ -168,64 +238,15 @@ exports.dispatchAdminNotification = functions
         notificationId
       );
 
-      const tokenOwners = buildTokenOwners(recipients);
-      const tokens = tokenOwners.map((item) => item.token);
-      let successCount = 0;
-      let failureCount = 0;
-      const invalidTokens = [];
-
-      if (tokens.length > 0) {
-        for (const tokenChunk of chunk(tokens, 500)) {
-          const chunkOwners = tokenOwners.filter((owner) =>
-            tokenChunk.includes(owner.token)
-          );
-
-          const response = await admin.messaging().sendEachForMulticast({
-            tokens: tokenChunk,
-            notification: {
-              title,
-              body: message,
-            },
-            data: {
-              title,
-              message,
-              type,
-              notificationId,
-              audience,
-            },
-            android: {
-              priority: "high",
-              notification: {
-                channelId: "videomoney_general",
-              },
-            },
-          });
-
-          successCount += response.successCount;
-          failureCount += response.failureCount;
-
-          response.responses.forEach((result, index) => {
-            if (!result.success && shouldRemoveToken(result.error?.code)) {
-              const owner = chunkOwners[index];
-              if (owner) {
-                invalidTokens.push(owner);
-              }
-            }
-          });
-        }
-      }
-
-      await removeInvalidTokens(invalidTokens);
-
       await snapshot.ref.set(
         {
           status: "sent",
           errorMessage: "",
           recipientCount: recipients.length,
-          tokenCount: tokens.length,
-          successCount,
-          failureCount,
-          inboxOnly: tokens.length === 0,
+          tokenCount: 0,
+          successCount: 0,
+          failureCount: 0,
+          inboxOnly: true,
           sentAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -239,6 +260,59 @@ exports.dispatchAdminNotification = functions
           errorMessage:
             error instanceof Error ? error.message : String(error),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  });
+
+exports.dispatchInboxPush = functions
+  .region("europe-west1")
+  .firestore.document("inboxMessages/{messageId}")
+  .onCreate(async (snapshot) => {
+    const messageId = snapshot.id;
+    const data = snapshot.data() || {};
+    const userId = String(data.userId || "").trim();
+    const title = String(data.title || "VideoMoney").trim();
+    const message = String(data.message || "").trim();
+    const type = String(data.type || "info").trim();
+    const notificationId = String(data.notificationId || "").trim();
+    const ticketId = String(data.ticketId || "").trim();
+
+    if (!userId || !message) {
+      logger.warn("dispatchInboxPush skipped due to missing userId or message", {
+        messageId,
+      });
+      return;
+    }
+
+    try {
+      const user = await getUserById(userId);
+      const result = await sendPushToUsers([user], {
+        title: title || "VideoMoney",
+        message,
+        type,
+        notificationId,
+        ticketId,
+        audience: "user",
+      });
+
+      await snapshot.ref.set(
+        {
+          pushSentAt: admin.firestore.FieldValue.serverTimestamp(),
+          pushSuccessCount: result.successCount,
+          pushFailureCount: result.failureCount,
+          pushTokenCount: result.tokenCount,
+          pushInboxOnly: result.inboxOnly,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      logger.error("dispatchInboxPush failed", error);
+      await snapshot.ref.set(
+        {
+          pushError:
+            error instanceof Error ? error.message : String(error),
         },
         { merge: true }
       );

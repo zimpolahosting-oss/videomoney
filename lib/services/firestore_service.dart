@@ -974,100 +974,20 @@ class FirestoreService {
       throw Exception('Select a user.');
     }
 
-    final notificationRef = _adminNotifications.doc();
-    final notificationId = notificationRef.id;
-    final normalizedTypeValue =
-        normalizedType.isEmpty ? 'announcement' : normalizedType;
-    final targetUid = normalizedAudience == 'user' ? targetUserId!.trim() : null;
-
-    await notificationRef.set({
+    await _adminNotifications.add({
       'createdByUid': createdByUid,
       'createdByEmail': createdByEmail.trim(),
       'audience': normalizedAudience,
-      'targetUserId': targetUid,
-      'type': normalizedTypeValue,
+      'targetUserId':
+          normalizedAudience == 'user' ? targetUserId!.trim() : null,
+      'type': normalizedType.isEmpty ? 'announcement' : normalizedType,
       'title': trimmedTitle,
       'message': trimmedMessage,
       'status': 'pending',
       'errorMessage': '',
-      'deliveredCount': 0,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-
-    try {
-      if (normalizedAudience == 'user') {
-        await createInboxMessage(
-          userId: targetUid!,
-          title: trimmedTitle,
-          message: trimmedMessage,
-          type: normalizedTypeValue,
-        );
-        await notificationRef.set({
-          'status': 'sent',
-          'deliveredCount': 1,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        return;
-      }
-
-      final usersSnapshot = await _users.get();
-      final userIds = usersSnapshot.docs
-          .map((doc) => doc.id.trim())
-          .where((uid) => uid.isNotEmpty)
-          .toList(growable: false);
-
-      if (userIds.isEmpty) {
-        await notificationRef.set({
-          'status': 'sent',
-          'deliveredCount': 0,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        return;
-      }
-
-      var deliveredCount = 0;
-      WriteBatch batch = _firestore.batch();
-      var operationCount = 0;
-
-      Future<void> commitBatchIfNeeded({bool force = false}) async {
-        if (operationCount == 0) return;
-        if (!force && operationCount < 400) return;
-        await batch.commit();
-        batch = _firestore.batch();
-        operationCount = 0;
-      }
-
-      for (final userId in userIds) {
-        final inboxRef = _inboxMessages.doc();
-        batch.set(inboxRef, {
-          'userId': userId,
-          'title': trimmedTitle,
-          'message': trimmedMessage,
-          'type': normalizedTypeValue,
-          'read': false,
-          'notificationId': notificationId,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        deliveredCount += 1;
-        operationCount += 1;
-        await commitBatchIfNeeded();
-      }
-
-      await commitBatchIfNeeded(force: true);
-      await notificationRef.set({
-        'status': 'sent',
-        'deliveredCount': deliveredCount,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (error) {
-      await notificationRef.set({
-        'status': 'failed',
-        'errorMessage': error.toString(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      rethrow;
-    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchAdminNotifications() {
