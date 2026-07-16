@@ -31,11 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
   final _pageController = PageController();
-  final _controllers = <int, YoutubePlayerController>{};
   final _countedShortIds = <String>{};
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
 
+  YoutubePlayerController? _playlistController;
   Timer? _watchTimer;
   Timer? _playlistRefreshTimer;
   List<ShortVideoItem> _feed = const [];
@@ -89,8 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _feedError = null;
       });
 
-      await _ensureController(0);
-      await _activateCurrentController();
+      await _initializePlaylistController();
       _watchTimer ??= Timer.periodic(
         const Duration(milliseconds: 900),
         (_) => _trackWatchTime(),
@@ -120,9 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentIndex = _feed.length - 1;
         }
       });
-      await _ensureController(_currentIndex);
-      await _ensureController(_currentIndex + 1);
-      await _ensureController(_currentIndex + 2);
+      await _reloadPlaylistController();
     } catch (_) {}
   }
 
@@ -131,58 +128,51 @@ class _HomeScreenState extends State<HomeScreen> {
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
     _pageController.dispose();
-    for (final controller in _controllers.values) {
-      controller.close();
-    }
+    _playlistController?.close();
     super.dispose();
   }
 
-  Future<void> _ensureController(int index) async {
-    if (index < 0 || index >= _feed.length || _controllers.containsKey(index)) {
-      return;
-    }
+  List<String> get _playlistVideoIds => _feed
+      .map((item) => item.videoId)
+      .where((videoId) => videoId.isNotEmpty)
+      .toList(growable: false);
 
-    final controller = YoutubePlayerController.fromVideoId(
-      videoId: _feed[index].videoId,
-      autoPlay: false,
-      params: _playerParams,
+  Future<void> _initializePlaylistController() async {
+    if (_feed.isEmpty) return;
+    await _playlistController?.close();
+    final controller = YoutubePlayerController(params: _playerParams);
+    _playlistController = controller;
+    await controller.loadPlaylist(
+      list: _playlistVideoIds,
+      index: _currentIndex,
     );
-    _controllers[index] = controller;
-
+    _lastTrackedPositionMs = 0;
     if (mounted) {
       setState(() {});
     }
   }
 
-  Future<void> _activateCurrentController() async {
-    if (_feed.isEmpty) return;
-
-    await _ensureController(_currentIndex);
-    await _ensureController(_currentIndex + 1);
-    await _ensureController(_currentIndex + 2);
-
+  Future<void> _reloadPlaylistController() async {
+    final controller = _playlistController;
+    if (controller == null || _feed.isEmpty) return;
+    await controller.loadPlaylist(
+      list: _playlistVideoIds,
+      index: _currentIndex,
+    );
     _lastTrackedPositionMs = 0;
-    for (final entry in _controllers.entries) {
-      if (entry.key == _currentIndex) {
-        await entry.value.playVideo();
-      } else {
-        await entry.value.pauseVideo();
-      }
-    }
+  }
 
-    final removable = _controllers.keys
-        .where((index) => (index - _currentIndex).abs() > 2)
-        .toList(growable: false);
-    for (final index in removable) {
-      await _controllers[index]?.close();
-      _controllers.remove(index);
-    }
+  Future<void> _playCurrentIndex() async {
+    final controller = _playlistController;
+    if (controller == null || _feed.isEmpty) return;
+    _lastTrackedPositionMs = 0;
+    await controller.playVideoAt(_currentIndex);
   }
 
   Future<void> _trackWatchTime() async {
     if (!mounted || _feed.isEmpty || _isRewardHandling) return;
     final user = FirebaseAuth.instance.currentUser;
-    final controller = _controllers[_currentIndex];
+    final controller = _playlistController;
     if (user == null || controller == null) return;
 
     final state = controller.value.playerState;
@@ -344,20 +334,24 @@ class _HomeScreenState extends State<HomeScreen> {
           body: Stack(
             children: [
               Positioned.fill(
+                child: _ShortsPlayerBackdrop(
+                  controller: _playlistController,
+                  thumbnailUrl: _feed[_currentIndex].thumbnailUrl,
+                ),
+              ),
+              Positioned.fill(
                 child: PageView.builder(
                   controller: _pageController,
                   scrollDirection: Axis.vertical,
                   itemCount: _feed.length,
                   onPageChanged: (index) async {
                     setState(() => _currentIndex = index);
-                    await _activateCurrentController();
+                    await _playCurrentIndex();
                   },
                   itemBuilder: (context, index) {
                     final item = _feed[index];
-                    final controller = _controllers[index];
                     return _ShortVideoPage(
                       item: item,
-                      controller: controller,
                     );
                   },
                 ),
@@ -568,47 +562,18 @@ class _HomeScreenState extends State<HomeScreen> {
 class _ShortVideoPage extends StatelessWidget {
   const _ShortVideoPage({
     required this.item,
-    required this.controller,
   });
 
   final ShortVideoItem item;
-  final YoutubePlayerController? controller;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DecoratedBox(
-      decoration: const BoxDecoration(color: Color(0xFF030806)),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (controller != null)
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final aspectRatio = constraints.maxWidth / constraints.maxHeight;
-                return IgnorePointer(
-                  child: YoutubePlayer(
-                    controller: controller!,
-                    aspectRatio: aspectRatio,
-                  ),
-                );
-              },
-            )
-          else if (item.thumbnailUrl != null)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(item.thumbnailUrl!),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            )
-          else
-            Container(
-              color: const Color(0xFF07120D),
-              alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
-            ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -651,6 +616,50 @@ class _ShortVideoPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ShortsPlayerBackdrop extends StatelessWidget {
+  const _ShortsPlayerBackdrop({
+    required this.controller,
+    this.thumbnailUrl,
+  });
+
+  final YoutubePlayerController? controller;
+  final String? thumbnailUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final aspectRatio = constraints.maxWidth / constraints.maxHeight;
+          return IgnorePointer(
+            child: YoutubePlayer(
+              controller: controller!,
+              aspectRatio: aspectRatio,
+            ),
+          );
+        },
+      );
+    }
+
+    if (thumbnailUrl != null) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: NetworkImage(thumbnailUrl!),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      color: const Color(0xFF07120D),
+      alignment: Alignment.center,
+      child: const CircularProgressIndicator(),
     );
   }
 }
