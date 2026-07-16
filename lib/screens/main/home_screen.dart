@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
@@ -24,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const String _appBaseUrl = 'https://com.videomoney.app';
   static const String _youtubeDesktopUserAgent =
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -34,8 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _countedShortIds = <String>{};
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
+  late final WebViewController _webViewController;
 
-  YoutubePlayerController? _playlistController;
   Timer? _watchTimer;
   Timer? _playlistRefreshTimer;
   List<ShortVideoItem> _feed = const [];
@@ -44,25 +46,43 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _lastTrackedPositionMs = 0;
+  int _playerStateCode = -1;
+  double _playerCurrentTimeSeconds = 0;
+  double _playerDurationSeconds = 0;
+  bool _playerReady = false;
   bool _isLoadingFeed = true;
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   String? _feedError;
 
-  YoutubePlayerParams get _playerParams => const YoutubePlayerParams(
-        mute: false,
-        showControls: false,
-        showFullscreenButton: false,
-        enableJavaScript: true,
-        origin: 'https://www.youtube.com',
-        playsInline: true,
-        strictRelatedVideos: true,
-        userAgent: _youtubeDesktopUserAgent,
-      );
-
   @override
   void initState() {
     super.initState();
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF030806))
+      ..setUserAgent(_youtubeDesktopUserAgent)
+      ..addJavaScriptChannel(
+        'PlaybackBridge',
+        onMessageReceived: (message) => _handlePlayerBridgeMessage(message.message),
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            if (uri == null) return NavigationDecision.navigate;
+            if (request.url == 'about:blank' ||
+                request.url.startsWith('data:') ||
+                uri.host.contains('youtube.com') ||
+                uri.host.contains('youtube-nocookie.com') ||
+                uri.host.contains('googlevideo.com') ||
+                uri.host.contains('ytimg.com')) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
+        ),
+      );
     _initializeHome();
   }
 
@@ -89,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _feedError = null;
       });
 
-      await _initializePlaylistController();
+      await _loadCurrentVideoIntoWebView();
       _watchTimer ??= Timer.periodic(
         const Duration(milliseconds: 900),
         (_) => _trackWatchTime(),
@@ -119,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentIndex = _feed.length - 1;
         }
       });
-      await _reloadPlaylistController();
+      await _loadCurrentVideoIntoWebView();
     } catch (_) {}
   }
 
@@ -128,62 +148,184 @@ class _HomeScreenState extends State<HomeScreen> {
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
     _pageController.dispose();
-    _playlistController?.close();
     super.dispose();
   }
 
-  List<String> get _playlistVideoIds => _feed
-      .map((item) => item.videoId)
-      .where((videoId) => videoId.isNotEmpty)
-      .toList(growable: false);
-
-  Future<void> _initializePlaylistController() async {
+  Future<void> _loadCurrentVideoIntoWebView() async {
     if (_feed.isEmpty) return;
-    await _playlistController?.close();
-    final controller = YoutubePlayerController(params: _playerParams);
-    _playlistController = controller;
-    await controller.loadPlaylist(
-      list: _playlistVideoIds,
-      index: _currentIndex,
-    );
     _lastTrackedPositionMs = 0;
+    _playerStateCode = -1;
+    _playerCurrentTimeSeconds = 0;
+    _playerDurationSeconds = 0;
+    _playerReady = false;
+
+    final videoId = _feed[_currentIndex].videoId;
+    final html = _buildYouTubeEmbedHtml(videoId);
+    await _webViewController.loadHtmlString(html, baseUrl: _appBaseUrl);
     if (mounted) {
       setState(() {});
     }
   }
 
-  Future<void> _reloadPlaylistController() async {
-    final controller = _playlistController;
-    if (controller == null || _feed.isEmpty) return;
-    await controller.loadPlaylist(
-      list: _playlistVideoIds,
-      index: _currentIndex,
-    );
-    _lastTrackedPositionMs = 0;
+  String _buildYouTubeEmbedHtml(String videoId) {
+    final safeVideoId = jsonEncode(videoId);
+    final safeOrigin = jsonEncode(_appBaseUrl);
+
+    return '''
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #030806;
+        overflow: hidden;
+      }
+      #player, iframe {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #030806;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="player"></div>
+    <script>
+      let player = null;
+      let tickHandle = null;
+      const videoId = $safeVideoId;
+      const appOrigin = $safeOrigin;
+
+      function postBridge(payload) {
+        if (window.PlaybackBridge && window.PlaybackBridge.postMessage) {
+          window.PlaybackBridge.postMessage(JSON.stringify(payload));
+        }
+      }
+
+      function emitTick() {
+        if (!player || typeof player.getCurrentTime !== 'function') return;
+        try {
+          postBridge({
+            type: 'tick',
+            currentTime: Number(player.getCurrentTime() || 0),
+            duration: Number(player.getDuration() || 0),
+            playerState: Number(player.getPlayerState ? player.getPlayerState() : -1),
+            videoId: videoId
+          });
+        } catch (_) {}
+      }
+
+      function ensureTicker() {
+        if (tickHandle) clearInterval(tickHandle);
+        tickHandle = setInterval(emitTick, 800);
+      }
+
+      var tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            playsinline: 1,
+            controls: 1,
+            rel: 0,
+            enablejsapi: 1,
+            origin: appOrigin,
+            widget_referrer: appOrigin
+          },
+          events: {
+            onReady: function(event) {
+              ensureTicker();
+              postBridge({ type: 'ready', videoId: videoId });
+              event.target.playVideo();
+            },
+            onStateChange: function(event) {
+              postBridge({ type: 'state', state: Number(event.data), videoId: videoId });
+              if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
+                ensureTicker();
+              }
+              if (event.data === YT.PlayerState.ENDED) {
+                emitTick();
+                postBridge({ type: 'ended', videoId: videoId });
+              }
+            },
+            onError: function(event) {
+              postBridge({ type: 'error', error: Number(event.data), videoId: videoId });
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
+''';
   }
 
-  Future<void> _playCurrentIndex() async {
-    final controller = _playlistController;
-    if (controller == null || _feed.isEmpty) return;
-    _lastTrackedPositionMs = 0;
-    await controller.playVideoAt(_currentIndex);
+  void _handlePlayerBridgeMessage(String rawMessage) {
+    try {
+      final decoded = jsonDecode(rawMessage);
+      if (decoded is! Map<String, dynamic>) return;
+
+      final type = decoded['type'] as String? ?? '';
+      switch (type) {
+        case 'ready':
+          _playerReady = true;
+          break;
+        case 'state':
+          _playerStateCode = (decoded['state'] as num?)?.toInt() ?? -1;
+          break;
+        case 'tick':
+          _playerStateCode = (decoded['playerState'] as num?)?.toInt() ?? _playerStateCode;
+          _playerCurrentTimeSeconds =
+              (decoded['currentTime'] as num?)?.toDouble() ?? _playerCurrentTimeSeconds;
+          _playerDurationSeconds =
+              (decoded['duration'] as num?)?.toDouble() ?? _playerDurationSeconds;
+          break;
+        case 'ended':
+          _playerStateCode = 0;
+          if (_currentIndex < _feed.length - 1) {
+            unawaited(
+              _pageController.nextPage(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+              ),
+            );
+          }
+          break;
+        case 'error':
+          final code = (decoded['error'] as num?)?.toInt();
+          if (!mounted) return;
+          setState(() {
+            _feedError = 'YouTube playback error ${code ?? ''}'.trim();
+          });
+          break;
+      }
+    } catch (_) {}
   }
 
   Future<void> _trackWatchTime() async {
-    if (!mounted || _feed.isEmpty || _isRewardHandling) return;
+    if (!mounted || _feed.isEmpty || _isRewardHandling || !_playerReady) return;
     final user = FirebaseAuth.instance.currentUser;
-    final controller = _playlistController;
-    if (user == null || controller == null) return;
+    if (user == null) return;
+    if (_playerStateCode != 1 && _playerStateCode != 3) return;
 
-    final state = controller.value.playerState;
-    if (state != PlayerState.playing && state != PlayerState.buffering) return;
+    final positionMs = (_playerCurrentTimeSeconds * 1000).round();
+    final durationMs = (_playerDurationSeconds * 1000).round();
+    if (durationMs <= 0) return;
 
-    final currentTimeSeconds = await controller.currentTime;
-    final durationSeconds = await controller.duration;
-    if (durationSeconds <= 0) return;
-
-    final positionMs = (currentTimeSeconds * 1000).round();
-    final durationMs = (durationSeconds * 1000).round();
     final deltaMs = positionMs - _lastTrackedPositionMs;
     _lastTrackedPositionMs = positionMs;
 
@@ -204,13 +346,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (watchedRatio >= 0.92 && !_countedShortIds.contains(item.id)) {
       _countedShortIds.add(item.id);
       unawaited(_handleCompletedShort());
-    }
-
-    if (state == PlayerState.ended && _currentIndex < _feed.length - 1) {
-      await _pageController.nextPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-      );
     }
   }
 
@@ -335,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Positioned.fill(
                 child: _ShortsPlayerBackdrop(
-                  controller: _playlistController,
+                  controller: _webViewController,
                   thumbnailUrl: _feed[_currentIndex].thumbnailUrl,
                 ),
               ),
@@ -346,13 +481,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: _feed.length,
                   onPageChanged: (index) async {
                     setState(() => _currentIndex = index);
-                    await _playCurrentIndex();
+                    await _loadCurrentVideoIntoWebView();
                   },
                   itemBuilder: (context, index) {
                     final item = _feed[index];
-                    return _ShortVideoPage(
-                      item: item,
-                    );
+                    return _ShortVideoPage(item: item);
                   },
                 ),
               ),
@@ -407,9 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           _CircleIconButton(
                                             icon: Icons.mail_outline_rounded,
                                             onPressed: () {
-                                              Navigator.of(
-                                                context,
-                                              ).pushNamed(AppRoutes.inbox);
+                                              Navigator.of(context).pushNamed(AppRoutes.inbox);
                                             },
                                           ),
                                           if (unread > 0)
@@ -417,15 +548,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                               top: -2,
                                               right: -2,
                                               child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
+                                                padding: const EdgeInsets.symmetric(
                                                   horizontal: 5,
                                                   vertical: 2,
                                                 ),
                                                 decoration: BoxDecoration(
                                                   color: AppTheme.primary,
-                                                  borderRadius:
-                                                      BorderRadius.circular(999),
+                                                  borderRadius: BorderRadius.circular(999),
                                                 ),
                                                 child: Text(
                                                   unread > 99 ? '99+' : '$unread',
@@ -443,9 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _CircleIconButton(
                                         icon: Icons.settings_outlined,
                                         onPressed: () {
-                                          Navigator.of(
-                                            context,
-                                          ).pushNamed(AppRoutes.settings);
+                                          Navigator.of(context).pushNamed(AppRoutes.settings);
                                         },
                                       ),
                                     ],
@@ -472,8 +599,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             l10n.currentViews,
@@ -503,13 +629,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color:
-                                                AppTheme.primary.withOpacity(0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            color: AppTheme.primary.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(999),
                                             border: Border.all(
-                                              color: AppTheme.primary
-                                                  .withOpacity(0.28),
+                                              color: AppTheme.primary.withOpacity(0.28),
                                             ),
                                           ),
                                           child: Text(
@@ -626,40 +749,25 @@ class _ShortsPlayerBackdrop extends StatelessWidget {
     this.thumbnailUrl,
   });
 
-  final YoutubePlayerController? controller;
+  final WebViewController controller;
   final String? thumbnailUrl;
 
   @override
   Widget build(BuildContext context) {
-    if (controller != null) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final aspectRatio = constraints.maxWidth / constraints.maxHeight;
-          return IgnorePointer(
-            child: YoutubePlayer(
-              controller: controller!,
-              aspectRatio: aspectRatio,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (thumbnailUrl != null)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage(thumbnailUrl!),
+                fit: BoxFit.cover,
+              ),
             ),
-          );
-        },
-      );
-    }
-
-    if (thumbnailUrl != null) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: NetworkImage(thumbnailUrl!),
-            fit: BoxFit.cover,
           ),
-        ),
-      );
-    }
-
-    return Container(
-      color: const Color(0xFF07120D),
-      alignment: Alignment.center,
-      child: const CircularProgressIndicator(),
+        WebViewWidget(controller: controller),
+      ],
     );
   }
 }
