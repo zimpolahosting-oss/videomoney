@@ -410,6 +410,48 @@ class FirestoreService {
     });
   }
 
+  Future<void> applyUserProgress({
+    required String uid,
+    int viewsDelta = 0,
+    int videosWatchedDelta = 0,
+  }) async {
+    if (viewsDelta == 0 && videosWatchedDelta == 0) return;
+
+    final userRef = _users.doc(uid);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(userRef);
+      final data = snapshot.data();
+      if (data == null) {
+        throw Exception('User profile not found.');
+      }
+
+      final currentViews = (data['coins'] as num?)?.toInt() ?? 0;
+      final currentVideos = (data['videosWatched'] as num?)?.toInt() ?? 0;
+      final nextViews = currentViews + viewsDelta;
+      final nextVideos = currentVideos + videosWatchedDelta;
+
+      final updates = <String, dynamic>{};
+      if (viewsDelta != 0) {
+        updates['coins'] = FieldValue.increment(viewsDelta);
+      }
+      if (videosWatchedDelta != 0) {
+        updates['videosWatched'] = FieldValue.increment(videosWatchedDelta);
+      }
+      transaction.update(userRef, updates);
+      transaction.set(
+        _leaderboard.doc(uid),
+        _leaderboardPayload(
+          uid: uid,
+          email: data['email'] as String? ?? '',
+          customName: data['leaderboardDisplayName'] as String? ?? '',
+          views: nextViews,
+          videosWatched: nextVideos,
+        ),
+        SetOptions(merge: true),
+      );
+    });
+  }
+
   Stream<List<PayoutRequest>> watchPayouts(String uid) {
     return _payouts
         .where('userId', isEqualTo: uid)

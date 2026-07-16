@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
-import 'earn_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'wallet_screen.dart';
@@ -33,7 +32,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   static const List<Widget> _screens = [
     HomeScreen(),
-    EarnScreen(),
     WalletScreen(),
     ProfileScreen(),
   ];
@@ -158,11 +156,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home),
                 label: l10n.home,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.play_circle_outline),
-                selectedIcon: const Icon(Icons.play_circle),
-                label: l10n.earn,
               ),
               NavigationDestination(
                 icon: const Icon(Icons.account_balance_wallet_outlined),

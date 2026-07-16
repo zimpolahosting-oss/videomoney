@@ -1,16 +1,20 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
-import '../../models/leaderboard_entry.dart';
-import '../../services/earnings_service.dart';
+import '../../models/short_video_item.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
+import '../../services/shorts_progress_service.dart';
+import '../../services/video_feed_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/watermark_hero_card.dart';
+import '../../widgets/animated_int_text.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,48 +25,265 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
-  final _earningsService = EarningsService();
+  final _videoFeedService = VideoFeedService();
+  final _pageController = PageController();
+  final _controllers = <int, YoutubePlayerController>{};
+  final _countedShortIds = <String>{};
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
-  bool _isLoading = false;
+
+  Timer? _watchTimer;
+  Timer? _playlistRefreshTimer;
+  List<ShortVideoItem> _feed = const [];
+  int _currentIndex = 0;
+  int _cycleCompletedShorts = 0;
+  int _cycleWatchMs = 0;
+  int _bonusProgressShorts = 0;
+  int _lastTrackedPositionMs = 0;
+  bool _isLoadingFeed = true;
+  bool _isRewardHandling = false;
+  bool _isProcessingCompletedShort = false;
+  String? _feedError;
+
+  YoutubePlayerParams get _playerParams => const YoutubePlayerParams(
+        mute: false,
+        showControls: false,
+        showFullscreenButton: false,
+      );
 
   @override
   void initState() {
     super.initState();
-    _earningsService.preloadRewardedVideo();
+    _initializeHome();
   }
 
-  Future<void> _watchVideo() async {
-    final l10n = context.l10n;
+  Future<void> _initializeHome() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _isLoading) return;
+    if (user == null) {
+      if (mounted) {
+        setState(() => _isLoadingFeed = false);
+      }
+      return;
+    }
 
-    setState(() => _isLoading = true);
-    String? lastStatusMessage;
+    try {
+      final feed = await _videoFeedService.loadFeed(userId: user.uid);
+      final progress = await ShortsProgressService.instance.load(user.uid);
 
-    final rewardGranted = await _earningsService.watchRewardedVideo(
-      uid: user.uid,
-      onAdStatus: (message) {
-        lastStatusMessage = message;
+      if (!mounted) return;
+      setState(() {
+        _feed = feed;
+        _cycleCompletedShorts = progress.completedShortsInCycle;
+        _cycleWatchMs = progress.watchMsInCycle;
+        _bonusProgressShorts = progress.bonusProgressShorts;
+        _isLoadingFeed = false;
+        _feedError = null;
+      });
+
+      await _ensureController(0);
+      await _activateCurrentController();
+      _watchTimer ??= Timer.periodic(
+        const Duration(milliseconds: 900),
+        (_) => _trackWatchTime(),
+      );
+      _playlistRefreshTimer ??= Timer.periodic(
+        const Duration(minutes: 20),
+        (_) => _refreshFeedSilently(),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingFeed = false;
+        _feedError = error.toString();
+      });
+    }
+  }
+
+  Future<void> _refreshFeedSilently() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final freshFeed = await _videoFeedService.loadFeed(userId: user.uid);
+      if (!mounted || freshFeed.isEmpty) return;
+      setState(() {
+        _feed = freshFeed;
+        if (_currentIndex >= _feed.length) {
+          _currentIndex = _feed.length - 1;
+        }
+      });
+      await _ensureController(_currentIndex);
+      await _ensureController(_currentIndex + 1);
+      await _ensureController(_currentIndex + 2);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _watchTimer?.cancel();
+    _playlistRefreshTimer?.cancel();
+    _pageController.dispose();
+    for (final controller in _controllers.values) {
+      controller.close();
+    }
+    super.dispose();
+  }
+
+  Future<void> _ensureController(int index) async {
+    if (index < 0 || index >= _feed.length || _controllers.containsKey(index)) {
+      return;
+    }
+
+    final controller = YoutubePlayerController.fromVideoId(
+      videoId: _feed[index].videoId,
+      autoPlay: false,
+      params: _playerParams,
+    );
+    _controllers[index] = controller;
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _activateCurrentController() async {
+    if (_feed.isEmpty) return;
+
+    await _ensureController(_currentIndex);
+    await _ensureController(_currentIndex + 1);
+    await _ensureController(_currentIndex + 2);
+
+    _lastTrackedPositionMs = 0;
+    for (final entry in _controllers.entries) {
+      if (entry.key == _currentIndex) {
+        await entry.value.playVideo();
+      } else {
+        await entry.value.pauseVideo();
+      }
+    }
+
+    final removable = _controllers.keys
+        .where((index) => (index - _currentIndex).abs() > 2)
+        .toList(growable: false);
+    for (final index in removable) {
+      await _controllers[index]?.close();
+      _controllers.remove(index);
+    }
+  }
+
+  Future<void> _trackWatchTime() async {
+    if (!mounted || _feed.isEmpty || _isRewardHandling) return;
+    final user = FirebaseAuth.instance.currentUser;
+    final controller = _controllers[_currentIndex];
+    if (user == null || controller == null) return;
+
+    final state = controller.value.playerState;
+    if (state != PlayerState.playing && state != PlayerState.buffering) return;
+
+    final currentTimeSeconds = await controller.currentTime;
+    final durationSeconds = await controller.duration;
+    if (durationSeconds <= 0) return;
+
+    final positionMs = (currentTimeSeconds * 1000).round();
+    final durationMs = (durationSeconds * 1000).round();
+    final deltaMs = positionMs - _lastTrackedPositionMs;
+    _lastTrackedPositionMs = positionMs;
+
+    if (deltaMs > 0 && deltaMs <= 2000) {
+      final result = await ShortsProgressService.instance.addWatchTime(
+        uid: user.uid,
+        deltaMs: deltaMs,
+      );
+      if (!mounted) return;
+      setState(() => _cycleWatchMs = result.snapshot.watchMsInCycle);
+      if (result.rewardCycleCompleted) {
+        await _grantCycleReward();
+      }
+    }
+
+    final item = _feed[_currentIndex];
+    final watchedRatio = positionMs / durationMs.clamp(1, 1 << 30);
+    if (watchedRatio >= 0.92 && !_countedShortIds.contains(item.id)) {
+      _countedShortIds.add(item.id);
+      unawaited(_handleCompletedShort());
+    }
+
+    if (state == PlayerState.ended && _currentIndex < _feed.length - 1) {
+      await _pageController.nextPage(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  Future<void> _handleCompletedShort() async {
+    if (_isProcessingCompletedShort) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _isProcessingCompletedShort = true;
+    try {
+      await _firestoreService.applyUserProgress(
+        uid: user.uid,
+        videosWatchedDelta: 1,
+      );
+
+      final result = await ShortsProgressService.instance.markShortCompleted(
+        user.uid,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
+        _bonusProgressShorts = result.snapshot.bonusProgressShorts;
+      });
+
+      if (result.bonusViewsAwarded > 0) {
+        await _firestoreService.applyUserProgress(
+          uid: user.uid,
+          viewsDelta: result.bonusViewsAwarded,
+        );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+          SnackBar(
+            content: Text('🎁 +${result.bonusViewsAwarded} bonus views'),
+          ),
         );
-      },
+      }
+
+      if (result.rewardCycleCompleted) {
+        await _grantCycleReward();
+      }
+    } finally {
+      _isProcessingCompletedShort = false;
+    }
+  }
+
+  Future<void> _grantCycleReward() async {
+    if (_isRewardHandling) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+
+    _isRewardHandling = true;
+    const rewardViews = 40;
+
+    await _firestoreService.applyUserProgress(
+      uid: user.uid,
+      viewsDelta: rewardViews,
+    );
+    final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
+      user.uid,
     );
 
     if (!mounted) return;
+    setState(() {
+      _cycleCompletedShorts = snapshot.completedShortsInCycle;
+      _cycleWatchMs = snapshot.watchMsInCycle;
+    });
 
-    if (rewardGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.rewardConfirmedViewsAdded)),
-      );
-    } else if (lastStatusMessage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.rewardedAdNotCompleted)),
-      );
-    }
-    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('+40 views added')),
+    );
+    _isRewardHandling = false;
   }
 
   @override
@@ -71,8 +292,32 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
+      return Scaffold(body: Center(child: Text(l10n.noUserSessionFound)));
+    }
+
+    if (_isLoadingFeed) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_feedError != null) {
       return Scaffold(
-        body: Center(child: Text(l10n.noUserSessionFound)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              _feedError!,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_feed.isEmpty) {
+      return const Scaffold(
+        body: Center(child: Text('No playlist videos available.')),
       );
     }
 
@@ -80,655 +325,447 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
         final appUser = snapshot.data;
-        final views = appUser?.views ?? 0;
-        final videosWatched = appUser?.videosWatched ?? 0;
-        final todayKey = FirestoreService.formatLocalDateKey(DateTime.now());
-        final dailyCount = (appUser?.dailyProgressDate == todayKey)
-            ? (appUser?.dailyVideosWatched ?? 0)
-            : 0;
-        final dailyBonusAwarded = (appUser?.dailyProgressDate == todayKey)
-            ? (appUser?.dailyBonusAwarded ?? false)
-            : false;
-        final dailyProgress =
-            (dailyCount / FirestoreService.dailyBonusTargetVideos)
-                .clamp(0, 1)
-                .toDouble();
-        final payoutProgress = (views / FirestoreService.minimumPayoutCoins)
+        final currentViews = appUser?.views ?? 0;
+        final payoutProgress = (currentViews / FirestoreService.minimumPayoutCoins)
             .clamp(0, 1)
             .toDouble();
 
         return Scaffold(
-          body: SafeArea(
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                _TopTitle(title: l10n.home),
-                const SizedBox(height: 14),
-                StreamBuilder<int>(
-                  stream: _onlineUsersCountStream,
-                  builder: (context, onlineSnapshot) {
-                    final onlineUsers = onlineSnapshot.data ?? 0;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: Theme.of(context).colorScheme.surface,
-                        border: Border.all(
-                          color: AppTheme.outline.withOpacity(0.55),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.circle,
-                            color: AppTheme.primary,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.usersOnline(
-                                NumberFormat.decimalPattern().format(
-                                  onlineUsers,
-                                ),
-                              ),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                        ],
-                      ),
+          extendBody: true,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: _feed.length,
+                  onPageChanged: (index) async {
+                    setState(() => _currentIndex = index);
+                    await _activateCurrentController();
+                  },
+                  itemBuilder: (context, index) {
+                    final item = _feed[index];
+                    final controller = _controllers[index];
+                    return _ShortVideoPage(
+                      item: item,
+                      controller: controller,
                     );
                   },
                 ),
-                const SizedBox(height: 14),
-                RepaintBoundary(
-                  child: SizedBox(
-                    height: 290,
-                    child: WatermarkHeroCard(
-                      key: const ValueKey('home-top-hero-card'),
-                      imageAsset: 'assets/illustrations/home_movie_v2.jpg',
-                      imageOpacity: 0.18,
-                      imageScale: 1.42,
-                      child: Column(
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 102),
+                  child: Column(
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'VideoMoney',
-                                  style: TextStyle(
-                                    color: AppTheme.primarySoft,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
+                          Expanded(
+                            child: const Text(
+                              'VideoMoney',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
                               ),
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              StreamBuilder<int>(
+                                stream: _onlineUsersCountStream,
+                                builder: (context, onlineSnapshot) {
+                                  return _OverlayChip(
+                                    child: Text(
+                                      l10n.usersOnline(
+                                        NumberFormat.decimalPattern().format(
+                                          onlineSnapshot.data ?? 0,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 8),
                               StreamBuilder<int>(
                                 stream: _firestoreService.watchUnreadInboxCount(
                                   user.uid,
                                 ),
-                                builder: (context, inboxSnapshot) {
-                                  final unread = inboxSnapshot.data ?? 0;
-                                  return Stack(
-                                    clipBehavior: Clip.none,
+                                builder: (context, unreadSnapshot) {
+                                  final unread = unreadSnapshot.data ?? 0;
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      IconButton(
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          _CircleIconButton(
+                                            icon: Icons.mail_outline_rounded,
+                                            onPressed: () {
+                                              Navigator.of(
+                                                context,
+                                              ).pushNamed(AppRoutes.inbox);
+                                            },
+                                          ),
+                                          if (unread > 0)
+                                            Positioned(
+                                              top: -2,
+                                              right: -2,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 5,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(999),
+                                                ),
+                                                child: Text(
+                                                  unread > 99 ? '99+' : '$unread',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF04110A),
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _CircleIconButton(
+                                        icon: Icons.settings_outlined,
                                         onPressed: () {
                                           Navigator.of(
                                             context,
-                                          ).pushNamed(AppRoutes.inbox);
+                                          ).pushNamed(AppRoutes.settings);
                                         },
-                                        icon: const Icon(
-                                          Icons.mail_outline_rounded,
-                                          color: AppTheme.primarySoft,
-                                        ),
                                       ),
-                                      if (unread > 0)
-                                        Positioned(
-                                          right: 4,
-                                          top: 4,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.primary,
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: Text(
-                                              unread > 99 ? '99+' : '$unread',
-                                              style: const TextStyle(
-                                                color: Color(0xFF04110A),
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   );
                                 },
                               ),
-                              IconButton(
-                                onPressed: () {
-                                  Navigator.of(
-                                    context,
-                                  ).pushNamed(AppRoutes.settings);
-                                },
-                                icon: const Icon(
-                                  Icons.settings_outlined,
-                                  color: AppTheme.primarySoft,
-                                ),
-                              ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 230),
-                            child: Text(
-                              l10n.welcomeBackShort,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 230),
-                            child: Text(
-                              user.email ?? l10n.signedInUser,
-                              style: Theme.of(context).textTheme.titleMedium,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 235),
-                            child: Text(
-                              l10n.watchVideosEarnPaid,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _MiniStatCard(
-                                  icon: Icons.visibility_outlined,
-                                  title: l10n.currentViews,
-                                  value:
-                                      NumberFormat.decimalPattern().format(
-                                        views,
+                        ],
+                      ),
+                      const Spacer(),
+                      _OverlayCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.currentViews,
+                                        style: const TextStyle(
+                                          color: AppTheme.textMuted,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _MiniStatCard(
-                                  icon: Icons.ondemand_video_outlined,
-                                  title: l10n.videosWatched,
-                                  value: NumberFormat.decimalPattern().format(
-                                    videosWatched,
+                                      const SizedBox(height: 4),
+                                      AnimatedIntText(
+                                        value: currentViews,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: Theme.of(context).colorScheme.surface,
-                    border:
-                        Border.all(color: AppTheme.outline.withOpacity(0.55)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.progressToPayout,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.youAreOnYourWay,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${NumberFormat.decimalPattern().format(views)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)} ${l10n.viewsUnit}',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: AppTheme.primary.withOpacity(0.28),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _feed[_currentIndex].category,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            '${(payoutProgress * 100).round()}%',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 10,
-                          value: payoutProgress,
-                          backgroundColor: Colors.white.withOpacity(0.08),
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppTheme.primary),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isLoading ? null : _watchVideo,
-                          icon: Icon(
-                            _isLoading
-                                ? Icons.hourglass_top_rounded
-                                : Icons.play_arrow_rounded,
-                          ),
-                          label: Text(
-                            _isLoading ? l10n.loading : l10n.watchVideo,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: Theme.of(context).colorScheme.surface,
-                    border:
-                        Border.all(color: AppTheme.outline.withOpacity(0.55)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.emoji_events_outlined,
-                            color: AppTheme.primarySoft,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.dailyBonus,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              color: AppTheme.primary.withOpacity(0.12),
-                              border: Border.all(
-                                color: AppTheme.primary.withOpacity(0.28),
-                              ),
-                            ),
-                            child: Text(
-                              '+${FirestoreService.dailyBonusViews}',
+                            const SizedBox(height: 10),
+                            Text(
+                              l10n.progressToPayout,
                               style: const TextStyle(
-                                color: AppTheme.primarySoft,
-                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textMuted,
                                 fontSize: 12,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.watchDailyVideosBonus(
-                          '${FirestoreService.dailyBonusTargetVideos}',
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} ${l10n.videosWatched.toLowerCase()}',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                minHeight: 9,
+                                value: payoutProgress,
+                                backgroundColor: Colors.white.withOpacity(0.10),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  AppTheme.primary,
+                                ),
+                              ),
                             ),
-                          ),
-                          Text(
-                            dailyBonusAwarded ? l10n.bonusClaimed : l10n.bonus,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 10,
-                          value: dailyProgress,
-                          backgroundColor: Colors.white.withOpacity(0.08),
-                          valueColor:
-                              const AlwaysStoppedAnimation(AppTheme.primary),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Reward progress',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} Shorts • ${(_cycleWatchMs / 1000).floor()}s / 150s',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                minHeight: 8,
+                                value: (_cycleCompletedShorts /
+                                        ShortsProgressService
+                                            .rewardThresholdShorts)
+                                    .clamp(0, 1)
+                                    .toDouble(),
+                                backgroundColor: Colors.white.withOpacity(0.10),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  AppTheme.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Bonus progress',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$_bonusProgressShorts / ${ShortsProgressService.bonusThresholdShorts} Shorts',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                minHeight: 8,
+                                value: (_bonusProgressShorts /
+                                        ShortsProgressService
+                                            .bonusThresholdShorts)
+                                    .clamp(0, 1)
+                                    .toDouble(),
+                                backgroundColor: Colors.white.withOpacity(0.10),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  AppTheme.primarySoft,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                StreamBuilder<List<LeaderboardEntry>>(
-                  stream: _firestoreService.watchLeaderboard(limit: 50),
-                  builder: (context, leaderboardSnapshot) {
-                    final entries =
-                        leaderboardSnapshot.data ?? const <LeaderboardEntry>[];
-                    return StreamBuilder<Set<String>>(
-                      stream: PresenceService.instance.watchOnlineUserIds(),
-                      builder: (context, onlineSnapshot) {
-                        final onlineUserIds =
-                            onlineSnapshot.data ?? const <String>{};
-                        return Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            color: Theme.of(context).colorScheme.surface,
-                            border: Border.all(
-                              color: AppTheme.outline.withOpacity(0.55),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.emoji_events_outlined,
-                                    color: AppTheme.primarySoft,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      l10n.leaderboardTitle,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                l10n.leaderboardSubtitle,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 14),
-                              if (entries.isEmpty)
-                                Text(
-                                  l10n.leaderboardEmpty,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                )
-                              else
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 360,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: ListView.separated(
-                                      primary: false,
-                                      shrinkWrap: true,
-                                      physics: entries.length > 5
-                                          ? const ClampingScrollPhysics()
-                                          : const NeverScrollableScrollPhysics(),
-                                      itemCount: entries.length,
-                                      separatorBuilder: (_, __) =>
-                                          const SizedBox(height: 10),
-                                      itemBuilder: (context, index) {
-                                        final entry = entries[index];
-                                        return _LeaderboardTile(
-                                          rank: index + 1,
-                                          entry: entry,
-                                          isCurrentUser: entry.uid == user.uid,
-                                          isOnline: onlineUserIds.contains(
-                                            entry.uid,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),
         );
       },
     );
   }
 }
 
-class _TopTitle extends StatelessWidget {
-  const _TopTitle({required this.title});
+class _ShortVideoPage extends StatelessWidget {
+  const _ShortVideoPage({
+    required this.item,
+    required this.controller,
+  });
 
-  final String title;
+  final ShortVideoItem item;
+  final YoutubePlayerController? controller;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppTheme.primary,
-          fontWeight: FontWeight.w800,
-          fontSize: 18,
-          letterSpacing: 0.4,
-        ),
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Color(0xFF030806)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (controller != null)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final aspectRatio = constraints.maxWidth / constraints.maxHeight;
+                return IgnorePointer(
+                  child: YoutubePlayer(
+                    controller: controller!,
+                    aspectRatio: aspectRatio,
+                  ),
+                );
+              },
+            )
+          else if (item.thumbnailUrl != null)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(item.thumbnailUrl!),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              color: const Color(0xFF07120D),
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.18),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.72),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            right: 18,
+            bottom: 18,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.creator,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.caption,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white.withOpacity(0.92),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _MiniStatCard extends StatelessWidget {
-  const _MiniStatCard({
+class _OverlayChip extends StatelessWidget {
+  const _OverlayChip({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.36),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
+      child: DefaultTextStyle(
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _OverlayCard extends StatelessWidget {
+  const _OverlayCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(14),
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.42),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({
     required this.icon,
-    required this.title,
-    required this.value,
+    required this.onPressed,
   });
 
   final IconData icon;
-  final String title;
-  final String value;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.58),
-        border: Border.all(color: AppTheme.outline.withOpacity(0.6)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppTheme.primarySoft, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LeaderboardTile extends StatelessWidget {
-  const _LeaderboardTile({
-    required this.rank,
-    required this.entry,
-    required this.isCurrentUser,
-    required this.isOnline,
-  });
-
-  final int rank;
-  final LeaderboardEntry entry;
-  final bool isCurrentUser;
-  final bool isOnline;
-
-  @override
-  Widget build(BuildContext context) {
-    final earnings = FirestoreService.estimateEarningsEuro(entry.views);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: isCurrentUser
-            ? AppTheme.primary.withOpacity(0.12)
-            : Theme.of(context).colorScheme.surface.withOpacity(0.45),
-        border: Border.all(
-          color: isCurrentUser
-              ? AppTheme.primary.withOpacity(0.35)
-              : AppTheme.outline.withOpacity(0.5),
+    return Material(
+      color: Colors.black.withOpacity(0.30),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(11),
+          child: Icon(icon, color: Colors.white),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: rank <= 3
-                  ? AppTheme.coin.withOpacity(0.18)
-                  : AppTheme.primarySoft.withOpacity(0.12),
-            ),
-            child: Text(
-              '$rank',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isCurrentUser
-                      ? '${entry.publicName} ${context.l10n.leaderboardYou}'
-                      : entry.publicName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline
-                            ? const Color(0xFF35E06A)
-                            : Colors.white.withOpacity(0.22),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        context.l10n.leaderboardViews(
-                          NumberFormat.decimalPattern().format(entry.views),
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '€${earnings.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: AppTheme.primarySoft,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.leaderboardIncome,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

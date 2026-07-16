@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
+import '../../models/leaderboard_entry.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
@@ -281,6 +282,120 @@ class WalletScreen extends StatelessWidget {
                         ),
                       ),
                   ],
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _SectionTitle(title: l10n.leaderboardTitle),
+            const SizedBox(height: 6),
+            Text(
+              l10n.leaderboardSubtitle,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 10),
+            StreamBuilder<List<LeaderboardEntry>>(
+              stream: firestoreService.watchLeaderboard(limit: 10),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final entries = snapshot.data ?? const <LeaderboardEntry>[];
+                if (entries.isEmpty) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(l10n.leaderboardEmpty),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: entries
+                      .map(
+                        (entry) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            color: Theme.of(context).colorScheme.surface,
+                            border: Border.all(
+                              color: AppTheme.outline.withOpacity(0.55),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                height: 38,
+                                width: 38,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: entry.uid == user.uid
+                                      ? AppTheme.primary.withOpacity(0.18)
+                                      : Colors.white.withOpacity(0.04),
+                                ),
+                                child: Text(
+                                  '${entries.indexOf(entry) + 1}',
+                                  style: TextStyle(
+                                    color: entry.uid == user.uid
+                                        ? AppTheme.primarySoft
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      entry.customName.isNotEmpty
+                                          ? entry.customName
+                                          : entry.publicName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${NumberFormat.decimalPattern().format(entry.views)} ${l10n.viewsUnit} • ${entry.videosWatched} ${l10n.videosWatched.toLowerCase()}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (entry.uid == user.uid)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(999),
+                                    color: AppTheme.primary.withOpacity(0.12),
+                                    border: Border.all(
+                                      color: AppTheme.primary.withOpacity(0.28),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: AppTheme.primarySoft,
+                                    size: 14,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
                 );
               },
             ),

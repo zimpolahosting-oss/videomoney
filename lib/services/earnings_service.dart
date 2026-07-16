@@ -17,6 +17,15 @@ class EarningsService {
     return _rewardedAdService.preloadRewardedAd();
   }
 
+  Future<bool> showRewardedBonusAd({
+    required ValueChanged<String> onAdStatus,
+  }) {
+    return _rewardedAdService.showRewardedAd(
+      onUserEarnedReward: () async {},
+      onAdStatus: onAdStatus,
+    );
+  }
+
   Future<bool> watchRewardedVideo({
     required String uid,
     required ValueChanged<String> onAdStatus,
