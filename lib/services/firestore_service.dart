@@ -91,6 +91,53 @@ class FirestoreService {
     return '$y-$m-$d';
   }
 
+  static Map<String, dynamic> buildExistingUserProfileUpdates({
+    required Map<String, dynamic> data,
+    required String uid,
+    required String email,
+    required String todayKey,
+  }) {
+    final rewardBalanceResetApplied =
+        data[rewardBalanceResetAppliedField] as bool? ?? false;
+    final updates = <String, dynamic>{
+      'uid': uid,
+      'email': email,
+      'appVerified': true,
+    };
+
+    if (!rewardBalanceResetApplied) {
+      updates[rewardBalanceResetAppliedField] = true;
+    }
+
+    if (!data.containsKey('dailyProgressDate')) {
+      updates['dailyProgressDate'] = todayKey;
+    }
+    if (!data.containsKey('dailyVideosWatched')) {
+      updates['dailyVideosWatched'] = 0;
+    }
+    if (!data.containsKey('dailyBonusAwarded')) {
+      updates['dailyBonusAwarded'] = false;
+    }
+    if (!data.containsKey('settings')) {
+      updates['settings'] = {
+        'notificationsEnabled': true,
+        'dailyReminderEnabled': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+    }
+    if (!data.containsKey('fcmTokens')) {
+      updates['fcmTokens'] = <String>[];
+    }
+    if (!data.containsKey('createdAt')) {
+      updates['createdAt'] = FieldValue.serverTimestamp();
+    }
+    if (!data.containsKey('leaderboardDisplayName')) {
+      updates['leaderboardDisplayName'] = '';
+    }
+
+    return updates;
+  }
+
   Future<void> createUserProfile(User user) async {
     final docRef = _users.doc(user.uid);
     final doc = await docRef.get();
@@ -98,46 +145,12 @@ class FirestoreService {
 
     if (doc.exists) {
       final data = doc.data() ?? <String, dynamic>{};
-      final rewardBalanceResetApplied =
-          data[rewardBalanceResetAppliedField] as bool? ?? false;
-      final updates = <String, dynamic>{
-        'uid': user.uid,
-        'email': user.email ?? '',
-        'appVerified': true,
-      };
-
-      if (!rewardBalanceResetApplied) {
-        updates.addAll({
-          'coins': 0,
-          rewardBalanceResetAppliedField: true,
-        });
-      }
-
-      if (!data.containsKey('dailyProgressDate')) {
-        updates['dailyProgressDate'] = todayKey;
-      }
-      if (!data.containsKey('dailyVideosWatched')) {
-        updates['dailyVideosWatched'] = 0;
-      }
-      if (!data.containsKey('dailyBonusAwarded')) {
-        updates['dailyBonusAwarded'] = false;
-      }
-      if (!data.containsKey('settings')) {
-        updates['settings'] = {
-          'notificationsEnabled': true,
-          'dailyReminderEnabled': true,
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
-      }
-      if (!data.containsKey('fcmTokens')) {
-        updates['fcmTokens'] = <String>[];
-      }
-      if (!data.containsKey('createdAt')) {
-        updates['createdAt'] = FieldValue.serverTimestamp();
-      }
-      if (!data.containsKey('leaderboardDisplayName')) {
-        updates['leaderboardDisplayName'] = '';
-      }
+      final updates = buildExistingUserProfileUpdates(
+        data: data,
+        uid: user.uid,
+        email: user.email ?? '',
+        todayKey: todayKey,
+      );
       await docRef.set(updates, SetOptions(merge: true));
       await _syncLeaderboardDoc(
         uid: user.uid,
