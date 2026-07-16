@@ -78,6 +78,7 @@ class AppLocalizations {
   String get enterValidEmail => _text('enterValidEmail');
   String get enterYourPassword => _text('enterYourPassword');
   String get useAtLeast6Chars => _text('useAtLeast6Chars');
+  String get rememberMe => _text('rememberMe');
   String get forgotPassword => _text('forgotPassword');
   String get resetPassword => _text('resetPassword');
   String get emailHint => _text('emailHint');
@@ -358,6 +359,7 @@ class AppLocalizations {
       'enterValidEmail': 'Enter a valid email address.',
       'enterYourPassword': 'Enter your password.',
       'useAtLeast6Chars': 'Use at least 6 characters.',
+      'rememberMe': 'Remember me',
       'forgotPassword': 'Forgot password?',
       'resetPassword': 'Reset password',
       'emailHint': 'name@example.com',
@@ -618,6 +620,7 @@ class AppLocalizations {
       'enterValidEmail': 'Voer een geldig e-mailadres in.',
       'enterYourPassword': 'Voer je wachtwoord in.',
       'useAtLeast6Chars': 'Gebruik minimaal 6 tekens.',
+      'rememberMe': 'Onthoud mij',
       'forgotPassword': 'Wachtwoord vergeten?',
       'resetPassword': 'Wachtwoord resetten',
       'emailHint': 'naam@voorbeeld.com',

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/remember_me_service.dart';
 import '../../theme/app_theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -297,6 +298,7 @@ class ProfileScreen extends StatelessWidget {
                       side: BorderSide(color: const Color(0xFFFF7B7B).withOpacity(0.35)),
                     ),
                     onPressed: () async {
+                      await RememberMeService.instance.clear();
                       await authService.signOut();
                     },
                     icon: const Icon(Icons.logout),

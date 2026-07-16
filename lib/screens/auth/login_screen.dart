@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/app_language_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/remember_me_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_logo.dart';
 
@@ -22,6 +25,58 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLogin = true;
   bool _isLoading = false;
+  bool _rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreRememberMe();
+  }
+
+  Future<void> _restoreRememberMe() async {
+    final enabled = await RememberMeService.instance.isEnabled();
+    final creds = enabled ? await RememberMeService.instance.readCredentials() : null;
+    if (!mounted) return;
+
+    setState(() => _rememberMe = enabled);
+    if (creds != null) {
+      _emailController.text = creds.email;
+      _passwordController.text = creds.password;
+
+      // If Firebase doesn't restore the session automatically, try to sign in
+      // silently (only when user explicitly enabled "remember me").
+      if (FirebaseAuth.instance.currentUser == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          unawaited(_attemptAutoLogin());
+        });
+      }
+    }
+  }
+
+  Future<void> _attemptAutoLogin() async {
+    if (_isLoading || !_rememberMe) return;
+    final l10n = context.l10n;
+    final creds = await RememberMeService.instance.readCredentials();
+    if (creds == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signIn(email: creds.email, password: creds.password);
+    } on FirebaseAuthException catch (error) {
+      await RememberMeService.instance.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? l10n.authenticationFailed)),
+      );
+    } catch (_) {
+      await RememberMeService.instance.clear();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -42,11 +97,30 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        if (_rememberMe) {
+          await RememberMeService.instance.setEnabled(true);
+          await RememberMeService.instance.saveCredentials(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+        } else {
+          await RememberMeService.instance.clear();
+        }
       } else {
         await _authService.signUp(
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        // Default to remembering the account if the user explicitly opted in.
+        if (_rememberMe) {
+          await RememberMeService.instance.setEnabled(true);
+          await RememberMeService.instance.saveCredentials(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+        }
       }
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
@@ -386,6 +460,32 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _rememberMe,
+                                onChanged: _isLoading
+                                    ? null
+                                    : (value) async {
+                                        final enabled = value ?? false;
+                                        setState(() => _rememberMe = enabled);
+                                        if (!enabled) {
+                                          await RememberMeService.instance.clear();
+                                        } else {
+                                          await RememberMeService.instance.setEnabled(true);
+                                        }
+                                      },
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  l10n.rememberMe,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
                           ),
                           if (_isLogin) ...[
                             const SizedBox(height: 8),
