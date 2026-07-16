@@ -375,6 +375,37 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: AppTheme.outline.withOpacity(0.7),
+                              ),
+                            ),
+                            child: const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.system_update_alt_rounded,
+                                  color: AppTheme.primarySoft,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'If videos do not start on your phone, update Android System WebView, Google Chrome and YouTube first.',
+                                    style: TextStyle(
+                                      color: AppTheme.textMuted,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 28),
                           Container(
                             padding: const EdgeInsets.all(6),

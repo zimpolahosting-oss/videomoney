@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _bonusProgressShorts = 0;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
+  int? _playbackErrorCode;
   double _playerCurrentTimeSeconds = 0;
   double _playerDurationSeconds = 0;
   bool _playerReady = false;
@@ -168,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_feed.isEmpty) return;
     _lastTrackedPositionMs = 0;
     _playerStateCode = -1;
+    _playbackErrorCode = null;
     _playerCurrentTimeSeconds = 0;
     _playerDurationSeconds = 0;
     _playerReady = false;
@@ -317,11 +320,22 @@ class _HomeScreenState extends State<HomeScreen> {
           final code = (decoded['error'] as num?)?.toInt();
           if (!mounted) return;
           setState(() {
-            _feedError = 'YouTube playback error ${code ?? ''}'.trim();
+            _playbackErrorCode = code;
           });
           break;
       }
     } catch (_) {}
+  }
+
+  bool get _hasRecoverablePlaybackError =>
+      _playbackErrorCode == 150 ||
+      _playbackErrorCode == 152 ||
+      _playbackErrorCode == 153;
+
+  Future<void> _openCurrentVideoExternally() async {
+    if (_feed.isEmpty) return;
+    final uri = Uri.parse(_feed[_currentIndex].sourceUrl);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _trackWatchTime() async {
@@ -503,6 +517,62 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const SizedBox.expand(),
                 ),
               ),
+              if (_hasRecoverablePlaybackError)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 360),
+                          child: _OverlayCard(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Playback needs a fallback',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'This device is blocking YouTube embed playback (error $_playbackErrorCode). Open the video in YouTube, or update Android System WebView, Chrome and YouTube.',
+                                  style: const TextStyle(
+                                    color: AppTheme.textMuted,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: _loadCurrentVideoIntoWebView,
+                                        child: const Text('Retry'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: _openCurrentVideoExternally,
+                                        child: const Text('Open in YouTube'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 102),
