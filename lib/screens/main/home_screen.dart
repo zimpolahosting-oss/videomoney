@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
@@ -32,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
-  final _pageController = PageController();
   final _countedShortIds = <String>{};
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
@@ -83,6 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       );
+    final platformController = _webViewController.platform;
+    if (platformController is AndroidWebViewController) {
+      platformController.setMediaPlaybackRequiresUserGesture(false);
+    }
     _initializeHome();
   }
 
@@ -147,9 +151,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
-    _pageController.dispose();
     super.dispose();
   }
+
+  Future<void> _showVideoAtIndex(int index) async {
+    if (index < 0 || index >= _feed.length || index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+    await _loadCurrentVideoIntoWebView();
+  }
+
+  Future<void> _goToNextVideo() => _showVideoAtIndex(_currentIndex + 1);
+
+  Future<void> _goToPreviousVideo() => _showVideoAtIndex(_currentIndex - 1);
 
   Future<void> _loadCurrentVideoIntoWebView() async {
     if (_feed.isEmpty) return;
@@ -297,12 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
         case 'ended':
           _playerStateCode = 0;
           if (_currentIndex < _feed.length - 1) {
-            unawaited(
-              _pageController.nextPage(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-              ),
-            );
+            unawaited(_goToNextVideo());
           }
           break;
         case 'error':
@@ -475,18 +483,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Positioned.fill(
-                child: PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  itemCount: _feed.length,
-                  onPageChanged: (index) async {
-                    setState(() => _currentIndex = index);
-                    await _loadCurrentVideoIntoWebView();
+                child: _ShortVideoPage(item: _feed[_currentIndex]),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 56,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity < -180) {
+                      unawaited(_goToNextVideo());
+                    } else if (velocity > 180) {
+                      unawaited(_goToPreviousVideo());
+                    }
                   },
-                  itemBuilder: (context, index) {
-                    final item = _feed[index];
-                    return _ShortVideoPage(item: item);
-                  },
+                  child: const SizedBox.expand(),
                 ),
               ),
               SafeArea(
