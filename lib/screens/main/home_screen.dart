@@ -24,6 +24,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const String _youtubeDesktopUserAgent =
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
   final _pageController = PageController();
@@ -49,6 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
         mute: false,
         showControls: false,
         showFullscreenButton: false,
+        enableJavaScript: true,
+        origin: 'https://www.youtube.com',
+        playsInline: true,
+        strictRelatedVideos: true,
+        userAgent: _youtubeDesktopUserAgent,
       );
 
   @override
