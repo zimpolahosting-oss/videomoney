@@ -454,144 +454,100 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const Spacer(),
-                      _OverlayCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 270),
+                          child: _OverlayCard(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.currentViews,
-                                        style: const TextStyle(
-                                          color: AppTheme.textMuted,
-                                          fontSize: 12,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            l10n.currentViews,
+                                            style: const TextStyle(
+                                              color: AppTheme.textMuted,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          AnimatedIntText(
+                                            value: currentViews,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primary.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: AppTheme.primary.withOpacity(0.28),
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      AnimatedIntText(
-                                        value: currentViews,
+                                      child: Text(
+                                        _feed[_currentIndex].category,
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 11,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primary.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: AppTheme.primary.withOpacity(0.28),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _feed[_currentIndex].category,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
+                                const SizedBox(height: 8),
+                                _CompactProgressLine(
+                                  title: l10n.progressToPayout,
+                                  valueLabel:
+                                      '${NumberFormat.decimalPattern().format(currentViews)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)}',
+                                  value: payoutProgress,
+                                  color: AppTheme.primary,
+                                ),
+                                const SizedBox(height: 8),
+                                _CompactProgressLine(
+                                  title: 'Reward',
+                                  valueLabel:
+                                      '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} • ${(_cycleWatchMs / 1000).floor()}s',
+                                  value: (_cycleCompletedShorts /
+                                          ShortsProgressService
+                                              .rewardThresholdShorts)
+                                      .clamp(0, 1)
+                                      .toDouble(),
+                                  color: AppTheme.primary,
+                                ),
+                                const SizedBox(height: 8),
+                                _CompactProgressLine(
+                                  title: 'Bonus',
+                                  valueLabel:
+                                      '$_bonusProgressShorts / ${ShortsProgressService.bonusThresholdShorts}',
+                                  value: (_bonusProgressShorts /
+                                          ShortsProgressService
+                                              .bonusThresholdShorts)
+                                      .clamp(0, 1)
+                                      .toDouble(),
+                                  color: AppTheme.primarySoft,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              l10n.progressToPayout,
-                              style: const TextStyle(
-                                color: AppTheme.textMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                minHeight: 9,
-                                value: payoutProgress,
-                                backgroundColor: Colors.white.withOpacity(0.10),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  AppTheme.primary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Reward progress',
-                              style: TextStyle(
-                                color: AppTheme.textMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} Shorts • ${(_cycleWatchMs / 1000).floor()}s / 150s',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                minHeight: 8,
-                                value: (_cycleCompletedShorts /
-                                        ShortsProgressService
-                                            .rewardThresholdShorts)
-                                    .clamp(0, 1)
-                                    .toDouble(),
-                                backgroundColor: Colors.white.withOpacity(0.10),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  AppTheme.primary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Bonus progress',
-                              style: TextStyle(
-                                color: AppTheme.textMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '$_bonusProgressShorts / ${ShortsProgressService.bonusThresholdShorts} Shorts',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                minHeight: 8,
-                                value: (_bonusProgressShorts /
-                                        ShortsProgressService
-                                            .bonusThresholdShorts)
-                                    .clamp(0, 1)
-                                    .toDouble(),
-                                backgroundColor: Colors.white.withOpacity(0.10),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  AppTheme.primarySoft,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
@@ -741,6 +697,60 @@ class _OverlayCard extends StatelessWidget {
         border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: child,
+    );
+  }
+}
+
+class _CompactProgressLine extends StatelessWidget {
+  const _CompactProgressLine({
+    required this.title,
+    required this.valueLabel,
+    required this.value,
+    required this.color,
+  });
+
+  final String title;
+  final String valueLabel;
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+            Text(
+              valueLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            minHeight: 6,
+            value: value,
+            backgroundColor: Colors.white.withOpacity(0.10),
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
     );
   }
 }
