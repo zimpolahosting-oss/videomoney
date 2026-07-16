@@ -22,7 +22,7 @@ Flutter Android app with Firebase Authentication, Firestore storage, Material De
   - `Wallet`
   - `Profile`
 - Rewarded ad integration using the native Appodeal Android SDK
-- Reward logic: user receives `200` coins after a successful rewarded ad
+- Reward logic: user receives `1` view after a successful rewarded ad
 - Payout request flow stored in Firestore
 
 ## Setup

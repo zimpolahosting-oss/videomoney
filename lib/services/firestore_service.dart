@@ -13,9 +13,7 @@ class FirestoreService {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Views awarded for each completed rewarded video.
-  ///
-  /// Kept in sync with `README.md` reward description.
-  static const int rewardCoinsPerVideo = 200;
+  static const int rewardCoinsPerVideo = 1;
   static const int dailyBonusTargetVideos = 20;
   static const int dailyBonusViews = 500;
   static const int minimumPayoutCoins = 10000;
