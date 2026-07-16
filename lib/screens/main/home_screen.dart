@@ -465,6 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Column(
@@ -490,26 +491,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primary.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: AppTheme.primary.withOpacity(0.28),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                AppTheme.primary.withOpacity(0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                            border: Border.all(
+                                              color: AppTheme.primary
+                                                  .withOpacity(0.28),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _feed[_currentIndex].category,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      child: Text(
-                                        _feed[_currentIndex].category,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 11,
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -520,30 +538,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       '${NumberFormat.decimalPattern().format(currentViews)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)}',
                                   value: payoutProgress,
                                   color: AppTheme.primary,
-                                ),
-                                const SizedBox(height: 8),
-                                _CompactProgressLine(
-                                  title: 'Reward',
-                                  valueLabel:
-                                      '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} • ${(_cycleWatchMs / 1000).floor()}s',
-                                  value: (_cycleCompletedShorts /
-                                          ShortsProgressService
-                                              .rewardThresholdShorts)
-                                      .clamp(0, 1)
-                                      .toDouble(),
-                                  color: AppTheme.primary,
-                                ),
-                                const SizedBox(height: 8),
-                                _CompactProgressLine(
-                                  title: 'Bonus',
-                                  valueLabel:
-                                      '$_bonusProgressShorts / ${ShortsProgressService.bonusThresholdShorts}',
-                                  value: (_bonusProgressShorts /
-                                          ShortsProgressService
-                                              .bonusThresholdShorts)
-                                      .clamp(0, 1)
-                                      .toDouble(),
-                                  color: AppTheme.primarySoft,
                                 ),
                               ],
                             ),
