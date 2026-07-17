@@ -1,9 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MonetagAdBreakScreen extends StatefulWidget {
   const MonetagAdBreakScreen({
@@ -17,103 +13,67 @@ class MonetagAdBreakScreen extends StatefulWidget {
   State<MonetagAdBreakScreen> createState() => _MonetagAdBreakScreenState();
 }
 
-class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
+class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen>
+    with WidgetsBindingObserver {
   bool _isClosing = false;
-  bool _pageFinished = false;
-  DateTime? _openedAt;
+  bool _isOpening = true;
+  bool _browserOpened = false;
+  DateTime? _browserOpenedAt;
 
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..setOnConsoleMessage((message) {
-        debugPrint(
-          '[Monetag][console][${message.level}] ${message.message}',
-        );
-      })
-      ..addJavaScriptChannel(
-        'MonetagBridge',
-        onMessageReceived: (message) {
-          final value = message.message.trim().toLowerCase();
-          if (value == 'close' || value == 'done' || value == 'finished') {
-            _closeAdBreakIfReady(completed: true);
-          }
-        },
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            _openedAt ??= DateTime.now();
-            debugPrint('[Monetag] page started: $_');
-            if (mounted) {
-              setState(() => _isLoading = true);
-            }
-          },
-          onPageFinished: (_) {
-            _pageFinished = true;
-            debugPrint('[Monetag] page finished: $_');
-            if (mounted) {
-              setState(() => _isLoading = false);
-            }
-          },
-          onWebResourceError: (error) {
-            debugPrint(
-              '[Monetag] web resource error: mainFrame=${error.isForMainFrame} '
-              'code=${error.errorCode} desc=${error.description}',
-            );
-            if (!(error.isForMainFrame ?? false)) return;
-            if (mounted) {
-              setState(() => _isLoading = false);
-            }
-          },
-          onNavigationRequest: (request) {
-            debugPrint('[Monetag] navigation request: ${request.url}');
-            final uri = Uri.tryParse(request.url);
-            if (uri == null) return NavigationDecision.navigate;
-            final closeSignal =
-                uri.queryParameters['close'] == '1' ||
-                uri.queryParameters['done'] == '1' ||
-                uri.queryParameters['status'] == 'close' ||
-                uri.queryParameters['status'] == 'done' ||
-                uri.queryParameters['status'] == 'finished' ||
-                uri.path.contains('ad-close') ||
-                uri.path.contains('ad-finished');
-            if (closeSignal) {
-              _closeAdBreakIfReady(completed: true);
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
+    WidgetsBinding.instance.addObserver(this);
+    Future<void>.delayed(const Duration(milliseconds: 300), _openAdInAppBrowser);
+  }
 
-    final platformController = _controller.platform;
-    if (platformController is AndroidWebViewController) {
-      unawaited(AndroidWebViewController.enableDebugging(true));
-      platformController.setMediaPlaybackRequiresUserGesture(false);
-      final cookieManager = AndroidWebViewCookieManager(
-        const PlatformWebViewCookieManagerCreationParams(),
-      );
-      unawaited(
-        cookieManager.setAcceptThirdPartyCookies(platformController, true),
-      );
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_browserOpened) {
+      return;
+    }
+    final openedAt = _browserOpenedAt;
+    final wasOpenLongEnough =
+        openedAt != null &&
+        DateTime.now().difference(openedAt) >= const Duration(seconds: 1);
+    if (wasOpenLongEnough) {
+      _closeAdBreak(completed: true);
     }
   }
 
-  void _closeAdBreakIfReady({required bool completed}) {
-    final openedAt = _openedAt;
-    final visibleLongEnough =
-        openedAt != null &&
-        DateTime.now().difference(openedAt) >= const Duration(seconds: 5);
-    if (!_pageFinished || !visibleLongEnough) {
-      return;
+  Future<void> _openAdInAppBrowser() async {
+    if (_browserOpened || _isClosing || !mounted) return;
+    final uri = Uri.parse(widget.url);
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.inAppBrowserView,
+      webViewConfiguration: const WebViewConfiguration(
+        enableJavaScript: true,
+        enableDomStorage: true,
+      ),
+      browserConfiguration: const BrowserConfiguration(
+        showTitle: false,
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _isOpening = false;
+      _browserOpened = launched;
+      _browserOpenedAt = launched ? DateTime.now() : null;
+    });
+    if (!launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the in-app browser.'),
+        ),
+      );
     }
-    _closeAdBreak(completed: completed);
   }
 
   void _closeAdBreak({required bool completed}) {
@@ -130,7 +90,42 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: WebViewWidget(controller: _controller),
+              child: Container(color: Colors.black),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Ad break',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'The ad opens in the in-app browser. After viewing it, come back to VideoMoney to continue watching shorts.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _browserOpened ? null : _openAdInAppBrowser,
+                        child: Text(_browserOpened ? 'Ad opened' : 'Open ad'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             Positioned(
               top: 12,
@@ -148,7 +143,7 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
                 ),
               ),
             ),
-            if (_isLoading)
+            if (_isOpening)
               Positioned(
                 left: 16,
                 right: 16,
@@ -172,7 +167,7 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Loading ad…',
+                          'Opening in-app browser…',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
