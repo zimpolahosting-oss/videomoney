@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 class MonetagAdBreakScreen extends StatefulWidget {
   const MonetagAdBreakScreen({
@@ -27,6 +30,11 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
+      ..setOnConsoleMessage((message) {
+        debugPrint(
+          '[Monetag][console][${message.level}] ${message.message}',
+        );
+      })
       ..addJavaScriptChannel(
         'MonetagBridge',
         onMessageReceived: (message) {
@@ -40,23 +48,30 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
         NavigationDelegate(
           onPageStarted: (_) {
             _openedAt ??= DateTime.now();
+            debugPrint('[Monetag] page started: $_');
             if (mounted) {
               setState(() => _isLoading = true);
             }
           },
           onPageFinished: (_) {
             _pageFinished = true;
+            debugPrint('[Monetag] page finished: $_');
             if (mounted) {
               setState(() => _isLoading = false);
             }
           },
           onWebResourceError: (error) {
+            debugPrint(
+              '[Monetag] web resource error: mainFrame=${error.isForMainFrame} '
+              'code=${error.errorCode} desc=${error.description}',
+            );
             if (!(error.isForMainFrame ?? false)) return;
             if (mounted) {
               setState(() => _isLoading = false);
             }
           },
           onNavigationRequest: (request) {
+            debugPrint('[Monetag] navigation request: ${request.url}');
             final uri = Uri.tryParse(request.url);
             if (uri == null) return NavigationDecision.navigate;
             final closeSignal =
@@ -79,7 +94,14 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
 
     final platformController = _controller.platform;
     if (platformController is AndroidWebViewController) {
+      unawaited(AndroidWebViewController.enableDebugging(true));
       platformController.setMediaPlaybackRequiresUserGesture(false);
+      final cookieManager = AndroidWebViewCookieManager(
+        const PlatformWebViewCookieManagerCreationParams(),
+      );
+      unawaited(
+        cookieManager.setAcceptThirdPartyCookies(platformController, true),
+      );
     }
   }
 
