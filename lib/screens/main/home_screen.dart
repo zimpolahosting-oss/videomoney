@@ -30,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const String _appBaseUrl = 'https://com.videomoney.app';
+  static const String _monetagDirectLinkUrl = 'https://omg10.com/4/11320247';
   static const String _youtubeDesktopUserAgent =
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -493,7 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final completed = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             fullscreenDialog: true,
-            builder: (_) => const MonetagAdBreakScreen(),
+            builder: (_) => const MonetagAdBreakScreen(
+              url: _monetagDirectLinkUrl,
+            ),
           ),
         ) ??
         false;
