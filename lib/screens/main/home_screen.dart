@@ -12,6 +12,7 @@ import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/short_video_item.dart';
+import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/shorts_progress_service.dart';
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
+  final _earningsService = EarningsService();
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
@@ -51,8 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _playbackErrorCode;
   double _playerCurrentTimeSeconds = 0;
   double _playerDurationSeconds = 0;
+  Offset? _swipeStartPosition;
+  bool _swipeGestureConsumed = false;
   bool _playerReady = false;
   bool _isLoadingFeed = true;
+  bool _isShowingAdBreak = false;
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   String? _feedError;
@@ -90,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
     _initializeHome();
+    unawaited(_earningsService.preloadRewardedVideo());
   }
 
   Future<void> _initializeHome() async {
@@ -165,6 +171,30 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _goToNextVideo() => _showVideoAtIndex(_currentIndex + 1);
 
   Future<void> _goToPreviousVideo() => _showVideoAtIndex(_currentIndex - 1);
+
+  void _onSwipePointerDown(PointerDownEvent event) {
+    _swipeStartPosition = event.position;
+    _swipeGestureConsumed = false;
+  }
+
+  void _onSwipePointerMove(PointerMoveEvent event) {
+    if (_swipeGestureConsumed || _swipeStartPosition == null) return;
+    final delta = event.position - _swipeStartPosition!;
+    if (delta.dy.abs() < 110) return;
+    if (delta.dy.abs() < delta.dx.abs() * 1.25) return;
+
+    _swipeGestureConsumed = true;
+    if (delta.dy < 0) {
+      unawaited(_goToNextVideo());
+    } else {
+      unawaited(_goToPreviousVideo());
+    }
+  }
+
+  void _resetSwipeGesture() {
+    _swipeStartPosition = null;
+    _swipeGestureConsumed = false;
+  }
 
   Future<void> _loadCurrentVideoIntoWebView() async {
     if (_feed.isEmpty) return;
@@ -358,8 +388,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       if (!mounted) return;
       setState(() => _cycleWatchMs = result.snapshot.watchMsInCycle);
-      if (result.rewardCycleCompleted) {
-        await _grantCycleReward();
+      if (result.watchThresholdReached) {
+        await _grantWatchTimeReward();
       }
     }
 
@@ -393,6 +423,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _bonusProgressShorts = result.snapshot.bonusProgressShorts;
       });
 
+      if (result.adBreakReached) {
+        await _showShortsAdBreak();
+      }
+
       if (result.bonusViewsAwarded > 0) {
         await _firestoreService.applyUserProgress(
           uid: user.uid,
@@ -406,12 +440,70 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      if (result.rewardCycleCompleted) {
+      if (result.shortsThresholdReached) {
         await _grantCycleReward();
       }
     } finally {
       _isProcessingCompletedShort = false;
     }
+  }
+
+  Future<void> _showShortsAdBreak() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (!mounted || user == null || _isShowingAdBreak) return;
+
+    _isShowingAdBreak = true;
+    String? lastStatusMessage;
+    final completed = await _earningsService.showRewardedBonusAd(
+      onAdStatus: (message) {
+        lastStatusMessage = message;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+    );
+
+    if (!mounted) {
+      _isShowingAdBreak = false;
+      return;
+    }
+
+    if (!completed && lastStatusMessage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.rewardedAdNotCompleted)),
+      );
+    }
+    _isShowingAdBreak = false;
+    unawaited(_earningsService.preloadRewardedVideo());
+  }
+
+  Future<void> _grantWatchTimeReward() async {
+    if (_isRewardHandling) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+
+    _isRewardHandling = true;
+    const rewardViews = 40;
+
+    await _firestoreService.applyUserProgress(
+      uid: user.uid,
+      viewsDelta: rewardViews,
+    );
+    final snapshot = await ShortsProgressService.instance.consumeWatchTimeReward(
+      user.uid,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _cycleCompletedShorts = snapshot.completedShortsInCycle;
+      _cycleWatchMs = snapshot.watchMsInCycle;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('+40 views added')),
+    );
+    _isRewardHandling = false;
   }
 
   Future<void> _grantCycleReward() async {
@@ -501,19 +593,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Positioned(
                 top: 0,
+                left: 0,
                 right: 0,
                 bottom: 0,
-                width: 56,
-                child: GestureDetector(
+                child: Listener(
                   behavior: HitTestBehavior.translucent,
-                  onVerticalDragEnd: (details) {
-                    final velocity = details.primaryVelocity ?? 0;
-                    if (velocity < -180) {
-                      unawaited(_goToNextVideo());
-                    } else if (velocity > 180) {
-                      unawaited(_goToPreviousVideo());
-                    }
-                  },
+                  onPointerDown: _onSwipePointerDown,
+                  onPointerMove: _onSwipePointerMove,
+                  onPointerUp: (_) => _resetSwipeGesture(),
+                  onPointerCancel: (_) => _resetSwipeGesture(),
                   child: const SizedBox.expand(),
                 ),
               ),

@@ -34,12 +34,16 @@ class ShortsProgressSnapshot {
 class ShortsProgressResult {
   const ShortsProgressResult({
     required this.snapshot,
-    this.rewardCycleCompleted = false,
+    this.watchThresholdReached = false,
+    this.shortsThresholdReached = false,
+    this.adBreakReached = false,
     this.bonusViewsAwarded = 0,
   });
 
   final ShortsProgressSnapshot snapshot;
-  final bool rewardCycleCompleted;
+  final bool watchThresholdReached;
+  final bool shortsThresholdReached;
+  final bool adBreakReached;
   final int bonusViewsAwarded;
 }
 
@@ -77,9 +81,7 @@ class ShortsProgressService {
     await _save(uid, next);
     return ShortsProgressResult(
       snapshot: next,
-      rewardCycleCompleted:
-          next.watchMsInCycle >= rewardThresholdWatchMs ||
-          next.completedShortsInCycle >= rewardThresholdShorts,
+      watchThresholdReached: next.watchMsInCycle >= rewardThresholdWatchMs,
     );
   }
 
@@ -92,14 +94,25 @@ class ShortsProgressService {
       bonusProgressShorts: rawBonusProgress % bonusThresholdShorts,
     );
     await _save(uid, next);
+    final previousAdMilestone = snapshot.completedShortsInCycle ~/ 5;
+    final nextAdMilestone = next.completedShortsInCycle ~/ 5;
 
     return ShortsProgressResult(
       snapshot: next,
-      rewardCycleCompleted:
-          next.completedShortsInCycle >= rewardThresholdShorts ||
-          next.watchMsInCycle >= rewardThresholdWatchMs,
+      shortsThresholdReached:
+          next.completedShortsInCycle >= rewardThresholdShorts,
+      adBreakReached: nextAdMilestone > previousAdMilestone,
       bonusViewsAwarded: bonusAwards * bonusViewsReward,
     );
+  }
+
+  Future<ShortsProgressSnapshot> consumeWatchTimeReward(String uid) async {
+    final snapshot = await load(uid);
+    final next = snapshot.copyWith(
+      watchMsInCycle: 0,
+    );
+    await _save(uid, next);
+    return next;
   }
 
   Future<ShortsProgressSnapshot> consumeRewardCycle(String uid) async {
