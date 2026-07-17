@@ -197,8 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showVideoAtIndex(int index) async {
     if (index < 0 || index >= _feed.length || index == _currentIndex) return;
-    await _countCurrentShortIfEligible();
-    if (!mounted) return;
     setState(() => _currentIndex = index);
     await _loadCurrentVideoIntoWebView();
   }
@@ -377,6 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
         case 'ended':
           _playerStateCode = 0;
+          unawaited(_countCurrentShortIfEligible(forceComplete: true));
           if (_currentIndex < _feed.length - 1) {
             unawaited(_goToNextVideo());
           }
@@ -408,20 +407,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasReachedShortCountThreshold() {
     final watchedSeconds = _playerCurrentTimeSeconds;
     final durationSeconds = _playerDurationSeconds;
-    if (watchedSeconds <= 0) return false;
-    if (durationSeconds <= 0) {
-      return watchedSeconds >= 4;
-    }
-    final requiredSeconds = min(4.0, max(1.5, durationSeconds * 0.35));
-    return watchedSeconds >= requiredSeconds ||
-        (watchedSeconds / durationSeconds) >= 0.92;
+    if (watchedSeconds <= 0 || durationSeconds <= 0) return false;
+    final remainingSeconds = durationSeconds - watchedSeconds;
+    return remainingSeconds <= 0.4 || (watchedSeconds / durationSeconds) >= 0.985;
   }
 
-  Future<void> _countCurrentShortIfEligible() async {
+  Future<void> _countCurrentShortIfEligible({bool forceComplete = false}) async {
     if (_feed.isEmpty) return;
     final item = _feed[_currentIndex];
     if (_countedShortIds.contains(item.id)) return;
-    if (!_hasReachedShortCountThreshold()) return;
+    if (!forceComplete && !_hasReachedShortCountThreshold()) return;
     _countedShortIds.add(item.id);
     await _handleCompletedShort();
   }
@@ -434,28 +429,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _trackWatchTime() async {
     if (!mounted || _feed.isEmpty || _isRewardHandling || !_playerReady) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
     if (_playerStateCode != 1 && _playerStateCode != 3) return;
 
     final positionMs = (_playerCurrentTimeSeconds * 1000).round();
     final durationMs = (_playerDurationSeconds * 1000).round();
     if (durationMs <= 0) return;
 
-    final deltaMs = positionMs - _lastTrackedPositionMs;
     _lastTrackedPositionMs = positionMs;
-
-    if (deltaMs > 0 && deltaMs <= 2000) {
-      final result = await ShortsProgressService.instance.addWatchTime(
-        uid: user.uid,
-        deltaMs: deltaMs,
-      );
-      if (!mounted) return;
-      setState(() => _cycleWatchMs = result.snapshot.watchMsInCycle);
-      if (result.watchThresholdReached) {
-        await _grantWatchTimeReward();
-      }
-    }
 
     await _countCurrentShortIfEligible();
   }
@@ -469,6 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await _firestoreService.applyUserProgress(
         uid: user.uid,
+        viewsDelta: 5,
         videosWatchedDelta: 1,
       );
 
@@ -502,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (result.shortsThresholdReached) {
-        await _grantCycleReward();
+        await _resetShortCycle();
       }
     } finally {
       _isProcessingCompletedShort = false;
@@ -620,45 +601,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = false;
   }
 
-  Future<void> _grantWatchTimeReward() async {
+  Future<void> _resetShortCycle() async {
     if (_isRewardHandling) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || !mounted) return;
 
     _isRewardHandling = true;
-    const rewardViews = 40;
-
-    await _firestoreService.applyUserProgress(
-      uid: user.uid,
-      viewsDelta: rewardViews,
-    );
-    final snapshot = await ShortsProgressService.instance.consumeWatchTimeReward(
-      user.uid,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _syncProgressFromSnapshot(snapshot);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('+40 views added')),
-    );
-    _isRewardHandling = false;
-  }
-
-  Future<void> _grantCycleReward() async {
-    if (_isRewardHandling) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || !mounted) return;
-
-    _isRewardHandling = true;
-    const rewardViews = 40;
-
-    await _firestoreService.applyUserProgress(
-      uid: user.uid,
-      viewsDelta: rewardViews,
-    );
     final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
       user.uid,
     );
@@ -667,10 +615,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _syncProgressFromSnapshot(snapshot);
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('+40 views added')),
-    );
     _isRewardHandling = false;
   }
 

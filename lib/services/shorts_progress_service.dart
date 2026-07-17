@@ -45,14 +45,12 @@ class ShortsProgressSnapshot {
 class ShortsProgressResult {
   const ShortsProgressResult({
     required this.snapshot,
-    this.watchThresholdReached = false,
     this.shortsThresholdReached = false,
     this.adBreakReached = false,
     this.bonusViewsAwarded = 0,
   });
 
   final ShortsProgressSnapshot snapshot;
-  final bool watchThresholdReached;
   final bool shortsThresholdReached;
   final bool adBreakReached;
   final int bonusViewsAwarded;
@@ -64,9 +62,8 @@ class ShortsProgressService {
   static final ShortsProgressService instance = ShortsProgressService._();
 
   static const int rewardThresholdShorts = 10;
-  static const int rewardThresholdWatchMs = 150000;
   static const int bonusThresholdShorts = 50;
-  static const int bonusViewsReward = 100;
+  static const int bonusViewsReward = 25;
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
@@ -84,21 +81,6 @@ class ShortsProgressService {
       pendingAdBreakShorts: prefs.getInt(_pendingAdBreakKey(uid)) ?? 0,
       pendingAdBreakAttempted:
           prefs.getBool(_pendingAdBreakAttemptedKey(uid)) ?? false,
-    );
-  }
-
-  Future<ShortsProgressResult> addWatchTime({
-    required String uid,
-    required int deltaMs,
-  }) async {
-    final snapshot = await load(uid);
-    final next = snapshot.copyWith(
-      watchMsInCycle: snapshot.watchMsInCycle + deltaMs,
-    );
-    await _save(uid, next);
-    return ShortsProgressResult(
-      snapshot: next,
-      watchThresholdReached: next.watchMsInCycle >= rewardThresholdWatchMs,
     );
   }
 
@@ -129,15 +111,6 @@ class ShortsProgressService {
       adBreakReached: shouldStartNewAdBreak,
       bonusViewsAwarded: bonusAwards * bonusViewsReward,
     );
-  }
-
-  Future<ShortsProgressSnapshot> consumeWatchTimeReward(String uid) async {
-    final snapshot = await load(uid);
-    final next = snapshot.copyWith(
-      watchMsInCycle: 0,
-    );
-    await _save(uid, next);
-    return next;
   }
 
   Future<ShortsProgressSnapshot> consumeRewardCycle(String uid) async {
