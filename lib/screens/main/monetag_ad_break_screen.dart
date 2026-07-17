@@ -18,6 +18,8 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isClosing = false;
+  bool _pageFinished = false;
+  DateTime? _openedAt;
 
   @override
   void initState() {
@@ -30,24 +32,29 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
         onMessageReceived: (message) {
           final value = message.message.trim().toLowerCase();
           if (value == 'close' || value == 'done' || value == 'finished') {
-            _closeAdBreak(completed: true);
+            _closeAdBreakIfReady(completed: true);
           }
         },
       )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
+            _openedAt ??= DateTime.now();
             if (mounted) {
               setState(() => _isLoading = true);
             }
           },
           onPageFinished: (_) {
+            _pageFinished = true;
             if (mounted) {
               setState(() => _isLoading = false);
             }
           },
-          onWebResourceError: (_) {
-            _closeAdBreak(completed: false);
+          onWebResourceError: (error) {
+            if (!error.isForMainFrame) return;
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
           },
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
@@ -61,7 +68,7 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
                 uri.path.contains('ad-close') ||
                 uri.path.contains('ad-finished');
             if (closeSignal) {
-              _closeAdBreak(completed: true);
+              _closeAdBreakIfReady(completed: true);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -74,6 +81,17 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
     if (platformController is AndroidWebViewController) {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
+  }
+
+  void _closeAdBreakIfReady({required bool completed}) {
+    final openedAt = _openedAt;
+    final visibleLongEnough =
+        openedAt != null &&
+        DateTime.now().difference(openedAt) >= const Duration(seconds: 5);
+    if (!_pageFinished || !visibleLongEnough) {
+      return;
+    }
+    _closeAdBreak(completed: completed);
   }
 
   void _closeAdBreak({required bool completed}) {
