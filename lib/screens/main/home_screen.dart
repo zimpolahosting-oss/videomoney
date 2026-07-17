@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _feed = feed;
-        _cycleCompletedShorts = progress.completedShortsInCycle;
+        _cycleCompletedShorts = _visibleCompletedShorts(progress);
         _cycleWatchMs = progress.watchMsInCycle;
         _bonusProgressShorts = progress.bonusProgressShorts;
         _isLoadingFeed = false;
@@ -362,6 +362,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _playbackErrorCode == 152 ||
       _playbackErrorCode == 153;
 
+  int _visibleCompletedShorts(ShortsProgressSnapshot snapshot) {
+    return snapshot.pendingAdBreakShorts > 0
+        ? snapshot.pendingAdBreakShorts
+        : snapshot.completedShortsInCycle;
+  }
+
   Future<void> _openCurrentVideoExternally() async {
     if (_feed.isEmpty) return;
     final uri = Uri.parse(_feed[_currentIndex].sourceUrl);
@@ -419,7 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       setState(() {
-        _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
+        _cycleCompletedShorts = _visibleCompletedShorts(result.snapshot);
         _bonusProgressShorts = result.snapshot.bonusProgressShorts;
       });
 
@@ -469,6 +475,19 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    if (completed) {
+      final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
+        user.uid,
+      );
+      if (!mounted) {
+        _isShowingAdBreak = false;
+        return;
+      }
+      setState(() {
+        _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
+      });
+    }
+
     if (!completed && lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.rewardedAdNotCompleted)),
@@ -496,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     setState(() {
-      _cycleCompletedShorts = snapshot.completedShortsInCycle;
+      _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
       _cycleWatchMs = snapshot.watchMsInCycle;
     });
 
@@ -524,7 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     setState(() {
-      _cycleCompletedShorts = snapshot.completedShortsInCycle;
+      _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
       _cycleWatchMs = snapshot.watchMsInCycle;
     });
 

@@ -5,28 +5,33 @@ class ShortsProgressSnapshot {
     required this.completedShortsInCycle,
     required this.watchMsInCycle,
     required this.bonusProgressShorts,
+    required this.pendingAdBreakShorts,
   });
 
   final int completedShortsInCycle;
   final int watchMsInCycle;
   final int bonusProgressShorts;
+  final int pendingAdBreakShorts;
 
   static const empty = ShortsProgressSnapshot(
     completedShortsInCycle: 0,
     watchMsInCycle: 0,
     bonusProgressShorts: 0,
+    pendingAdBreakShorts: 0,
   );
 
   ShortsProgressSnapshot copyWith({
     int? completedShortsInCycle,
     int? watchMsInCycle,
     int? bonusProgressShorts,
+    int? pendingAdBreakShorts,
   }) {
     return ShortsProgressSnapshot(
       completedShortsInCycle:
           completedShortsInCycle ?? this.completedShortsInCycle,
       watchMsInCycle: watchMsInCycle ?? this.watchMsInCycle,
       bonusProgressShorts: bonusProgressShorts ?? this.bonusProgressShorts,
+      pendingAdBreakShorts: pendingAdBreakShorts ?? this.pendingAdBreakShorts,
     );
   }
 }
@@ -60,6 +65,7 @@ class ShortsProgressService {
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
   String _bonusKey(String uid) => 'shorts_bonus_progress_$uid';
+  String _pendingAdBreakKey(String uid) => 'shorts_pending_ad_break_$uid';
 
   Future<ShortsProgressSnapshot> load(String uid) async {
     final prefs = await SharedPreferences.getInstance();
@@ -67,6 +73,7 @@ class ShortsProgressService {
       completedShortsInCycle: prefs.getInt(_completedKey(uid)) ?? 0,
       watchMsInCycle: prefs.getInt(_watchMsKey(uid)) ?? 0,
       bonusProgressShorts: prefs.getInt(_bonusKey(uid)) ?? 0,
+      pendingAdBreakShorts: prefs.getInt(_pendingAdBreakKey(uid)) ?? 0,
     );
   }
 
@@ -93,15 +100,23 @@ class ShortsProgressService {
       completedShortsInCycle: snapshot.completedShortsInCycle + 1,
       bonusProgressShorts: rawBonusProgress % bonusThresholdShorts,
     );
-    await _save(uid, next);
-    final previousAdMilestone = snapshot.completedShortsInCycle ~/ 5;
-    final nextAdMilestone = next.completedShortsInCycle ~/ 5;
+    final nextPendingAdBreakShorts =
+        snapshot.pendingAdBreakShorts > 0
+            ? snapshot.pendingAdBreakShorts
+            : (next.completedShortsInCycle % 5 == 0 &&
+                    next.completedShortsInCycle < rewardThresholdShorts
+                ? next.completedShortsInCycle
+                : 0);
+    final nextWithPending = next.copyWith(
+      pendingAdBreakShorts: nextPendingAdBreakShorts,
+    );
+    await _save(uid, nextWithPending);
 
     return ShortsProgressResult(
-      snapshot: next,
+      snapshot: nextWithPending,
       shortsThresholdReached:
           next.completedShortsInCycle >= rewardThresholdShorts,
-      adBreakReached: nextAdMilestone > previousAdMilestone,
+      adBreakReached: nextPendingAdBreakShorts > 0,
       bonusViewsAwarded: bonusAwards * bonusViewsReward,
     );
   }
@@ -120,6 +135,16 @@ class ShortsProgressService {
     final next = snapshot.copyWith(
       completedShortsInCycle: 0,
       watchMsInCycle: 0,
+      pendingAdBreakShorts: 0,
+    );
+    await _save(uid, next);
+    return next;
+  }
+
+  Future<ShortsProgressSnapshot> consumePendingAdBreak(String uid) async {
+    final snapshot = await load(uid);
+    final next = snapshot.copyWith(
+      pendingAdBreakShorts: 0,
     );
     await _save(uid, next);
     return next;
@@ -130,5 +155,6 @@ class ShortsProgressService {
     await prefs.setInt(_completedKey(uid), snapshot.completedShortsInCycle);
     await prefs.setInt(_watchMsKey(uid), snapshot.watchMsInCycle);
     await prefs.setInt(_bonusKey(uid), snapshot.bonusProgressShorts);
+    await prefs.setInt(_pendingAdBreakKey(uid), snapshot.pendingAdBreakShorts);
   }
 }
