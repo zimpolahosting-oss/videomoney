@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
+  final _random = Random();
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
   late final WebViewController _webViewController;
@@ -110,12 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final feed = await _videoFeedService.loadFeed(userId: user.uid);
+      final feed = _randomizeFeed(
+        await _videoFeedService.loadFeed(userId: user.uid),
+      );
       final progress = await ShortsProgressService.instance.load(user.uid);
 
       if (!mounted) return;
       setState(() {
         _feed = feed;
+        _currentIndex = 0;
         _syncProgressFromSnapshot(progress);
         _isLoadingFeed = false;
         _feedError = null;
@@ -143,16 +148,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      final freshFeed = await _videoFeedService.loadFeed(userId: user.uid);
+      final currentVideoId =
+          _feed.isNotEmpty ? _feed[_currentIndex].videoId : null;
+      final freshFeed = _randomizeFeed(
+        await _videoFeedService.loadFeed(userId: user.uid),
+        keepVideoId: currentVideoId,
+      );
       if (!mounted || freshFeed.isEmpty) return;
       setState(() {
         _feed = freshFeed;
-        if (_currentIndex >= _feed.length) {
-          _currentIndex = _feed.length - 1;
+        _currentIndex = currentVideoId == null
+            ? 0
+            : freshFeed.indexWhere((item) => item.videoId == currentVideoId);
+        if (_currentIndex < 0 || _currentIndex >= _feed.length) {
+          _currentIndex = 0;
         }
       });
       await _loadCurrentVideoIntoWebView();
     } catch (_) {}
+  }
+
+  List<ShortVideoItem> _randomizeFeed(
+    List<ShortVideoItem> feed, {
+    String? keepVideoId,
+  }) {
+    if (feed.length <= 1) return List<ShortVideoItem>.from(feed);
+    final shuffled = List<ShortVideoItem>.from(feed)..shuffle(_random);
+    if (keepVideoId == null) {
+      return shuffled;
+    }
+
+    final keptIndex = shuffled.indexWhere((item) => item.videoId == keepVideoId);
+    if (keptIndex <= 0) {
+      return shuffled;
+    }
+
+    final keptItem = shuffled.removeAt(keptIndex);
+    shuffled.insert(0, keptItem);
+    return shuffled;
   }
 
   @override
