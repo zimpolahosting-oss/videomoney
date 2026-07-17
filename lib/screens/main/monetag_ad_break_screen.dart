@@ -6,12 +6,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 class MonetagAdBreakScreen extends StatefulWidget {
-  const MonetagAdBreakScreen({
-    super.key,
-    required this.url,
-  });
-
-  final String url;
+  const MonetagAdBreakScreen({super.key});
 
   @override
   State<MonetagAdBreakScreen> createState() => _MonetagAdBreakScreenState();
@@ -90,7 +85,10 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(widget.url));
+      ..loadHtmlString(
+        _buildMonetagHtml(),
+        baseUrl: 'https://al5sm.com',
+      );
 
     final platformController = _controller.platform;
     if (platformController is AndroidWebViewController) {
@@ -103,6 +101,56 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
         cookieManager.setAcceptThirdPartyCookies(platformController, true),
       );
     }
+  }
+
+  String _buildMonetagHtml() {
+    return '''
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #ad-root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ad-root"></div>
+    <script>
+      window.closeAdBreak = function() {
+        if (window.MonetagBridge && window.MonetagBridge.postMessage) {
+          window.MonetagBridge.postMessage('close');
+        }
+      };
+    </script>
+    <script>
+      (function(s){
+        s.dataset.zone='11339682';
+        s.src='https://al5sm.com/tag.min.js';
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+    </script>
+  </body>
+</html>
+''';
   }
 
   void _closeAdBreakIfReady({required bool completed}) {
