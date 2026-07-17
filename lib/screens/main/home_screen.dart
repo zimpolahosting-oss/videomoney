@@ -48,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleCompletedShorts = 0;
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
+  int _pendingAdBreakShorts = 0;
+  bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
   int? _playbackErrorCode;
@@ -114,9 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _feed = feed;
-        _cycleCompletedShorts = _visibleCompletedShorts(progress);
-        _cycleWatchMs = progress.watchMsInCycle;
-        _bonusProgressShorts = progress.bonusProgressShorts;
+        _syncProgressFromSnapshot(progress);
         _isLoadingFeed = false;
         _feedError = null;
       });
@@ -362,10 +362,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _playbackErrorCode == 152 ||
       _playbackErrorCode == 153;
 
-  int _visibleCompletedShorts(ShortsProgressSnapshot snapshot) {
-    return snapshot.pendingAdBreakShorts > 0
-        ? snapshot.pendingAdBreakShorts
-        : snapshot.completedShortsInCycle;
+  void _syncProgressFromSnapshot(ShortsProgressSnapshot snapshot) {
+    _cycleCompletedShorts = snapshot.completedShortsInCycle;
+    _cycleWatchMs = snapshot.watchMsInCycle;
+    _bonusProgressShorts = snapshot.bonusProgressShorts;
+    _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+    _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
   }
 
   Future<void> _openCurrentVideoExternally() async {
@@ -425,12 +427,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       setState(() {
-        _cycleCompletedShorts = _visibleCompletedShorts(result.snapshot);
+        _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
         _bonusProgressShorts = result.snapshot.bonusProgressShorts;
+        _pendingAdBreakShorts = result.snapshot.pendingAdBreakShorts;
+        _pendingAdBreakAttempted = result.snapshot.pendingAdBreakAttempted;
       });
 
       if (result.adBreakReached) {
-        await _showShortsAdBreak();
+        await _presentAdBreakSheet(autoTry: true);
       }
 
       if (result.bonusViewsAwarded > 0) {
@@ -454,47 +458,137 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _showShortsAdBreak() async {
+  Future<void> _presentAdBreakSheet({required bool autoTry}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
 
     _isShowingAdBreak = true;
     String? lastStatusMessage;
-    final completed = await _earningsService.showRewardedBonusAd(
-      onAdStatus: (message) {
-        lastStatusMessage = message;
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      },
-    );
 
-    if (!mounted) {
-      _isShowingAdBreak = false;
-      return;
-    }
-
-    if (completed) {
-      final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
-        user.uid,
+    Future<bool> tryShowAd() async {
+      final completed = await _earningsService.showRewardedBonusAd(
+        onAdStatus: (message) {
+          lastStatusMessage = message;
+        },
       );
-      if (!mounted) {
-        _isShowingAdBreak = false;
-        return;
+
+      if (!mounted) return false;
+
+      if (completed) {
+        final snapshot =
+            await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
+        if (!mounted) return true;
+        setState(() {
+          _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+          _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
+        });
+        unawaited(_earningsService.preloadRewardedVideo());
+        return true;
       }
+
+      // Mark that we attempted, so we don't auto-trigger forever.
+      final snapshot = await ShortsProgressService.instance
+          .markPendingAdBreakAttempted(user.uid);
+      if (!mounted) return false;
       setState(() {
-        _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
+        _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+        _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
       });
+      unawaited(_earningsService.preloadRewardedVideo());
+      return false;
     }
 
-    if (!completed && lastStatusMessage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.rewardedAdNotCompleted)),
+    // Show a dedicated "page" for the ad break.
+    var autoStarted = false;
+    if (mounted) {
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isDismissible: true,
+        builder: (sheetContext) {
+          if (autoTry && !autoStarted) {
+            autoStarted = true;
+            // Start once, after the sheet is mounted.
+            Future.microtask(() async {
+              final ok = await tryShowAd();
+              if (!mounted) return;
+              if (Navigator.of(sheetContext).canPop()) {
+                Navigator.of(sheetContext).pop();
+              }
+              if (!ok) {
+                final msg = lastStatusMessage ??
+                    'No ad available right now. Please try again later.';
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(msg)));
+              }
+            });
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: _OverlayCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Ad break',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Watch an ad to support VideoMoney. If no ad is available, you can continue watching shorts and try again later.',
+                      style: const TextStyle(
+                        color: AppTheme.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            child: const Text('Continue'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () async {
+                              final ok = await tryShowAd();
+                              if (!sheetContext.mounted) return;
+                              if (Navigator.of(sheetContext).canPop()) {
+                                Navigator.of(sheetContext).pop();
+                              }
+                              if (!ok) {
+                                final msg = lastStatusMessage ??
+                                    'No ad available right now. Please try again later.';
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(msg)),
+                                );
+                              }
+                            },
+                            child: const Text('Watch ad'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       );
     }
+
     _isShowingAdBreak = false;
-    unawaited(_earningsService.preloadRewardedVideo());
   }
 
   Future<void> _grantWatchTimeReward() async {
@@ -515,8 +609,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     setState(() {
-      _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
-      _cycleWatchMs = snapshot.watchMsInCycle;
+      _syncProgressFromSnapshot(snapshot);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -543,8 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     setState(() {
-      _cycleCompletedShorts = _visibleCompletedShorts(snapshot);
-      _cycleWatchMs = snapshot.watchMsInCycle;
+      _syncProgressFromSnapshot(snapshot);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -610,6 +702,30 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned.fill(
                 child: _ShortVideoPage(item: _feed[_currentIndex]),
               ),
+              if (_pendingAdBreakShorts > 0 && _pendingAdBreakAttempted)
+                Positioned(
+                  right: 12,
+                  bottom: 152,
+                  child: Material(
+                    color: Colors.black.withOpacity(0.40),
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: () => _presentAdBreakSheet(autoTry: false),
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Text(
+                          'Watch ad',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 top: 0,
                 left: 0,

@@ -6,18 +6,21 @@ class ShortsProgressSnapshot {
     required this.watchMsInCycle,
     required this.bonusProgressShorts,
     required this.pendingAdBreakShorts,
+    required this.pendingAdBreakAttempted,
   });
 
   final int completedShortsInCycle;
   final int watchMsInCycle;
   final int bonusProgressShorts;
   final int pendingAdBreakShorts;
+  final bool pendingAdBreakAttempted;
 
   static const empty = ShortsProgressSnapshot(
     completedShortsInCycle: 0,
     watchMsInCycle: 0,
     bonusProgressShorts: 0,
     pendingAdBreakShorts: 0,
+    pendingAdBreakAttempted: false,
   );
 
   ShortsProgressSnapshot copyWith({
@@ -25,6 +28,7 @@ class ShortsProgressSnapshot {
     int? watchMsInCycle,
     int? bonusProgressShorts,
     int? pendingAdBreakShorts,
+    bool? pendingAdBreakAttempted,
   }) {
     return ShortsProgressSnapshot(
       completedShortsInCycle:
@@ -32,6 +36,8 @@ class ShortsProgressSnapshot {
       watchMsInCycle: watchMsInCycle ?? this.watchMsInCycle,
       bonusProgressShorts: bonusProgressShorts ?? this.bonusProgressShorts,
       pendingAdBreakShorts: pendingAdBreakShorts ?? this.pendingAdBreakShorts,
+      pendingAdBreakAttempted:
+          pendingAdBreakAttempted ?? this.pendingAdBreakAttempted,
     );
   }
 }
@@ -66,6 +72,8 @@ class ShortsProgressService {
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
   String _bonusKey(String uid) => 'shorts_bonus_progress_$uid';
   String _pendingAdBreakKey(String uid) => 'shorts_pending_ad_break_$uid';
+  String _pendingAdBreakAttemptedKey(String uid) =>
+      'shorts_pending_ad_break_attempted_$uid';
 
   Future<ShortsProgressSnapshot> load(String uid) async {
     final prefs = await SharedPreferences.getInstance();
@@ -74,6 +82,8 @@ class ShortsProgressService {
       watchMsInCycle: prefs.getInt(_watchMsKey(uid)) ?? 0,
       bonusProgressShorts: prefs.getInt(_bonusKey(uid)) ?? 0,
       pendingAdBreakShorts: prefs.getInt(_pendingAdBreakKey(uid)) ?? 0,
+      pendingAdBreakAttempted:
+          prefs.getBool(_pendingAdBreakAttemptedKey(uid)) ?? false,
     );
   }
 
@@ -100,15 +110,16 @@ class ShortsProgressService {
       completedShortsInCycle: snapshot.completedShortsInCycle + 1,
       bonusProgressShorts: rawBonusProgress % bonusThresholdShorts,
     );
-    final nextPendingAdBreakShorts =
-        snapshot.pendingAdBreakShorts > 0
-            ? snapshot.pendingAdBreakShorts
-            : (next.completedShortsInCycle % 5 == 0 &&
-                    next.completedShortsInCycle < rewardThresholdShorts
-                ? next.completedShortsInCycle
-                : 0);
+    final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
+        next.completedShortsInCycle % 5 == 0 &&
+        next.completedShortsInCycle < rewardThresholdShorts;
+    final nextPendingAdBreakShorts = shouldStartNewAdBreak
+        ? next.completedShortsInCycle
+        : snapshot.pendingAdBreakShorts;
     final nextWithPending = next.copyWith(
       pendingAdBreakShorts: nextPendingAdBreakShorts,
+      pendingAdBreakAttempted:
+          shouldStartNewAdBreak ? false : snapshot.pendingAdBreakAttempted,
     );
     await _save(uid, nextWithPending);
 
@@ -116,7 +127,7 @@ class ShortsProgressService {
       snapshot: nextWithPending,
       shortsThresholdReached:
           next.completedShortsInCycle >= rewardThresholdShorts,
-      adBreakReached: nextPendingAdBreakShorts > 0,
+      adBreakReached: shouldStartNewAdBreak,
       bonusViewsAwarded: bonusAwards * bonusViewsReward,
     );
   }
@@ -136,6 +147,7 @@ class ShortsProgressService {
       completedShortsInCycle: 0,
       watchMsInCycle: 0,
       pendingAdBreakShorts: 0,
+      pendingAdBreakAttempted: false,
     );
     await _save(uid, next);
     return next;
@@ -145,7 +157,17 @@ class ShortsProgressService {
     final snapshot = await load(uid);
     final next = snapshot.copyWith(
       pendingAdBreakShorts: 0,
+      pendingAdBreakAttempted: false,
     );
+    await _save(uid, next);
+    return next;
+  }
+
+  Future<ShortsProgressSnapshot> markPendingAdBreakAttempted(String uid) async {
+    final snapshot = await load(uid);
+    if (snapshot.pendingAdBreakShorts == 0) return snapshot;
+    if (snapshot.pendingAdBreakAttempted) return snapshot;
+    final next = snapshot.copyWith(pendingAdBreakAttempted: true);
     await _save(uid, next);
     return next;
   }
@@ -156,5 +178,9 @@ class ShortsProgressService {
     await prefs.setInt(_watchMsKey(uid), snapshot.watchMsInCycle);
     await prefs.setInt(_bonusKey(uid), snapshot.bonusProgressShorts);
     await prefs.setInt(_pendingAdBreakKey(uid), snapshot.pendingAdBreakShorts);
+    await prefs.setBool(
+      _pendingAdBreakAttemptedKey(uid),
+      snapshot.pendingAdBreakAttempted,
+    );
   }
 }
