@@ -56,6 +56,7 @@ def metaBannerPlacementId = (
 android {
     namespace = "com.videomoney.app"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = "28.2.13676358"
 
     buildFeatures {
         buildConfig true

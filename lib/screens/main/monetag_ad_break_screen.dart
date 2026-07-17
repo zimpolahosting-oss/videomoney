@@ -51,7 +51,7 @@ class _MonetagAdBreakScreenState extends State<MonetagAdBreakScreen> {
             }
           },
           onWebResourceError: (error) {
-            if (!error.isForMainFrame) return;
+            if (!(error.isForMainFrame ?? false)) return;
             if (mounted) {
               setState(() => _isLoading = false);
             }
