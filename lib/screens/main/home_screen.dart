@@ -13,11 +13,11 @@ import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/short_video_item.dart';
-import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/shorts_progress_service.dart';
 import '../../services/video_feed_service.dart';
+import 'monetag_ad_break_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
 
@@ -30,11 +30,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const String _appBaseUrl = 'https://com.videomoney.app';
+  static const String _monetagAdBreakUrl = 'https://zimpolahosting.pro/ad.html';
   static const String _youtubeDesktopUserAgent =
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-  final _earningsService = EarningsService();
   final _firestoreService = FirestoreService();
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
@@ -99,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
     _initializeHome();
-    unawaited(_earningsService.preloadRewardedVideo());
   }
 
   Future<void> _initializeHome() async {
@@ -375,10 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
         case 'ended':
           _playerStateCode = 0;
-          unawaited(_countCurrentShortIfEligible(forceComplete: true));
-          if (_currentIndex < _feed.length - 1) {
-            unawaited(_goToNextVideo());
-          }
+          unawaited(_handleEndedShortPlayback());
           break;
         case 'error':
           final code = (decoded['error'] as num?)?.toInt();
@@ -404,21 +400,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
   }
 
-  bool _hasReachedShortCountThreshold() {
-    final watchedSeconds = _playerCurrentTimeSeconds;
-    final durationSeconds = _playerDurationSeconds;
-    if (watchedSeconds <= 0 || durationSeconds <= 0) return false;
-    final remainingSeconds = durationSeconds - watchedSeconds;
-    return remainingSeconds <= 0.4 || (watchedSeconds / durationSeconds) >= 0.985;
-  }
-
   Future<void> _countCurrentShortIfEligible({bool forceComplete = false}) async {
     if (_feed.isEmpty) return;
     final item = _feed[_currentIndex];
     if (_countedShortIds.contains(item.id)) return;
-    if (!forceComplete && !_hasReachedShortCountThreshold()) return;
+    if (!forceComplete) return;
     _countedShortIds.add(item.id);
     await _handleCompletedShort();
+  }
+
+  Future<void> _handleEndedShortPlayback() async {
+    final shouldAdvance = _currentIndex < _feed.length - 1;
+    await _countCurrentShortIfEligible(forceComplete: true);
+    if (!mounted) return;
+    if (shouldAdvance) {
+      await _goToNextVideo();
+    }
   }
 
   Future<void> _openCurrentVideoExternally() async {
@@ -437,7 +434,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _lastTrackedPositionMs = positionMs;
 
-    await _countCurrentShortIfEligible();
   }
 
   Future<void> _handleCompletedShort() async {
@@ -466,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       if (result.adBreakReached) {
-        await _presentAdBreakSheet(autoTry: true);
+        await _presentAdBreakSheet();
       }
 
       if (result.bonusViewsAwarded > 0) {
@@ -490,114 +486,36 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _presentAdBreakSheet({required bool autoTry}) async {
+  Future<void> _presentAdBreakSheet() async {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
 
     _isShowingAdBreak = true;
-    String? lastStatusMessage;
-
-    Future<bool> tryShowAd() async {
-      final completed = await _earningsService.showRewardedBonusAd(
-        onAdStatus: (message) {
-          lastStatusMessage = message;
-        },
-      );
-
-      if (!mounted) return false;
-
-      final snapshot =
-          await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
-      if (!mounted) return completed;
-      setState(() {
-        _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
-        _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
-      });
-      unawaited(_earningsService.preloadRewardedVideo());
-      return completed;
-    }
-
-    // Show a dedicated "page" for the ad break.
-    var autoStarted = false;
-    if (mounted) {
-      await showModalBottomSheet<void>(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isDismissible: true,
-        builder: (sheetContext) {
-          if (autoTry && !autoStarted) {
-            autoStarted = true;
-            // Start once, after the sheet is mounted.
-            Future.microtask(() async {
-              await Future<void>.delayed(const Duration(seconds: 5));
-              if (!mounted || !sheetContext.mounted) return;
-              final ok = await tryShowAd();
-              if (!mounted) return;
-              if (Navigator.of(sheetContext).canPop()) {
-                Navigator.of(sheetContext).pop();
-              }
-              if (!ok) {
-                final msg = lastStatusMessage ??
-                    'No ad available right now. Continuing to the next short.';
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text(msg)));
-              }
-            });
-          }
-
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: _OverlayCard(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ad break',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Ad is loading. It will start automatically in 5 seconds.',
-                      style: const TextStyle(
-                        color: AppTheme.textMuted,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Row(
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.2),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Please wait a moment…',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    final completed = await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            fullscreenDialog: true,
+            builder: (_) => const MonetagAdBreakScreen(
+              url: _monetagAdBreakUrl,
             ),
-          );
-        },
+          ),
+        ) ??
+        false;
+    if (!mounted) return;
+    final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
+      user.uid,
+    );
+    if (!mounted) return;
+    setState(() {
+      _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+      _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
+    });
+    if (!completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad closed. Continuing to the next short.'),
+        ),
       );
     }
-
     _isShowingAdBreak = false;
   }
 

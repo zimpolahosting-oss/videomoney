@@ -16,6 +16,7 @@ class RewardedAdService {
   static final RewardedAdService _instance = RewardedAdService._internal();
   static const String rewardedAdUnitId =
       'ca-app-pub-7683034036748999/1933132998';
+  static const bool temporarilyDisableSdkAds = true;
   static const MethodChannel _channel =
       MethodChannel('com.videomoney.app/rewarded_video');
   static const String adUnavailableMessage =
@@ -50,6 +51,10 @@ class RewardedAdService {
   bool get isAdReady => _rewardedAd != null;
 
   Future<void> preloadRewardedAd() async {
+    if (temporarilyDisableSdkAds) {
+      debugPrint('[Ads][rewarded] SDK ad networks temporarily disabled.');
+      return;
+    }
     _registerMethodHandler();
     await _loadRewardedAd();
     await Future.wait([
@@ -98,6 +103,12 @@ class RewardedAdService {
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
   }) async {
+    if (temporarilyDisableSdkAds) {
+      onAdStatus?.call(
+        'SDK ad networks are temporarily disabled for Monetag WebView testing.',
+      );
+      return false;
+    }
     _registerMethodHandler();
     if (_isShowing) {
       onAdStatus?.call(adUnavailableMessage);
