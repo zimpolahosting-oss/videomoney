@@ -14,10 +14,10 @@ import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/short_video_item.dart';
 import '../../services/firestore_service.dart';
+import '../../services/monetag_interstitial_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/shorts_progress_service.dart';
 import '../../services/video_feed_service.dart';
-import 'monetag_ad_break_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
 
@@ -30,12 +30,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const String _appBaseUrl = 'https://com.videomoney.app';
-  static const String _monetagDirectLinkUrl = 'https://omg10.com/4/11320247';
   static const String _youtubeDesktopUserAgent =
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
   final _firestoreService = FirestoreService();
+  final _monetagInterstitialService = MonetagInterstitialService.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
   final _random = Random();
@@ -98,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (platformController is AndroidWebViewController) {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
+    unawaited(_monetagInterstitialService.initialize());
     _initializeHome();
   }
 
@@ -491,15 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted || user == null || _isShowingAdBreak) return;
 
     _isShowingAdBreak = true;
-    final completed = await Navigator.of(context).push<bool>(
-          MaterialPageRoute<bool>(
-            fullscreenDialog: true,
-            builder: (_) => const MonetagAdBreakScreen(
-              url: _monetagDirectLinkUrl,
-            ),
-          ),
-        ) ??
-        false;
+    final completed = await _monetagInterstitialService.showShortsInterstitial();
     if (!mounted) return;
     final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
       user.uid,
@@ -512,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!completed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ad closed. Continuing to the next short.'),
+          content: Text('No Monetag interstitial available. Continuing to the next short.'),
         ),
       );
     }
