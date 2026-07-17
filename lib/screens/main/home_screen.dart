@@ -197,6 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showVideoAtIndex(int index) async {
     if (index < 0 || index >= _feed.length || index == _currentIndex) return;
+    await _countCurrentShortIfEligible();
+    if (!mounted) return;
     setState(() => _currentIndex = index);
     await _loadCurrentVideoIntoWebView();
   }
@@ -403,6 +405,27 @@ class _HomeScreenState extends State<HomeScreen> {
     _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
   }
 
+  bool _hasReachedShortCountThreshold() {
+    final watchedSeconds = _playerCurrentTimeSeconds;
+    final durationSeconds = _playerDurationSeconds;
+    if (watchedSeconds <= 0) return false;
+    if (durationSeconds <= 0) {
+      return watchedSeconds >= 4;
+    }
+    final requiredSeconds = min(4.0, max(1.5, durationSeconds * 0.35));
+    return watchedSeconds >= requiredSeconds ||
+        (watchedSeconds / durationSeconds) >= 0.92;
+  }
+
+  Future<void> _countCurrentShortIfEligible() async {
+    if (_feed.isEmpty) return;
+    final item = _feed[_currentIndex];
+    if (_countedShortIds.contains(item.id)) return;
+    if (!_hasReachedShortCountThreshold()) return;
+    _countedShortIds.add(item.id);
+    await _handleCompletedShort();
+  }
+
   Future<void> _openCurrentVideoExternally() async {
     if (_feed.isEmpty) return;
     final uri = Uri.parse(_feed[_currentIndex].sourceUrl);
@@ -434,12 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    final item = _feed[_currentIndex];
-    final watchedRatio = positionMs / durationMs.clamp(1, 1 << 30);
-    if (watchedRatio >= 0.92 && !_countedShortIds.contains(item.id)) {
-      _countedShortIds.add(item.id);
-      unawaited(_handleCompletedShort());
-    }
+    await _countCurrentShortIfEligible();
   }
 
   Future<void> _handleCompletedShort() async {
@@ -507,28 +525,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return false;
 
-      if (completed) {
-        final snapshot =
-            await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
-        if (!mounted) return true;
-        setState(() {
-          _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
-          _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
-        });
-        unawaited(_earningsService.preloadRewardedVideo());
-        return true;
-      }
-
-      // Mark that we attempted, so we don't auto-trigger forever.
-      final snapshot = await ShortsProgressService.instance
-          .markPendingAdBreakAttempted(user.uid);
-      if (!mounted) return false;
+      final snapshot =
+          await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
+      if (!mounted) return completed;
       setState(() {
         _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
         _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
       });
       unawaited(_earningsService.preloadRewardedVideo());
-      return false;
+      return completed;
     }
 
     // Show a dedicated "page" for the ad break.
@@ -543,6 +548,8 @@ class _HomeScreenState extends State<HomeScreen> {
             autoStarted = true;
             // Start once, after the sheet is mounted.
             Future.microtask(() async {
+              await Future<void>.delayed(const Duration(seconds: 5));
+              if (!mounted || !sheetContext.mounted) return;
               final ok = await tryShowAd();
               if (!mounted) return;
               if (Navigator.of(sheetContext).canPop()) {
@@ -550,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               if (!ok) {
                 final msg = lastStatusMessage ??
-                    'No ad available right now. Please try again later.';
+                    'No ad available right now. Continuing to the next short.';
                 ScaffoldMessenger.of(context)
                     .showSnackBar(SnackBar(content: Text(msg)));
               }
@@ -575,39 +582,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Watch an ad to support VideoMoney. If no ad is available, you can continue watching shorts and try again later.',
+                      'Ad is loading. It will start automatically in 5 seconds.',
                       style: const TextStyle(
                         color: AppTheme.textMuted,
                         height: 1.4,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Row(
+                    const Row(
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            child: const Text('Continue'),
-                          ),
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: 12),
                         Expanded(
-                          child: FilledButton(
-                            onPressed: () async {
-                              final ok = await tryShowAd();
-                              if (!sheetContext.mounted) return;
-                              if (Navigator.of(sheetContext).canPop()) {
-                                Navigator.of(sheetContext).pop();
-                              }
-                              if (!ok) {
-                                final msg = lastStatusMessage ??
-                                    'No ad available right now. Please try again later.';
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(msg)),
-                                );
-                              }
-                            },
-                            child: const Text('Watch ad'),
+                          child: Text(
+                            'Please wait a moment…',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -735,30 +731,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned.fill(
                 child: _ShortVideoPage(item: _feed[_currentIndex]),
               ),
-              if (_pendingAdBreakShorts > 0 && _pendingAdBreakAttempted)
-                Positioned(
-                  right: 12,
-                  bottom: 152,
-                  child: Material(
-                    color: Colors.black.withOpacity(0.40),
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () => _presentAdBreakSheet(autoTry: false),
-                      child: const Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        child: Text(
-                          'Watch ad',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               Positioned(
                 top: 0,
                 left: 0,

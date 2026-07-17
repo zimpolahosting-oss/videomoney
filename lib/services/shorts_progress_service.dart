@@ -111,8 +111,7 @@ class ShortsProgressService {
       bonusProgressShorts: rawBonusProgress % bonusThresholdShorts,
     );
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
-        next.completedShortsInCycle % 5 == 0 &&
-        next.completedShortsInCycle < rewardThresholdShorts;
+        next.completedShortsInCycle % 5 == 0;
     final nextPendingAdBreakShorts = shouldStartNewAdBreak
         ? next.completedShortsInCycle
         : snapshot.pendingAdBreakShorts;
