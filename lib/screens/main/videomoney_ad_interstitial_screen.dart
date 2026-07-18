@@ -48,58 +48,87 @@ class _VideomoneyAdInterstitialScreenState
   bool _isOpening = true;
   bool _adLoaded = false;
   bool _adShown = false;
-  DateTime? _browserOpenedAt;
+  bool _fallbackOpening = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _timeoutTimer = Timer(widget.timeout, _handleTimeout);
-    if (_isDirectLinkMode) {
-      Future<void>.delayed(const Duration(milliseconds: 350), _openInAppBrowser);
-    } else {
-      _controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(const Color(0xFF05070D))
-        ..setOnConsoleMessage((message) {
-          _log('[console][${message.level.name}] ${message.message}');
-        })
-        ..addJavaScriptChannel(
-          'VideomoneyAdBridge',
-          onMessageReceived: (message) => _handleBridgeMessage(message.message),
-        )
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageStarted: (url) {
-              _log('Page started: $url');
-            },
-            onPageFinished: (url) {
-              _log('Page finished: $url');
-            },
-            onWebResourceError: (error) {
-              _log(
-                'Web resource error: code=${error.errorCode} '
-                'mainFrame=${error.isForMainFrame} desc=${error.description}',
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF05070D))
+      ..setOnConsoleMessage((message) {
+        _log('[console][${message.level.name}] ${message.message}');
+      })
+      ..addJavaScriptChannel(
+        'VideomoneyAdBridge',
+        onMessageReceived: (message) => _handleBridgeMessage(message.message),
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (url) {
+            _log('Page started: $url');
+            if (_isDirectLinkMode && !_adLoaded) {
+              _adLoaded = true;
+              setState(() => _isOpening = false);
+              widget.onLoaded();
+            }
+            if (_isDirectLinkMode && !_adShown) {
+              _adShown = true;
+              widget.onShown();
+            }
+          },
+          onPageFinished: (url) {
+            _log('Page finished: $url');
+          },
+          onWebResourceError: (error) {
+            _log(
+              'Web resource error: code=${error.errorCode} '
+              'mainFrame=${error.isForMainFrame} desc=${error.description}',
+            );
+            if (!(error.isForMainFrame ?? false)) return;
+            if (_isDirectLinkMode) {
+              unawaited(
+                _fallbackToInAppBrowser(
+                  '${widget.providerName} embedded load failed: ${error.description}',
+                ),
               );
-              if (error.isForMainFrame ?? false) {
-                widget.onFailed(
-                  '${widget.providerName} main frame error: ${error.description}',
-                );
-                _close(VideomoneyAdScreenResult.failed);
-              }
-            },
-            onNavigationRequest: (request) {
-              _log('Navigation request: ${request.url}');
+              return;
+            }
+            widget.onFailed(
+              '${widget.providerName} main frame error: ${error.description}',
+            );
+            _close(VideomoneyAdScreenResult.failed);
+          },
+          onNavigationRequest: (request) {
+            _log('Navigation request: ${request.url}');
+            final uri = Uri.tryParse(request.url);
+            if (uri == null) {
+              return NavigationDecision.prevent;
+            }
+            final isHttp = uri.scheme == 'http' || uri.scheme == 'https';
+            if (isHttp) {
               return NavigationDecision.navigate;
-            },
-          ),
-        )
-        ..loadHtmlString(widget.html!, baseUrl: widget.baseUrl!);
+            }
+            if (_isDirectLinkMode) {
+              _log('Blocked non-http navigation inside ad shell: ${request.url}');
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      );
 
-      final platformController = _controller!.platform;
-      if (platformController is AndroidWebViewController) {
-        platformController.setMediaPlaybackRequiresUserGesture(false);
-      }
+    final platformController = _controller!.platform;
+    if (platformController is AndroidWebViewController) {
+      platformController.setMediaPlaybackRequiresUserGesture(false);
+    }
+
+    if (_isDirectLinkMode) {
+      Future<void>.delayed(const Duration(milliseconds: 250), _loadDirectLinkInShell);
+    } else {
+      _controller!.loadHtmlString(widget.html!, baseUrl: widget.baseUrl!);
     }
   }
 
@@ -115,17 +144,21 @@ class _VideomoneyAdInterstitialScreenState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _log('Lifecycle changed: $state');
-    if (!_isDirectLinkMode) return;
-    if (state != AppLifecycleState.resumed || _browserOpenedAt == null) return;
-    _close(VideomoneyAdScreenResult.shownAndReturned);
   }
 
-  Future<void> _openInAppBrowser() async {
-    if (!_isDirectLinkMode || _isClosing || !mounted) return;
+  Future<void> _loadDirectLinkInShell() async {
+    if (!_isDirectLinkMode || _isClosing || !mounted || _controller == null) return;
     final uri = Uri.parse(widget.launchUrl!);
-    _log('Opening ${widget.providerName} direct link: $uri');
-    widget.onLoaded();
-    setState(() => _isOpening = false);
+    _log('Loading ${widget.providerName} direct link in shell: $uri');
+    await _controller!.loadRequest(uri);
+  }
+
+  Future<void> _fallbackToInAppBrowser(String reason) async {
+    if (!_isDirectLinkMode || _isClosing || !mounted || _fallbackOpening) return;
+    _fallbackOpening = true;
+    _log('Falling back to in-app browser: $reason');
+    widget.onFailed(reason);
+    final uri = Uri.parse(widget.launchUrl!);
     final launched = await launchUrl(
       uri,
       mode: LaunchMode.inAppBrowserView,
@@ -140,15 +173,16 @@ class _VideomoneyAdInterstitialScreenState
     if (!mounted) return;
     if (!launched) {
       widget.onFailed(
-        'Could not open ${widget.providerName} direct link in the in-app browser.',
+        'Could not open ${widget.providerName} fallback browser.',
       );
       _close(VideomoneyAdScreenResult.failed);
       return;
     }
-    _browserOpenedAt = DateTime.now();
     _adLoaded = true;
     _adShown = true;
+    setState(() => _isOpening = false);
     widget.onShown();
+    _close(VideomoneyAdScreenResult.shownAndReturned);
   }
 
   void _handleBridgeMessage(String rawMessage) {
@@ -221,7 +255,7 @@ class _VideomoneyAdInterstitialScreenState
       body: SafeArea(
         child: Stack(
           children: [
-            if (!_isDirectLinkMode && _controller != null)
+            if (_controller != null)
               Positioned.fill(
                 child: WebViewWidget(
                   controller: _controller!,
@@ -340,8 +374,8 @@ class _VideomoneyAdInterstitialScreenState
                             const SizedBox(height: 12),
                             Text(
                               _isDirectLinkMode
-                                  ? 'Please wait while VideoMoney opens the official ${widget.providerName} direct link. '
-                                        'When you close the browser, you will return to the app automatically.'
+                                  ? 'Please wait while VideoMoney loads the official ${widget.providerName} page inside the app. '
+                                        'Use the X button above to close and continue.'
                                   : 'Please wait while VideoMoney loads your interstitial ad. '
                                         'If this provider fails, the SDK will try the fallback automatically.',
                               textAlign: TextAlign.center,
@@ -374,7 +408,7 @@ class _VideomoneyAdInterstitialScreenState
                   ),
                   child: Text(
                     _isDirectLinkMode
-                        ? 'Opening ${widget.providerName} direct link…'
+                        ? 'Loading ${widget.providerName} inside app…'
                         : 'Loading ${widget.providerName} ad…',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
