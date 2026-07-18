@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, pangle, meta, startio }
+enum RewardedAdProvider { auto, meta, startio }
 
-enum _RewardedNetwork { pangle, admob, appodeal, appnext, meta, startio }
+enum _RewardedNetwork { admob, appodeal, appnext, meta, startio }
 
 class RewardedAdService {
   factory RewardedAdService() => _instance;
@@ -26,14 +26,12 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.pangle,
     _RewardedNetwork.meta,
     _RewardedNetwork.startio,
   ];
 
   RewardedAd? _rewardedAd;
   final Map<_RewardedNetwork, bool> _nativeRewardedReady = {
-    _RewardedNetwork.pangle: false,
     _RewardedNetwork.appodeal: false,
     _RewardedNetwork.appnext: false,
     _RewardedNetwork.meta: false,
@@ -54,7 +52,6 @@ class RewardedAdService {
   Future<void> preloadRewardedAd() async {
     _registerMethodHandler();
     await Future.wait([
-      _invokeVoidMethod('preloadPangleRewardedVideo'),
       _invokeVoidMethod('preloadMetaRewardedInterstitial'),
       _invokeVoidMethod('preloadStartioRewardedVideo'),
     ]);
@@ -66,7 +63,6 @@ class RewardedAdService {
     await Future.wait([
       _invokeVoidMethod('preloadRewardedVideo'),
       _invokeVoidMethod('preloadAppnextRewardedVideo'),
-      _invokeVoidMethod('preloadStartioRewardedVideo'),
     ]);
     await _refreshNativeRewardedAvailability();
   }
@@ -128,7 +124,6 @@ class RewardedAdService {
           onUserEarnedReward: onUserEarnedReward,
           onAdStatus: onAdStatus,
         );
-      case _RewardedNetwork.pangle:
       case _RewardedNetwork.appodeal:
       case _RewardedNetwork.appnext:
       case _RewardedNetwork.meta:
@@ -222,24 +217,15 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
-    if (preferredProvider == RewardedAdProvider.pangle) {
-      return _firstReady(const [
-        _RewardedNetwork.pangle,
-        _RewardedNetwork.meta,
-        _RewardedNetwork.startio,
-      ]);
-    }
     if (preferredProvider == RewardedAdProvider.meta) {
       return _firstReady(const [
         _RewardedNetwork.meta,
-        _RewardedNetwork.pangle,
         _RewardedNetwork.startio,
       ]);
     }
     if (preferredProvider == RewardedAdProvider.startio) {
       return _firstReady(const [
         _RewardedNetwork.startio,
-        _RewardedNetwork.pangle,
         _RewardedNetwork.meta,
       ]);
     }
@@ -259,10 +245,6 @@ class RewardedAdService {
     _updateNativeAvailability(
       _RewardedNetwork.meta,
       await _channel.invokeMethod<bool>('isMetaRewardedInterstitialLoaded') ?? false,
-    );
-    _updateNativeAvailability(
-      _RewardedNetwork.pangle,
-      await _channel.invokeMethod<bool>('isPangleRewardedVideoLoaded') ?? false,
     );
     _updateNativeAvailability(
       _RewardedNetwork.startio,
@@ -296,23 +278,6 @@ class RewardedAdService {
 
   Future<void> _handleNativeMethodCall(MethodCall call) async {
     switch (call.method) {
-      case 'onPangleRewardedVideoLoaded':
-        _updateNativeAvailability(_RewardedNetwork.pangle, true);
-        break;
-      case 'onPangleRewardedVideoShown':
-        _updateNativeAvailability(_RewardedNetwork.pangle, false);
-        break;
-      case 'onPangleRewardedVideoCompleted':
-        await _grantNativeReward();
-        break;
-      case 'onPangleRewardedVideoClosed':
-        _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
-        break;
-      case 'onPangleRewardedVideoError':
-        _updateNativeAvailability(_RewardedNetwork.pangle, false);
-        _nativeStatusCallback?.call(adUnavailableMessage);
-        _completeNativeRewardedFlow(false, reloadNextAd: true);
-        break;
       case 'onRewardedVideoLoaded':
         _updateNativeAvailability(_RewardedNetwork.appodeal, true);
         break;
@@ -354,6 +319,9 @@ class RewardedAdService {
         break;
       case 'onMetaRewardedInterstitialShown':
         _updateNativeAvailability(_RewardedNetwork.meta, false);
+        break;
+      case 'onMetaRewardedInterstitialClicked':
+        debugPrint('[Ads][rewarded] Meta clicked.');
         break;
       case 'onMetaRewardedInterstitialCompleted':
         await _grantNativeReward();
@@ -423,9 +391,6 @@ class RewardedAdService {
 
   Future<void> _reloadNativeRewardedNetwork(_RewardedNetwork? network) async {
     switch (network) {
-      case _RewardedNetwork.pangle:
-        await _invokeVoidMethod('preloadPangleRewardedVideo');
-        return;
       case _RewardedNetwork.appodeal:
         await _invokeVoidMethod('preloadRewardedVideo');
         return;
@@ -462,7 +427,6 @@ class RewardedAdService {
 
   String _labelForNetwork(_RewardedNetwork network) {
     return switch (network) {
-      _RewardedNetwork.pangle => 'Pangle',
       _RewardedNetwork.admob => 'AdMob',
       _RewardedNetwork.appodeal => 'Appodeal',
       _RewardedNetwork.appnext => 'Appnext',
@@ -473,7 +437,6 @@ class RewardedAdService {
 
   String? _showMethodForNetwork(_RewardedNetwork network) {
     return switch (network) {
-      _RewardedNetwork.pangle => 'showPangleRewardedVideo',
       _RewardedNetwork.appodeal => 'showRewardedVideo',
       _RewardedNetwork.appnext => 'showAppnextRewardedVideo',
       _RewardedNetwork.meta => 'showMetaRewardedInterstitial',

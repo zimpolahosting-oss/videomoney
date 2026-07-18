@@ -27,35 +27,23 @@ import com.startapp.sdk.adsbase.StartAppAd.AdMode
 import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
 import com.startapp.sdk.adsbase.adlisteners.AdEventListener
 import com.startapp.sdk.adsbase.adlisteners.VideoListener
-import com.bytedance.sdk.openadsdk.api.init.PAGConfig
-import com.bytedance.sdk.openadsdk.api.init.PAGSdk
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAd
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdInteractionListener
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdLoadListener
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardItem
-import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedRequest
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var rewardedVideoChannel: MethodChannel? = null
-    private var pangleRewardedAd: PAGRewardedAd? = null
     private var appnextRewardedVideo: RewardedVideo? = null
     private var metaRewardedInterstitialAd: RewardedInterstitialAd? = null
     private var metaInterstitialAd: InterstitialAd? = null
     private var metaBannerAdView: AdView? = null
     private var startioRewardedAd: StartAppAd? = null
     private var startioInterstitialAd: StartAppAd? = null
-    private var pangleInitStarted = false
-    private var pangleInitSuccessful = false
-    private var pangleRewardedLoaded = false
     private var startioRewardedLoaded = false
     private var startioInterstitialLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initializePangleIfNeeded()
         configureRewardedVideoCallbacks()
         initializeMetaAudienceNetwork()
         initializeStartioIfNeeded()
@@ -71,28 +59,6 @@ class MainActivity : FlutterActivity() {
         ).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "preloadPangleRewardedVideo" -> {
-                        preloadPangleRewardedVideo()
-                        result.success(null)
-                    }
-
-                    "isPangleRewardedVideoLoaded" -> {
-                        result.success(pangleRewardedLoaded && pangleRewardedAd != null)
-                    }
-
-                    "showPangleRewardedVideo" -> {
-                        val rewardedAd = pangleRewardedAd
-                        if (rewardedAd != null && pangleRewardedLoaded) {
-                            pangleRewardedLoaded = false
-                            pangleRewardedAd = null
-                            rewardedAd.show(this)
-                            result.success(true)
-                        } else {
-                            preloadPangleRewardedVideo()
-                            result.success(false)
-                        }
-                    }
-
                     "ensureAppodealInitialized" -> {
                         initializeAppodealIfNeeded()
                         result.success(Appodeal.isInitialized(REWARDED_VIDEO_TYPE))
@@ -192,7 +158,6 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         rewardedVideoChannel?.setMethodCallHandler(null)
         rewardedVideoChannel = null
-        pangleRewardedAd = null
         metaRewardedInterstitialAd?.destroy()
         metaRewardedInterstitialAd = null
         metaInterstitialAd?.destroy()
@@ -254,126 +219,6 @@ class MainActivity : FlutterActivity() {
         })
     }
 
-    private fun initializePangleIfNeeded() {
-        if (pangleInitStarted) {
-            return
-        }
-
-        val appId = BuildConfig.PANGLE_APP_ID
-        if (appId.isBlank()) {
-            Log.w(LOG_TAG, "Pangle app ID is missing.")
-            return
-        }
-
-        pangleInitStarted = true
-        val config = PAGConfig.Builder()
-            .appId(appId)
-            .debugLog(BuildConfig.DEBUG)
-            .build()
-
-        PAGSdk.init(
-            this,
-            config,
-            object : PAGSdk.PAGInitCallback {
-                override fun success() {
-                    pangleInitSuccessful = true
-                    Log.d(LOG_TAG, "[rewarded][pangle] init success.")
-                    preloadPangleRewardedVideo()
-                }
-
-                override fun fail(code: Int, msg: String?) {
-                    pangleInitSuccessful = false
-                    Log.w(LOG_TAG, "[rewarded][pangle] init failed: $code $msg")
-                    emitEvent(
-                        "onPangleRewardedVideoError",
-                        mapOf("error" to "Pangle init failed: $code ${msg ?: ""}".trim()),
-                    )
-                }
-            },
-        )
-    }
-
-    private fun preloadPangleRewardedVideo() {
-        val placementId = BuildConfig.PANGLE_REWARDED_PLACEMENT_ID
-        if (placementId.isBlank()) {
-            Log.w(LOG_TAG, "Pangle rewarded placement ID is missing.")
-            return
-        }
-        if (!pangleInitSuccessful) {
-            initializePangleIfNeeded()
-            return
-        }
-        if (pangleRewardedLoaded && pangleRewardedAd != null) {
-            return
-        }
-
-        pangleRewardedLoaded = false
-        PAGRewardedAd.loadAd(
-            placementId,
-            PAGRewardedRequest(),
-            object : PAGRewardedAdLoadListener {
-                override fun onError(code: Int, msg: String?) {
-                    pangleRewardedAd = null
-                    pangleRewardedLoaded = false
-                    Log.w(LOG_TAG, "[rewarded][pangle] load failed: $code $msg")
-                    emitEvent(
-                        "onPangleRewardedVideoError",
-                        mapOf("error" to "Pangle load failed: $code ${msg ?: ""}".trim()),
-                    )
-                }
-
-                override fun onAdLoaded(ad: PAGRewardedAd?) {
-                    if (ad == null) {
-                        pangleRewardedAd = null
-                        pangleRewardedLoaded = false
-                        emitEvent(
-                            "onPangleRewardedVideoError",
-                            mapOf("error" to "Pangle returned a null rewarded ad."),
-                        )
-                        return
-                    }
-
-                    pangleRewardedAd = ad
-                    pangleRewardedLoaded = true
-                    ad.setAdInteractionListener(object : PAGRewardedAdInteractionListener {
-                        override fun onAdShowed() {
-                            emitEvent("onPangleRewardedVideoShown")
-                            Log.d(LOG_TAG, "[rewarded][pangle] shown.")
-                        }
-
-                        override fun onAdClicked() = Unit
-
-                        override fun onAdDismissed() {
-                            emitEvent("onPangleRewardedVideoClosed")
-                            Log.d(LOG_TAG, "[rewarded][pangle] closed.")
-                            preloadPangleRewardedVideo()
-                        }
-
-                        override fun onUserEarnedReward(item: PAGRewardItem?) {
-                            emitEvent("onPangleRewardedVideoCompleted")
-                            Log.d(
-                                LOG_TAG,
-                                "[rewarded][pangle] reward earned: " +
-                                    "${item?.rewardName ?: "unknown"} " +
-                                    "${item?.rewardAmount ?: 0}",
-                            )
-                        }
-
-                        override fun onUserEarnedRewardFail(code: Int, msg: String?) {
-                            emitEvent(
-                                "onPangleRewardedVideoError",
-                                mapOf("error" to "Pangle reward failed: $code ${msg ?: ""}".trim()),
-                            )
-                            Log.w(LOG_TAG, "[rewarded][pangle] reward failed: $code $msg")
-                        }
-                    })
-                    emitEvent("onPangleRewardedVideoLoaded")
-                    Log.d(LOG_TAG, "[rewarded][pangle] loaded.")
-                }
-            },
-        )
-    }
-
     private fun initializeAppodealIfNeeded() {
         if (Appodeal.isInitialized(REWARDED_VIDEO_TYPE)) {
             return
@@ -402,7 +247,11 @@ class MainActivity : FlutterActivity() {
 
     private fun initializeMetaAudienceNetwork() {
         AudienceNetworkAds.initialize(this)
-        Log.d(LOG_TAG, "Meta Audience Network SDK initialized for app ID ${BuildConfig.META_APP_ID}")
+        Log.d(
+            LOG_TAG,
+            "Meta Audience Network SDK initialized for app ID ${BuildConfig.META_APP_ID} " +
+                "and rewarded placement ${BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID}",
+        )
         preloadMetaRewardedInterstitial()
         preloadMetaInterstitial()
         preloadMetaBanner()
@@ -420,6 +269,7 @@ class MainActivity : FlutterActivity() {
             return
         }
 
+        Log.d(LOG_TAG, "[rewarded][meta] requesting rewarded interstitial for placement $placementId")
         metaRewardedInterstitialAd?.destroy()
         metaRewardedInterstitialAd = RewardedInterstitialAd(this, placementId).apply {
             loadAd(
@@ -430,29 +280,40 @@ class MainActivity : FlutterActivity() {
                                 "onMetaRewardedInterstitialError",
                                 mapOf("error" to adError.errorMessage),
                             )
-                            Log.w(LOG_TAG, "Meta rewarded interstitial load failed: ${adError.errorMessage}")
+                            Log.w(
+                                LOG_TAG,
+                                "[rewarded][meta] load failed for placement $placementId: " +
+                                    "${adError.errorMessage} (code=${adError.errorCode})",
+                            )
                         }
 
                         override fun onAdLoaded(ad: Ad?) {
                             emitEvent("onMetaRewardedInterstitialLoaded")
-                            Log.d(LOG_TAG, "Meta rewarded interstitial loaded.")
+                            Log.d(
+                                LOG_TAG,
+                                "[rewarded][meta] loaded for placement $placementId " +
+                                    "invalidated=${metaRewardedInterstitialAd?.isAdInvalidated}",
+                            )
                         }
 
-                        override fun onAdClicked(ad: Ad?) = Unit
+                        override fun onAdClicked(ad: Ad?) {
+                            emitEvent("onMetaRewardedInterstitialClicked")
+                            Log.d(LOG_TAG, "[rewarded][meta] clicked for placement $placementId")
+                        }
 
                         override fun onLoggingImpression(ad: Ad?) {
                             emitEvent("onMetaRewardedInterstitialShown")
-                            Log.d(LOG_TAG, "[rewarded][meta] shown.")
+                            Log.d(LOG_TAG, "[rewarded][meta] impression logged for placement $placementId")
                         }
 
                         override fun onRewardedInterstitialCompleted() {
                             emitEvent("onMetaRewardedInterstitialCompleted")
-                            Log.d(LOG_TAG, "Meta rewarded interstitial completed.")
+                            Log.d(LOG_TAG, "[rewarded][meta] reward completed for placement $placementId")
                         }
 
                         override fun onRewardedInterstitialClosed() {
                             emitEvent("onMetaRewardedInterstitialClosed")
-                            Log.d(LOG_TAG, "Meta rewarded interstitial closed.")
+                            Log.d(LOG_TAG, "[rewarded][meta] closed for placement $placementId")
                             preloadMetaRewardedInterstitial()
                         }
                     })

@@ -28,7 +28,7 @@ class ShortsProgressSnapshot {
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
-    nextAdBreakProvider: ShortsProgressService.providerPangle,
+      nextAdBreakProvider: ShortsProgressService.providerMeta,
     pendingAdBreakAttempted: false,
   );
 
@@ -81,9 +81,8 @@ class ShortsProgressService {
   static const int bonusViewsReward = 15;
   static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
-  static const String providerPangle = 'pangle';
-  static const String providerMonetag = 'monetag';
   static const String providerMeta = 'meta';
+  static const String providerMonetag = 'monetag';
   static const String providerStartio = 'startio';
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
@@ -109,7 +108,7 @@ class ShortsProgressService {
       pendingAdBreakProvider:
           prefs.getString(_pendingAdBreakProviderKey(uid)) ?? '',
       nextAdBreakProvider:
-          prefs.getString(_nextAdBreakProviderKey(uid)) ?? providerPangle,
+          prefs.getString(_nextAdBreakProviderKey(uid)) ?? providerMeta,
       pendingAdBreakAttempted:
           prefs.getBool(_pendingAdBreakAttemptedKey(uid)) ?? false,
     );
@@ -210,11 +209,10 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerPangle => providerMonetag,
+      providerMeta => providerMonetag,
       providerMonetag => providerMeta,
-      providerMeta => providerStartio,
-      providerStartio => providerPangle,
-      _ => providerPangle,
+      providerStartio => providerMeta,
+      _ => providerMeta,
     };
   }
 }

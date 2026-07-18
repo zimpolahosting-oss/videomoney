@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerPangle;
+  String _pendingAdBreakProvider = ShortsProgressService.providerMeta;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -499,17 +499,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = true;
     try {
       final pendingProvider = _pendingAdBreakProvider;
-      final isPangleBreak = pendingProvider == ShortsProgressService.providerPangle;
       final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
       final isStartioBreak =
           pendingProvider == ShortsProgressService.providerStartio;
-      final completed = (isPangleBreak || isMetaBreak || isStartioBreak)
+      final completed = (isMetaBreak || isStartioBreak)
           ? await _earningsService.showRewardedBonusAd(
-              provider: isPangleBreak
-                  ? RewardedAdProvider.pangle
-                  : isMetaBreak
-                      ? RewardedAdProvider.meta
-                      : RewardedAdProvider.startio,
+              provider: isMetaBreak
+                  ? RewardedAdProvider.meta
+                  : RewardedAdProvider.startio,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -545,12 +542,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isPangleBreak
-                  ? 'No Pangle rewarded ad available. Meta fallback was also unavailable.'
-                  : isMetaBreak
-                      ? 'No Meta rewarded ad available. Pangle fallback was also unavailable.'
+              isMetaBreak
+                  ? 'No Meta rewarded ad available. Start.io fallback was also unavailable.'
                       : isStartioBreak
-                          ? 'No Start.io rewarded ad available. Pangle/Meta fallback was also unavailable.'
+                          ? 'No Start.io rewarded ad available. Meta fallback was also unavailable.'
                       : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
