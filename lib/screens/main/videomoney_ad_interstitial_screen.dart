@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
@@ -16,8 +17,9 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
   const VideomoneyAdInterstitialScreen({
     super.key,
     required this.providerName,
-    required this.html,
-    required this.baseUrl,
+    this.html,
+    this.baseUrl,
+    this.launchUrl,
     required this.timeout,
     required this.onLoaded,
     required this.onShown,
@@ -25,8 +27,9 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
   });
 
   final String providerName;
-  final String html;
-  final String baseUrl;
+  final String? html;
+  final String? baseUrl;
+  final String? launchUrl;
   final Duration timeout;
   final VoidCallback onLoaded;
   final VoidCallback onShown;
@@ -40,60 +43,67 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
 class _VideomoneyAdInterstitialScreenState
     extends State<VideomoneyAdInterstitialScreen> with WidgetsBindingObserver {
   Timer? _timeoutTimer;
-  late final WebViewController _controller;
+  WebViewController? _controller;
   bool _isClosing = false;
   bool _isOpening = true;
   bool _adLoaded = false;
   bool _adShown = false;
+  DateTime? _browserOpenedAt;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _timeoutTimer = Timer(widget.timeout, _handleTimeout);
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF05070D))
-      ..setOnConsoleMessage((message) {
-        _log('[console][${message.level.name}] ${message.message}');
-      })
-      ..addJavaScriptChannel(
-        'VideomoneyAdBridge',
-        onMessageReceived: (message) => _handleBridgeMessage(message.message),
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (url) {
-            _log('Page started: $url');
-          },
-          onPageFinished: (url) {
-            _log('Page finished: $url');
-          },
-          onWebResourceError: (error) {
-            _log(
-              'Web resource error: code=${error.errorCode} '
-              'mainFrame=${error.isForMainFrame} desc=${error.description}',
-            );
-            if (error.isForMainFrame ?? false) {
-              widget.onFailed(
-                '${widget.providerName} main frame error: ${error.description}',
+    if (_isDirectLinkMode) {
+      Future<void>.delayed(const Duration(milliseconds: 350), _openInAppBrowser);
+    } else {
+      _controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(const Color(0xFF05070D))
+        ..setOnConsoleMessage((message) {
+          _log('[console][${message.level.name}] ${message.message}');
+        })
+        ..addJavaScriptChannel(
+          'VideomoneyAdBridge',
+          onMessageReceived: (message) => _handleBridgeMessage(message.message),
+        )
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (url) {
+              _log('Page started: $url');
+            },
+            onPageFinished: (url) {
+              _log('Page finished: $url');
+            },
+            onWebResourceError: (error) {
+              _log(
+                'Web resource error: code=${error.errorCode} '
+                'mainFrame=${error.isForMainFrame} desc=${error.description}',
               );
-              _close(VideomoneyAdScreenResult.failed);
-            }
-          },
-          onNavigationRequest: (request) {
-            _log('Navigation request: ${request.url}');
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadHtmlString(widget.html, baseUrl: widget.baseUrl);
+              if (error.isForMainFrame ?? false) {
+                widget.onFailed(
+                  '${widget.providerName} main frame error: ${error.description}',
+                );
+                _close(VideomoneyAdScreenResult.failed);
+              }
+            },
+            onNavigationRequest: (request) {
+              _log('Navigation request: ${request.url}');
+              return NavigationDecision.navigate;
+            },
+          ),
+        )
+        ..loadHtmlString(widget.html!, baseUrl: widget.baseUrl!);
 
-    final platformController = _controller.platform;
-    if (platformController is AndroidWebViewController) {
-      platformController.setMediaPlaybackRequiresUserGesture(false);
+      final platformController = _controller!.platform;
+      if (platformController is AndroidWebViewController) {
+        platformController.setMediaPlaybackRequiresUserGesture(false);
+      }
     }
   }
+
+  bool get _isDirectLinkMode => (widget.launchUrl?.trim().isNotEmpty ?? false);
 
   @override
   void dispose() {
@@ -105,6 +115,40 @@ class _VideomoneyAdInterstitialScreenState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _log('Lifecycle changed: $state');
+    if (!_isDirectLinkMode) return;
+    if (state != AppLifecycleState.resumed || _browserOpenedAt == null) return;
+    _close(VideomoneyAdScreenResult.shownAndReturned);
+  }
+
+  Future<void> _openInAppBrowser() async {
+    if (!_isDirectLinkMode || _isClosing || !mounted) return;
+    final uri = Uri.parse(widget.launchUrl!);
+    _log('Opening ${widget.providerName} direct link: $uri');
+    widget.onLoaded();
+    setState(() => _isOpening = false);
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.inAppBrowserView,
+      webViewConfiguration: const WebViewConfiguration(
+        enableJavaScript: true,
+        enableDomStorage: true,
+      ),
+      browserConfiguration: const BrowserConfiguration(
+        showTitle: false,
+      ),
+    );
+    if (!mounted) return;
+    if (!launched) {
+      widget.onFailed(
+        'Could not open ${widget.providerName} direct link in the in-app browser.',
+      );
+      _close(VideomoneyAdScreenResult.failed);
+      return;
+    }
+    _browserOpenedAt = DateTime.now();
+    _adLoaded = true;
+    _adShown = true;
+    widget.onShown();
   }
 
   void _handleBridgeMessage(String rawMessage) {
@@ -177,11 +221,16 @@ class _VideomoneyAdInterstitialScreenState
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned.fill(
-              child: WebViewWidget(
-                controller: _controller,
+            if (!_isDirectLinkMode && _controller != null)
+              Positioned.fill(
+                child: WebViewWidget(
+                  controller: _controller!,
+                ),
+              )
+            else
+              const Positioned.fill(
+                child: ColoredBox(color: Color(0xFF05070D)),
               ),
-            ),
             Positioned.fill(
               child: IgnorePointer(
                 ignoring: true,
@@ -289,11 +338,14 @@ class _VideomoneyAdInterstitialScreenState
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              'Please wait while VideoMoney loads your interstitial ad. '
-                              'If this provider fails, the SDK will try the fallback automatically.',
+                            Text(
+                              _isDirectLinkMode
+                                  ? 'Please wait while VideoMoney opens the official ${widget.providerName} direct link. '
+                                        'When you close the browser, you will return to the app automatically.'
+                                  : 'Please wait while VideoMoney loads your interstitial ad. '
+                                        'If this provider fails, the SDK will try the fallback automatically.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white70,
                                 height: 1.5,
                               ),
@@ -321,7 +373,9 @@ class _VideomoneyAdInterstitialScreenState
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'Loading ${widget.providerName} ad…',
+                    _isDirectLinkMode
+                        ? 'Opening ${widget.providerName} direct link…'
+                        : 'Loading ${widget.providerName} ad…',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,

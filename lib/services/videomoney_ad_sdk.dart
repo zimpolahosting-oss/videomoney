@@ -51,8 +51,9 @@ class VideomoneyAdSdk {
           fullscreenDialog: true,
           builder: (_) => VideomoneyAdInterstitialScreen(
             providerName: config.displayName,
-            html: config.html!,
-            baseUrl: config.baseUrl!,
+            html: config.html,
+            baseUrl: config.baseUrl,
+            launchUrl: config.launchUrl,
             timeout: VideomoneyAdSettings.openTimeout,
             onLoaded: () {
               _log('Provider ${provider.name} reported loaded.');
@@ -112,10 +113,9 @@ class VideomoneyAdSdk {
   _VideomoneyProviderConfig _configFor(VideomoneyAdProvider provider) {
     switch (provider) {
       case VideomoneyAdProvider.monetag:
-        return _VideomoneyProviderConfig(
+        return const _VideomoneyProviderConfig(
           displayName: 'Monetag',
-          baseUrl: VideomoneyAdSettings.monetagBaseUrl,
-          html: _buildMonetagHtml(),
+          launchUrl: VideomoneyAdSettings.monetagDirectLinkUrl,
         );
       case VideomoneyAdProvider.adcash:
         return _VideomoneyProviderConfig(
@@ -137,83 +137,6 @@ class VideomoneyAdSdk {
 
   void _log(String message) {
     debugPrint('[VideomoneyAds] $message');
-  }
-
-  String _buildMonetagHtml() {
-    return '''
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    >
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #05070D;
-        color: #ffffff;
-        font-family: Arial, sans-serif;
-      }
-      #status {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.55);
-        font-size: 14px;
-        text-align: center;
-        z-index: 2;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="status">Loading Monetag interstitial...</div>
-    <script>
-      function postBridge(type, message) {
-        if (window.VideomoneyAdBridge && window.VideomoneyAdBridge.postMessage) {
-          window.VideomoneyAdBridge.postMessage(JSON.stringify({
-            type: type,
-            message: message || ''
-          }));
-        }
-      }
-
-      window.addEventListener('load', function() {
-        postBridge('loaded', 'Monetag wrapper loaded');
-        setTimeout(function() {
-          postBridge('shown', 'Monetag script had time to render');
-        }, 1200);
-      });
-
-      window.addEventListener('error', function(event) {
-        postBridge('error', event.message || 'Unknown Monetag page error');
-      });
-
-      (function(s){
-        s.dataset.zone='11339682';
-        s.src='https://al5sm.com/tag.min.js';
-        s.onload = function() {
-          postBridge('log', 'Monetag script loaded');
-        };
-        s.onerror = function() {
-          postBridge('error', 'Failed to load Monetag script');
-        };
-      })([document.documentElement, document.body]
-        .filter(Boolean)
-        .pop()
-        .appendChild(document.createElement('script')));
-    </script>
-  </body>
-</html>
-''';
   }
 
   String _buildAdcashHtml() {
@@ -310,22 +233,33 @@ class VideomoneyAdSettings {
       VideomoneyAdProvider.monetag;
   static const bool enableFallback = true;
   static const Duration openTimeout = Duration(seconds: 10);
-  static const String monetagBaseUrl = 'https://al5sm.com';
+  static const String monetagDirectLinkUrl = 'https://omg10.com/4/11320247';
   static const String adcashBaseUrl = 'https://acscdn.com';
 }
 
 class _VideomoneyProviderConfig {
   const _VideomoneyProviderConfig({
     required this.displayName,
-    required this.baseUrl,
-    required this.html,
+    this.baseUrl,
+    this.html,
+    this.launchUrl,
   });
 
   final String displayName;
   final String? baseUrl;
   final String? html;
+  final String? launchUrl;
 
   String? get validationError {
+    final directValue = launchUrl?.trim() ?? '';
+    if (directValue.isNotEmpty) {
+      final launchUri = Uri.tryParse(directValue);
+      if (launchUri == null || !launchUri.hasScheme) {
+        return '$displayName direct link is invalid.';
+      }
+      return null;
+    }
+
     final value = html?.trim() ?? '';
     if (value.isEmpty) {
       return '$displayName ad page is not configured yet.';
