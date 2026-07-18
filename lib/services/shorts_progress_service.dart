@@ -28,7 +28,7 @@ class ShortsProgressSnapshot {
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
-      nextAdBreakProvider: ShortsProgressService.providerMeta,
+    nextAdBreakProvider: ShortsProgressService.providerLiftoff,
     pendingAdBreakAttempted: false,
   );
 
@@ -81,9 +81,8 @@ class ShortsProgressService {
   static const int bonusViewsReward = 15;
   static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
-  static const String providerMeta = 'meta';
+  static const String providerLiftoff = 'liftoff';
   static const String providerMonetag = 'monetag';
-  static const String providerStartio = 'startio';
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
@@ -105,10 +104,13 @@ class ShortsProgressService {
       bonusProgressShorts: prefs.getInt(_bonusKey(uid)) ?? 0,
       adBreakProgressShorts: prefs.getInt(_adBreakProgressKey(uid)) ?? 0,
       pendingAdBreakShorts: prefs.getInt(_pendingAdBreakKey(uid)) ?? 0,
-      pendingAdBreakProvider:
-          prefs.getString(_pendingAdBreakProviderKey(uid)) ?? '',
-      nextAdBreakProvider:
-          prefs.getString(_nextAdBreakProviderKey(uid)) ?? providerMeta,
+      pendingAdBreakProvider: _sanitizeProvider(
+        prefs.getString(_pendingAdBreakProviderKey(uid)),
+        allowEmpty: true,
+      ),
+      nextAdBreakProvider: _sanitizeProvider(
+        prefs.getString(_nextAdBreakProviderKey(uid)),
+      ),
       pendingAdBreakAttempted:
           prefs.getBool(_pendingAdBreakAttemptedKey(uid)) ?? false,
     );
@@ -209,10 +211,20 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerMeta => providerMonetag,
-      providerMonetag => providerMeta,
-      providerStartio => providerMeta,
-      _ => providerMeta,
+      providerLiftoff => providerMonetag,
+      providerMonetag => providerLiftoff,
+      _ => providerLiftoff,
     };
+  }
+
+  String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
+    final value = (provider ?? '').trim();
+    if (value.isEmpty) {
+      return allowEmpty ? '' : providerLiftoff;
+    }
+    if (value == providerLiftoff || value == providerMonetag) {
+      return value;
+    }
+    return providerLiftoff;
   }
 }

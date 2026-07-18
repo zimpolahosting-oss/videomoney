@@ -27,6 +27,13 @@ import com.startapp.sdk.adsbase.StartAppAd.AdMode
 import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
 import com.startapp.sdk.adsbase.adlisteners.AdEventListener
 import com.startapp.sdk.adsbase.adlisteners.VideoListener
+import com.vungle.ads.AdConfig
+import com.vungle.ads.BaseAd
+import com.vungle.ads.InitializationListener
+import com.vungle.ads.RewardedAd as LiftoffRewardedAd
+import com.vungle.ads.RewardedAdListener
+import com.vungle.ads.VungleAds
+import com.vungle.ads.VungleError
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -34,19 +41,22 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var rewardedVideoChannel: MethodChannel? = null
     private var appnextRewardedVideo: RewardedVideo? = null
+    private var liftoffRewardedAd: LiftoffRewardedAd? = null
     private var metaRewardedInterstitialAd: RewardedInterstitialAd? = null
     private var metaInterstitialAd: InterstitialAd? = null
     private var metaBannerAdView: AdView? = null
     private var startioRewardedAd: StartAppAd? = null
     private var startioInterstitialAd: StartAppAd? = null
+    private var liftoffInitialized = false
+    private var liftoffInitStarted = false
+    private var liftoffRewardedLoaded = false
     private var startioRewardedLoaded = false
     private var startioInterstitialLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initializeLiftoffIfNeeded()
         configureRewardedVideoCallbacks()
-        initializeMetaAudienceNetwork()
-        initializeStartioIfNeeded()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
     }
@@ -59,6 +69,27 @@ class MainActivity : FlutterActivity() {
         ).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "preloadLiftoffRewardedVideo" -> {
+                        preloadLiftoffRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "isLiftoffRewardedVideoLoaded" -> {
+                        result.success(liftoffRewardedLoaded && liftoffRewardedAd?.canPlayAd() == true)
+                    }
+
+                    "showLiftoffRewardedVideo" -> {
+                        val rewardedAd = liftoffRewardedAd
+                        if (rewardedAd != null && liftoffRewardedLoaded && rewardedAd.canPlayAd()) {
+                            liftoffRewardedLoaded = false
+                            rewardedAd.play()
+                            result.success(true)
+                        } else {
+                            preloadLiftoffRewardedVideo()
+                            result.success(false)
+                        }
+                    }
+
                     "ensureAppodealInitialized" -> {
                         initializeAppodealIfNeeded()
                         result.success(Appodeal.isInitialized(REWARDED_VIDEO_TYPE))
@@ -158,6 +189,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         rewardedVideoChannel?.setMethodCallHandler(null)
         rewardedVideoChannel = null
+        liftoffRewardedAd = null
         metaRewardedInterstitialAd?.destroy()
         metaRewardedInterstitialAd = null
         metaInterstitialAd?.destroy()
@@ -217,6 +249,134 @@ class MainActivity : FlutterActivity() {
                 cacheRewardedVideo()
             }
         })
+    }
+
+    private fun initializeLiftoffIfNeeded() {
+        if (liftoffInitStarted) {
+            return
+        }
+
+        val appId = BuildConfig.LIFTOFF_APP_ID
+        if (appId.isBlank()) {
+            Log.w(LOG_TAG, "Liftoff app ID is missing.")
+            return
+        }
+
+        liftoffInitStarted = true
+        VungleAds.init(
+            this,
+            appId,
+            object : InitializationListener {
+                override fun onSuccess() {
+                    liftoffInitialized = true
+                    Log.d(LOG_TAG, "[rewarded][liftoff] init success for app $appId")
+                    preloadLiftoffRewardedVideo()
+                }
+
+                override fun onError(vungleError: VungleError) {
+                    liftoffInitialized = false
+                    Log.w(
+                        LOG_TAG,
+                        "[rewarded][liftoff] init failed: ${vungleError.code} ${vungleError.errorMessage}",
+                    )
+                    emitEvent(
+                        "onLiftoffRewardedVideoError",
+                        mapOf("error" to "Liftoff init failed: ${vungleError.errorMessage}"),
+                    )
+                }
+            },
+        )
+    }
+
+    private fun preloadLiftoffRewardedVideo() {
+        val placementId = BuildConfig.LIFTOFF_REWARDED_PLACEMENT_ID
+        if (placementId.isBlank()) {
+            Log.w(LOG_TAG, "Liftoff rewarded placement ID is missing.")
+            return
+        }
+        if (!liftoffInitialized) {
+            initializeLiftoffIfNeeded()
+            return
+        }
+        if (liftoffRewardedLoaded && liftoffRewardedAd?.canPlayAd() == true) {
+            return
+        }
+
+        liftoffRewardedLoaded = false
+        liftoffRewardedAd = LiftoffRewardedAd(this, placementId, AdConfig()).apply {
+            adListener = object : RewardedAdListener {
+                override fun onAdLoaded(baseAd: BaseAd) {
+                    liftoffRewardedLoaded = true
+                    emitEvent("onLiftoffRewardedVideoLoaded")
+                    Log.d(
+                        LOG_TAG,
+                        "[rewarded][liftoff] loaded placement=$placementId creative=${baseAd.creativeId}",
+                    )
+                }
+
+                override fun onAdStart(baseAd: BaseAd) {
+                    emitEvent("onLiftoffRewardedVideoShown")
+                    Log.d(LOG_TAG, "[rewarded][liftoff] started placement=$placementId")
+                }
+
+                override fun onAdImpression(baseAd: BaseAd) {
+                    emitEvent("onLiftoffRewardedVideoImpression")
+                    Log.d(LOG_TAG, "[rewarded][liftoff] impression placement=$placementId")
+                }
+
+                override fun onAdEnd(baseAd: BaseAd) {
+                    emitEvent("onLiftoffRewardedVideoClosed")
+                    Log.d(LOG_TAG, "[rewarded][liftoff] closed placement=$placementId")
+                    preloadLiftoffRewardedVideo()
+                }
+
+                override fun onAdClicked(baseAd: BaseAd) {
+                    emitEvent("onLiftoffRewardedVideoClicked")
+                    Log.d(LOG_TAG, "[rewarded][liftoff] clicked placement=$placementId")
+                }
+
+                override fun onAdLeftApplication(baseAd: BaseAd) = Unit
+
+                override fun onAdRewarded(baseAd: BaseAd) {
+                    emitEvent("onLiftoffRewardedVideoCompleted")
+                    Log.d(LOG_TAG, "[rewarded][liftoff] rewarded placement=$placementId")
+                }
+
+                override fun onAdFailedToLoad(baseAd: BaseAd, adError: VungleError) {
+                    liftoffRewardedLoaded = false
+                    emitEvent(
+                        "onLiftoffRewardedVideoError",
+                        mapOf(
+                            "error" to "Liftoff load failed: ${adError.errorMessage}",
+                            "code" to adError.code,
+                        ),
+                    )
+                    Log.w(
+                        LOG_TAG,
+                        "[rewarded][liftoff] load failed placement=$placementId: " +
+                            "${adError.errorMessage} code=${adError.code}",
+                    )
+                }
+
+                override fun onAdFailedToPlay(baseAd: BaseAd, adError: VungleError) {
+                    liftoffRewardedLoaded = false
+                    emitEvent(
+                        "onLiftoffRewardedVideoError",
+                        mapOf(
+                            "error" to "Liftoff play failed: ${adError.errorMessage}",
+                            "code" to adError.code,
+                        ),
+                    )
+                    Log.w(
+                        LOG_TAG,
+                        "[rewarded][liftoff] play failed placement=$placementId: " +
+                            "${adError.errorMessage} code=${adError.code}",
+                    )
+                    preloadLiftoffRewardedVideo()
+                }
+            }
+            load()
+        }
     }
 
     private fun initializeAppodealIfNeeded() {

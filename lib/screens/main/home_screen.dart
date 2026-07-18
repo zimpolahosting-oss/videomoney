@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerMeta;
+  String _pendingAdBreakProvider = ShortsProgressService.providerLiftoff;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -499,14 +499,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = true;
     try {
       final pendingProvider = _pendingAdBreakProvider;
-      final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
-      final isStartioBreak =
-          pendingProvider == ShortsProgressService.providerStartio;
-      final completed = (isMetaBreak || isStartioBreak)
+      final isLiftoffBreak =
+          pendingProvider == ShortsProgressService.providerLiftoff;
+      final completed = isLiftoffBreak
           ? await _earningsService.showRewardedBonusAd(
-              provider: isMetaBreak
-                  ? RewardedAdProvider.meta
-                  : RewardedAdProvider.startio,
+              provider: RewardedAdProvider.liftoff,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -542,11 +539,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isMetaBreak
-                  ? 'No Meta rewarded ad available. Start.io fallback was also unavailable.'
-                      : isStartioBreak
-                          ? 'No Start.io rewarded ad available. Meta fallback was also unavailable.'
-                      : 'No interstitial ad available. Continuing to the next short.',
+              isLiftoffBreak
+                  ? 'No Liftoff rewarded ad available. Falling back ad networks were also unavailable.'
+                  : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
         );
