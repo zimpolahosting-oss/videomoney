@@ -84,6 +84,7 @@ class ShortsProgressService {
   static const String providerPangle = 'pangle';
   static const String providerMonetag = 'monetag';
   static const String providerMeta = 'meta';
+  static const String providerStartio = 'startio';
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
@@ -211,7 +212,8 @@ class ShortsProgressService {
     return switch (provider) {
       providerPangle => providerMonetag,
       providerMonetag => providerMeta,
-      providerMeta => providerPangle,
+      providerMeta => providerStartio,
+      providerStartio => providerPangle,
       _ => providerPangle,
     };
   }

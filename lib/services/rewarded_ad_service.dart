@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, pangle, meta }
+enum RewardedAdProvider { auto, pangle, meta, startio }
 
 enum _RewardedNetwork { pangle, admob, appodeal, appnext, meta, startio }
 
@@ -28,6 +28,7 @@ class RewardedAdService {
   static const List<_RewardedNetwork> _rotationOrder = [
     _RewardedNetwork.pangle,
     _RewardedNetwork.meta,
+    _RewardedNetwork.startio,
   ];
 
   RewardedAd? _rewardedAd;
@@ -55,6 +56,7 @@ class RewardedAdService {
     await Future.wait([
       _invokeVoidMethod('preloadPangleRewardedVideo'),
       _invokeVoidMethod('preloadMetaRewardedInterstitial'),
+      _invokeVoidMethod('preloadStartioRewardedVideo'),
     ]);
     if (disableOtherLegacySdkAds) {
       debugPrint('[Ads][rewarded] Other legacy SDK ad networks temporarily disabled.');
@@ -224,12 +226,21 @@ class RewardedAdService {
       return _firstReady(const [
         _RewardedNetwork.pangle,
         _RewardedNetwork.meta,
+        _RewardedNetwork.startio,
       ]);
     }
     if (preferredProvider == RewardedAdProvider.meta) {
       return _firstReady(const [
         _RewardedNetwork.meta,
         _RewardedNetwork.pangle,
+        _RewardedNetwork.startio,
+      ]);
+    }
+    if (preferredProvider == RewardedAdProvider.startio) {
+      return _firstReady(const [
+        _RewardedNetwork.startio,
+        _RewardedNetwork.pangle,
+        _RewardedNetwork.meta,
       ]);
     }
     for (var offset = 1; offset <= _rotationOrder.length; offset++) {
@@ -253,6 +264,10 @@ class RewardedAdService {
       _RewardedNetwork.pangle,
       await _channel.invokeMethod<bool>('isPangleRewardedVideoLoaded') ?? false,
     );
+    _updateNativeAvailability(
+      _RewardedNetwork.startio,
+      await _channel.invokeMethod<bool>('isStartioRewardedVideoLoaded') ?? false,
+    );
     if (disableOtherLegacySdkAds) {
       return;
     }
@@ -263,10 +278,6 @@ class RewardedAdService {
     _updateNativeAvailability(
       _RewardedNetwork.appnext,
       await _channel.invokeMethod<bool>('isAppnextRewardedVideoLoaded') ?? false,
-    );
-    _updateNativeAvailability(
-      _RewardedNetwork.startio,
-      await _channel.invokeMethod<bool>('isStartioRewardedVideoLoaded') ?? false,
     );
   }
 

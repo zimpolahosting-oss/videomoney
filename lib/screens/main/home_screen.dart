@@ -501,11 +501,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final pendingProvider = _pendingAdBreakProvider;
       final isPangleBreak = pendingProvider == ShortsProgressService.providerPangle;
       final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
-      final completed = (isPangleBreak || isMetaBreak)
+      final isStartioBreak =
+          pendingProvider == ShortsProgressService.providerStartio;
+      final completed = (isPangleBreak || isMetaBreak || isStartioBreak)
           ? await _earningsService.showRewardedBonusAd(
               provider: isPangleBreak
                   ? RewardedAdProvider.pangle
-                  : RewardedAdProvider.meta,
+                  : isMetaBreak
+                      ? RewardedAdProvider.meta
+                      : RewardedAdProvider.startio,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -545,6 +549,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? 'No Pangle rewarded ad available. Meta fallback was also unavailable.'
                   : isMetaBreak
                       ? 'No Meta rewarded ad available. Pangle fallback was also unavailable.'
+                      : isStartioBreak
+                          ? 'No Start.io rewarded ad available. Pangle/Meta fallback was also unavailable.'
                       : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
