@@ -19,16 +19,19 @@ class EarningsService {
 
   Future<bool> showRewardedBonusAd({
     required ValueChanged<String> onAdStatus,
+    RewardedAdProvider provider = RewardedAdProvider.auto,
   }) {
     return _rewardedAdService.showRewardedAd(
       onUserEarnedReward: () async {},
       onAdStatus: onAdStatus,
+      provider: provider,
     );
   }
 
   Future<bool> watchRewardedVideo({
     required String uid,
     required ValueChanged<String> onAdStatus,
+    RewardedAdProvider provider = RewardedAdProvider.auto,
   }) {
     return _rewardedAdService.showRewardedAd(
       onUserEarnedReward: () async {
@@ -38,6 +41,7 @@ class EarningsService {
         );
       },
       onAdStatus: onAdStatus,
+      provider: provider,
     );
   }
 }

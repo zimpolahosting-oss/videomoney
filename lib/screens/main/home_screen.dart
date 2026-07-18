@@ -13,8 +13,10 @@ import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/short_video_item.dart';
+import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/presence_service.dart';
+import '../../services/rewarded_ad_service.dart';
 import '../../services/shorts_progress_service.dart';
 import '../../services/videomoney_ad_sdk.dart';
 import '../../services/video_feed_service.dart';
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
       '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
   final _firestoreService = FirestoreService();
+  final _earningsService = EarningsService();
   final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
+  String _pendingAdBreakProvider = ShortsProgressService.providerPangle;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -98,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (platformController is AndroidWebViewController) {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
+    unawaited(_earningsService.preloadRewardedVideo());
     _initializeHome();
   }
 
@@ -397,6 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _cycleWatchMs = snapshot.watchMsInCycle;
     _bonusProgressShorts = snapshot.bonusProgressShorts;
     _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+    _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
     _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
   }
 
@@ -458,6 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
         _bonusProgressShorts = result.snapshot.bonusProgressShorts;
         _pendingAdBreakShorts = result.snapshot.pendingAdBreakShorts;
+        _pendingAdBreakProvider = result.snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = result.snapshot.pendingAdBreakAttempted;
       });
 
@@ -492,17 +499,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _isShowingAdBreak = true;
     try {
-      final completed = await _videomoneyAdSdk.showInterstitial(
-        context: context,
-        callbacks: VideomoneyAdCallbacks(
-          onFailed: (provider, reason) {
-            debugPrint(
-              '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
-              '$reason',
+      final pendingProvider = _pendingAdBreakProvider;
+      final isPangleBreak = pendingProvider == ShortsProgressService.providerPangle;
+      final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
+      final completed = (isPangleBreak || isMetaBreak)
+          ? await _earningsService.showRewardedBonusAd(
+              provider: isPangleBreak
+                  ? RewardedAdProvider.pangle
+                  : RewardedAdProvider.meta,
+              onAdStatus: (message) {
+                debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+              },
+            )
+          : await _videomoneyAdSdk.showInterstitial(
+              context: context,
+              callbacks: VideomoneyAdCallbacks(
+                onFailed: (provider, reason) {
+                  debugPrint(
+                    '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
+                    '$reason',
+                  );
+                },
+              ),
             );
-          },
-        ),
-      );
       if (!mounted) return;
       final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
         user.uid,
@@ -510,12 +529,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+        _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
       });
       if (!completed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No interstitial ad available. Continuing to the next short.'),
+          SnackBar(
+            content: Text(
+              isPangleBreak
+                  ? 'No Pangle rewarded ad available. Meta fallback was also unavailable.'
+                  : isMetaBreak
+                      ? 'No Meta rewarded ad available. Pangle fallback was also unavailable.'
+                      : 'No interstitial ad available. Continuing to the next short.',
+            ),
           ),
         );
       }

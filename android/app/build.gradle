@@ -52,6 +52,16 @@ def metaBannerPlacementId = (
                 ?: System.getenv('META_BANNER_PLACEMENT_ID')
                 ?: '1741013560433241_1741019897099274'
 ).trim()
+def pangleAppId = (
+        localProperties.getProperty('pangle.appId')
+                ?: System.getenv('PANGLE_APP_ID')
+                ?: '8858245'
+).trim()
+def pangleRewardedPlacementId = (
+        localProperties.getProperty('pangle.rewardedPlacementId')
+                ?: System.getenv('PANGLE_REWARDED_PLACEMENT_ID')
+                ?: '983417397'
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -85,6 +95,8 @@ android {
         buildConfigField "String", "META_REWARDED_INTERSTITIAL_PLACEMENT_ID", "\"${metaRewardedInterstitialPlacementId}\""
         buildConfigField "String", "META_INTERSTITIAL_PLACEMENT_ID", "\"${metaInterstitialPlacementId}\""
         buildConfigField "String", "META_BANNER_PLACEMENT_ID", "\"${metaBannerPlacementId}\""
+        buildConfigField "String", "PANGLE_APP_ID", "\"${pangleAppId}\""
+        buildConfigField "String", "PANGLE_REWARDED_PLACEMENT_ID", "\"${pangleRewardedPlacementId}\""
     }
     signingConfigs {
         release {
@@ -114,6 +126,8 @@ flutter {
 
 dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.1.2")
+    implementation "com.pangle.global:ads-sdk:6.1.0.5"
+    implementation "com.google.android.gms:play-services-ads-identifier:18.0.1"
     implementation "com.facebook.android:audience-network-sdk:6.+"
     implementation "com.appnext.sdk:ads:2.7.6.473"
     implementation "com.appodeal.ads.sdk:core:4.2.0"
