@@ -78,8 +78,8 @@ class ShortsProgressService {
   static final ShortsProgressService instance = ShortsProgressService._();
 
   static const int rewardThresholdShorts = 10;
-  static const int bonusThresholdShorts = 50;
-  static const int bonusViewsReward = 25;
+  static const int bonusViewsReward = 15;
+  static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
   static const String providerPangle = 'pangle';
   static const String providerMonetag = 'monetag';
@@ -116,8 +116,9 @@ class ShortsProgressService {
 
   Future<ShortsProgressResult> markShortCompleted(String uid) async {
     final snapshot = await load(uid);
-    final rawBonusProgress = snapshot.bonusProgressShorts + 1;
-    final bonusAwards = rawBonusProgress ~/ bonusThresholdShorts;
+    final nextCompletedShorts = snapshot.completedShortsInCycle + 1;
+    final bonusAwarded =
+        nextCompletedShorts >= rewardThresholdShorts ? bonusViewsReward : 0;
     final rawAdBreakProgress = snapshot.adBreakProgressShorts + 1;
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
@@ -125,8 +126,8 @@ class ShortsProgressService {
         ? snapshot.nextAdBreakProvider
         : snapshot.pendingAdBreakProvider;
     final next = snapshot.copyWith(
-      completedShortsInCycle: snapshot.completedShortsInCycle + 1,
-      bonusProgressShorts: rawBonusProgress % bonusThresholdShorts,
+      completedShortsInCycle: nextCompletedShorts,
+      bonusProgressShorts: nextCompletedShorts % rewardThresholdShorts,
       adBreakProgressShorts: shouldStartNewAdBreak ? 0 : rawAdBreakProgress,
     );
     final nextPendingAdBreakShorts = shouldStartNewAdBreak
@@ -145,10 +146,9 @@ class ShortsProgressService {
 
     return ShortsProgressResult(
       snapshot: nextWithPending,
-      shortsThresholdReached:
-          next.completedShortsInCycle >= rewardThresholdShorts,
+      shortsThresholdReached: nextCompletedShorts >= rewardThresholdShorts,
       adBreakReached: shouldStartNewAdBreak,
-      bonusViewsAwarded: bonusAwards * bonusViewsReward,
+      bonusViewsAwarded: bonusAwarded,
     );
   }
 
@@ -157,6 +157,7 @@ class ShortsProgressService {
     final next = snapshot.copyWith(
       completedShortsInCycle: 0,
       watchMsInCycle: 0,
+      bonusProgressShorts: 0,
       pendingAdBreakShorts: 0,
       pendingAdBreakProvider: '',
       pendingAdBreakAttempted: false,

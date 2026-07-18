@@ -451,7 +451,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await _firestoreService.applyUserProgress(
         uid: user.uid,
-        viewsDelta: 5,
         videosWatchedDelta: 1,
       );
 
@@ -522,6 +521,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             );
+      if (completed) {
+        await _firestoreService.applyUserProgress(
+          uid: user.uid,
+          viewsDelta: ShortsProgressService.adBreakViewsReward,
+        );
+      }
       if (!mounted) return;
       final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
         user.uid,
@@ -542,6 +547,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? 'No Meta rewarded ad available. Pangle fallback was also unavailable.'
                       : 'No interstitial ad available. Continuing to the next short.',
             ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('+10 views for completed ad'),
           ),
         );
       }
