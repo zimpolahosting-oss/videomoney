@@ -32,6 +32,7 @@ import com.bytedance.sdk.openadsdk.api.init.PAGSdk
 import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAd
 import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdInteractionListener
 import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedAdLoadListener
+import com.bytedance.sdk.openadsdk.api.reward.PAGRewardItem
 import com.bytedance.sdk.openadsdk.api.reward.PAGRewardedRequest
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -348,9 +349,14 @@ class MainActivity : FlutterActivity() {
                             preloadPangleRewardedVideo()
                         }
 
-                        override fun onUserEarnedReward() {
+                        override fun onUserEarnedReward(item: PAGRewardItem?) {
                             emitEvent("onPangleRewardedVideoCompleted")
-                            Log.d(LOG_TAG, "[rewarded][pangle] reward earned.")
+                            Log.d(
+                                LOG_TAG,
+                                "[rewarded][pangle] reward earned: " +
+                                    "${item?.rewardName ?: "unknown"} " +
+                                    "${item?.rewardAmount ?: 0}",
+                            )
                         }
 
                         override fun onUserEarnedRewardFail(code: Int, msg: String?) {
