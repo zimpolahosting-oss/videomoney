@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerGravite;
+  String _pendingAdBreakProvider = ShortsProgressService.providerStartio;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -558,6 +558,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _pausePlayback();
     try {
       final pendingProvider = _pendingAdBreakProvider;
+      final isStartioBreak =
+          pendingProvider == ShortsProgressService.providerStartio;
       final isGraviteBreak =
           pendingProvider == ShortsProgressService.providerGravite;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
@@ -568,12 +570,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           pendingProvider == ShortsProgressService.providerLiftoff;
       final completed =
           (isGraviteBreak ||
+                  isStartioBreak ||
                   isAdmobBreak ||
                   isAppodealBreak ||
                   isMetaBreak ||
                   isLiftoffBreak)
           ? await _earningsService.showRewardedBonusAd(
-              provider: isGraviteBreak
+              provider: isStartioBreak
+                  ? RewardedAdProvider.startio
+                  : isGraviteBreak
                   ? RewardedAdProvider.gravite
                   : isAdmobBreak
                       ? RewardedAdProvider.admob
@@ -619,6 +624,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             content: Text(
               isGraviteBreak
                   ? 'No Gravite rewarded ad available for this turn.'
+                  : isStartioBreak
+                  ? 'No Start.io rewarded ad available for this turn.'
                   : isAdmobBreak
                   ? 'No AdMob rewarded ad available for this turn.'
                   : isAppodealBreak

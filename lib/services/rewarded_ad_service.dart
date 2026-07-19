@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, gravite, admob, appodeal, meta, liftoff }
+enum RewardedAdProvider { auto, startio, liftoff, gravite, admob, appodeal, meta }
 
 enum _RewardedNetwork { gravite, liftoff, admob, appodeal, appnext, meta, startio }
 
@@ -26,10 +26,7 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.gravite,
-    _RewardedNetwork.admob,
-    _RewardedNetwork.appodeal,
-    _RewardedNetwork.meta,
+    _RewardedNetwork.startio,
     _RewardedNetwork.liftoff,
   ];
 
@@ -227,6 +224,12 @@ class RewardedAdService {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
       return _isRewardedReady(_RewardedNetwork.gravite)
           ? _RewardedNetwork.gravite
+          : null;
+    }
+    if (preferredProvider == RewardedAdProvider.startio) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.startio);
+      return _isRewardedReady(_RewardedNetwork.startio)
+          ? _RewardedNetwork.startio
           : null;
     }
     if (preferredProvider == RewardedAdProvider.admob) {
