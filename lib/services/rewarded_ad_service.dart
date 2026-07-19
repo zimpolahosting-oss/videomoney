@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, liftoff }
+enum RewardedAdProvider { auto, admob, liftoff }
 
 enum _RewardedNetwork { liftoff, admob, appodeal, appnext, meta, startio }
 
@@ -216,6 +216,12 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
+    if (preferredProvider == RewardedAdProvider.admob) {
+      return _firstReady(const [
+        _RewardedNetwork.admob,
+        _RewardedNetwork.liftoff,
+      ]);
+    }
     if (preferredProvider == RewardedAdProvider.liftoff) {
       return _firstReady(const [
         _RewardedNetwork.liftoff,

@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerLiftoff;
+  String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -499,11 +499,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = true;
     try {
       final pendingProvider = _pendingAdBreakProvider;
+      final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
-      final completed = isLiftoffBreak
+      final completed = (isAdmobBreak || isLiftoffBreak)
           ? await _earningsService.showRewardedBonusAd(
-              provider: RewardedAdProvider.liftoff,
+              provider: isAdmobBreak
+                  ? RewardedAdProvider.admob
+                  : RewardedAdProvider.liftoff,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -539,8 +542,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isLiftoffBreak
-                  ? 'No Liftoff rewarded ad available. Falling back ad networks were also unavailable.'
+              isAdmobBreak
+                  ? 'No AdMob rewarded ad available. Liftoff fallback was also unavailable.'
+                  : isLiftoffBreak
+                      ? 'No Liftoff rewarded ad available. AdMob fallback was also unavailable.'
                   : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
