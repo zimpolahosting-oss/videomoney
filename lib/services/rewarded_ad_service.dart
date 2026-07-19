@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, appodeal, meta, liftoff }
+enum RewardedAdProvider { auto, admob, appodeal, meta, liftoff }
 
 enum _RewardedNetwork { liftoff, admob, appodeal, appnext, meta, startio }
 
@@ -26,6 +26,7 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
+    _RewardedNetwork.admob,
     _RewardedNetwork.appodeal,
     _RewardedNetwork.meta,
     _RewardedNetwork.liftoff,
@@ -218,6 +219,14 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
+    if (preferredProvider == RewardedAdProvider.admob) {
+      return _firstReady(const [
+        _RewardedNetwork.admob,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.meta,
+        _RewardedNetwork.liftoff,
+      ]);
+    }
     if (preferredProvider == RewardedAdProvider.appodeal) {
       return _firstReady(const [
         _RewardedNetwork.appodeal,
@@ -247,6 +256,10 @@ class RewardedAdService {
         debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)}.');
         return network;
       }
+    }
+    if (_isRewardedReady(_RewardedNetwork.admob)) {
+      debugPrint('[Ads][rewarded] selected ${_labelForNetwork(_RewardedNetwork.admob)}.');
+      return _RewardedNetwork.admob;
     }
     return null;
   }

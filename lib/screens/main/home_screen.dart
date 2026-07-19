@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerAppodeal;
+  String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -499,18 +499,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = true;
     try {
       final pendingProvider = _pendingAdBreakProvider;
+      final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
       final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
-      final completed = (isAppodealBreak || isMetaBreak || isLiftoffBreak)
+      final completed =
+          (isAdmobBreak || isAppodealBreak || isMetaBreak || isLiftoffBreak)
           ? await _earningsService.showRewardedBonusAd(
-              provider: isAppodealBreak
-                  ? RewardedAdProvider.appodeal
-                  : isMetaBreak
-                      ? RewardedAdProvider.meta
-                      : RewardedAdProvider.liftoff,
+              provider: isAdmobBreak
+                  ? RewardedAdProvider.admob
+                  : isAppodealBreak
+                      ? RewardedAdProvider.appodeal
+                      : isMetaBreak
+                          ? RewardedAdProvider.meta
+                          : RewardedAdProvider.liftoff,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -546,7 +550,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isAppodealBreak
+              isAdmobBreak
+                  ? 'No AdMob rewarded ad available. Appodeal/Meta/Liftoff fallback was also unavailable.'
+                  : isAppodealBreak
                   ? 'No Appodeal rewarded ad available. Meta/Liftoff fallback was also unavailable.'
                   : isMetaBreak
                       ? 'No Meta rewarded ad available. Liftoff/Appodeal fallback was also unavailable.'
