@@ -13,7 +13,7 @@ import com.intentsoftware.addapptr.ManagedConsent
 import com.intentsoftware.addapptr.Placement
 import com.intentsoftware.addapptr.RewardedVideoPlacement
 import com.intentsoftware.addapptr.RewardedVideoPlacementListener
-import com.intentsoftware.addapptr.consent.google.CMPGoogle
+import com.intentsoftware.addapptr.consent.CMPGoogle
 
 object GraviteAatkitManager :
     RewardedVideoPlacementListener,
