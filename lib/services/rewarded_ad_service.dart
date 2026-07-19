@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, admob, liftoff }
+enum RewardedAdProvider { auto, appodeal, meta, liftoff }
 
 enum _RewardedNetwork { liftoff, admob, appodeal, appnext, meta, startio }
 
@@ -18,7 +18,7 @@ class RewardedAdService {
   static final RewardedAdService _instance = RewardedAdService._internal();
   static const String rewardedAdUnitId =
       'ca-app-pub-7683034036748999/1933132998';
-  static const bool disableOtherLegacySdkAds = true;
+  static const bool disableOtherLegacySdkAds = false;
   static const MethodChannel _channel =
       MethodChannel('com.videomoney.app/rewarded_video');
   static const String adUnavailableMessage =
@@ -26,6 +26,8 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
+    _RewardedNetwork.appodeal,
+    _RewardedNetwork.meta,
     _RewardedNetwork.liftoff,
   ];
 
@@ -51,17 +53,17 @@ class RewardedAdService {
 
   Future<void> preloadRewardedAd() async {
     _registerMethodHandler();
-    await _invokeVoidMethod('preloadLiftoffRewardedVideo');
+    await Future.wait([
+      _invokeVoidMethod('preloadRewardedVideo'),
+      _invokeVoidMethod('preloadMetaRewardedInterstitial'),
+      _invokeVoidMethod('preloadLiftoffRewardedVideo'),
+    ]);
     await _loadRewardedAd();
     if (disableOtherLegacySdkAds) {
       debugPrint('[Ads][rewarded] Other legacy SDK ad networks temporarily disabled.');
       await _refreshNativeRewardedAvailability();
       return;
     }
-    await Future.wait([
-      _invokeVoidMethod('preloadRewardedVideo'),
-      _invokeVoidMethod('preloadAppnextRewardedVideo'),
-    ]);
     await _refreshNativeRewardedAvailability();
   }
 
@@ -216,16 +218,25 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
-    if (preferredProvider == RewardedAdProvider.admob) {
+    if (preferredProvider == RewardedAdProvider.appodeal) {
       return _firstReady(const [
-        _RewardedNetwork.admob,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.meta,
         _RewardedNetwork.liftoff,
+      ]);
+    }
+    if (preferredProvider == RewardedAdProvider.meta) {
+      return _firstReady(const [
+        _RewardedNetwork.meta,
+        _RewardedNetwork.liftoff,
+        _RewardedNetwork.appodeal,
       ]);
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
       return _firstReady(const [
         _RewardedNetwork.liftoff,
-        _RewardedNetwork.admob,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.meta,
       ]);
     }
     for (var offset = 1; offset <= _rotationOrder.length; offset++) {
@@ -237,14 +248,18 @@ class RewardedAdService {
         return network;
       }
     }
-    if (_isRewardedReady(_RewardedNetwork.admob)) {
-      debugPrint('[Ads][rewarded] selected ${_labelForNetwork(_RewardedNetwork.admob)}.');
-      return _RewardedNetwork.admob;
-    }
     return null;
   }
 
   Future<void> _refreshNativeRewardedAvailability() async {
+    _updateNativeAvailability(
+      _RewardedNetwork.appodeal,
+      await _channel.invokeMethod<bool>('isRewardedVideoLoaded') ?? false,
+    );
+    _updateNativeAvailability(
+      _RewardedNetwork.meta,
+      await _channel.invokeMethod<bool>('isMetaRewardedInterstitialLoaded') ?? false,
+    );
     _updateNativeAvailability(
       _RewardedNetwork.liftoff,
       await _channel.invokeMethod<bool>('isLiftoffRewardedVideoLoaded') ?? false,
@@ -252,10 +267,6 @@ class RewardedAdService {
     if (disableOtherLegacySdkAds) {
       return;
     }
-    _updateNativeAvailability(
-      _RewardedNetwork.appodeal,
-      await _channel.invokeMethod<bool>('isRewardedVideoLoaded') ?? false,
-    );
     _updateNativeAvailability(
       _RewardedNetwork.appnext,
       await _channel.invokeMethod<bool>('isAppnextRewardedVideoLoaded') ?? false,
