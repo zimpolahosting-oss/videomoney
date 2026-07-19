@@ -322,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
   <body>
     <div id="player"></div>
     <script>
-      let player = null;
+      window.player = null;
       let tickHandle = null;
       const videoId = $safeVideoId;
       const appOrigin = $safeOrigin;
@@ -334,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       function emitTick() {
+        const player = window.player;
         if (!player || typeof player.getCurrentTime !== 'function') return;
         try {
           postBridge({
@@ -357,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
       function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
+        window.player = new YT.Player('player', {
           videoId: videoId,
           playerVars: {
             autoplay: 1,
