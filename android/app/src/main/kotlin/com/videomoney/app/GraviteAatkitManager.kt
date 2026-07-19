@@ -7,18 +7,24 @@ import com.intentsoftware.addapptr.AATKit
 import com.intentsoftware.addapptr.AATKitAdNetworkOptions
 import com.intentsoftware.addapptr.AATKitConfiguration
 import com.intentsoftware.addapptr.AATKitReward
+import com.intentsoftware.addapptr.AATKitRuntimeConfiguration
 import com.intentsoftware.addapptr.GraviteRTBOptions
+import com.intentsoftware.addapptr.ManagedConsent
 import com.intentsoftware.addapptr.Placement
 import com.intentsoftware.addapptr.RewardedVideoPlacement
 import com.intentsoftware.addapptr.RewardedVideoPlacementListener
+import com.intentsoftware.addapptr.consent.google.CMPGoogle
 
-object GraviteAatkitManager : RewardedVideoPlacementListener {
+object GraviteAatkitManager :
+    RewardedVideoPlacementListener,
+    ManagedConsent.ManagedConsentDelegate {
     private const val LOG_TAG = "GraviteAATKit"
 
     private var initialized = false
     private var rewardedPlacement: RewardedVideoPlacement? = null
     private var rewardedLoaded = false
     private var currentActivity: Activity? = null
+    private var managedConsent: ManagedConsent? = null
     private var eventListener: ((String, Map<String, Any?>) -> Unit)? = null
 
     fun initialize(application: Application) {
@@ -56,9 +62,14 @@ object GraviteAatkitManager : RewardedVideoPlacementListener {
         eventListener = listener
     }
 
+    fun showPrivacyOptions(activity: Activity) {
+        managedConsent?.editConsent(activity)
+    }
+
     fun onActivityResume(activity: Activity) {
         currentActivity = activity
         ensureInitialized(activity.application)
+        ensureManagedConsent(activity)
         AATKit.onActivityResume(activity)
         rewardedPlacement?.listener = this
         rewardedPlacement?.startAutoReload()
@@ -136,5 +147,43 @@ object GraviteAatkitManager : RewardedVideoPlacementListener {
         if (!initialized) {
             initialize(application)
         }
+    }
+
+    private fun ensureManagedConsent(activity: Activity) {
+        if (managedConsent != null) return
+        val consent = ManagedConsent(
+            CMPGoogle(activity),
+            activity.applicationContext,
+            this,
+            ManagedConsent.ShowIfNeededSetting.SERVER_SIDE_CONTROL,
+        )
+        managedConsent = consent
+        val newConfiguration = AATKitRuntimeConfiguration().apply {
+            this.consent = consent
+        }
+        AATKit.reconfigure(newConfiguration)
+        consent.showIfNeeded(activity)
+    }
+
+    override fun managedConsentNeedsUserInterface(managedConsent: ManagedConsent) {
+        currentActivity?.let { managedConsent.showIfNeeded(it) }
+    }
+
+    override fun managedConsentCMPFinished(state: ManagedConsent.ManagedConsentState) {
+        Log.d(LOG_TAG, "[consent] managed consent finished with state=$state")
+    }
+
+    override fun managedConsentCMPFailedToLoad(
+        managedConsent: ManagedConsent,
+        error: String,
+    ) {
+        Log.w(LOG_TAG, "[consent] managed consent failed to load: $error")
+    }
+
+    override fun managedConsentCMPFailedToShow(
+        managedConsent: ManagedConsent,
+        error: String,
+    ) {
+        Log.w(LOG_TAG, "[consent] managed consent failed to show: $error")
     }
 }

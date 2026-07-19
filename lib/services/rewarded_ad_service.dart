@@ -225,46 +225,33 @@ class RewardedAdService {
     await _refreshNativeRewardedAvailability();
     if (preferredProvider == RewardedAdProvider.gravite) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
-      return _firstReady(const [
-        _RewardedNetwork.gravite,
-        _RewardedNetwork.admob,
-        _RewardedNetwork.appodeal,
-        _RewardedNetwork.meta,
-        _RewardedNetwork.liftoff,
-      ]);
+      return _isRewardedReady(_RewardedNetwork.gravite)
+          ? _RewardedNetwork.gravite
+          : null;
     }
     if (preferredProvider == RewardedAdProvider.admob) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
-      return _firstReady(const [
-        _RewardedNetwork.admob,
-        _RewardedNetwork.appodeal,
-        _RewardedNetwork.meta,
-        _RewardedNetwork.liftoff,
-      ]);
+      return _isRewardedReady(_RewardedNetwork.admob)
+          ? _RewardedNetwork.admob
+          : null;
     }
     if (preferredProvider == RewardedAdProvider.appodeal) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.appodeal);
-      return _firstReady(const [
-        _RewardedNetwork.appodeal,
-        _RewardedNetwork.meta,
-        _RewardedNetwork.liftoff,
-      ]);
+      return _isRewardedReady(_RewardedNetwork.appodeal)
+          ? _RewardedNetwork.appodeal
+          : null;
     }
     if (preferredProvider == RewardedAdProvider.meta) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.meta);
-      return _firstReady(const [
-        _RewardedNetwork.meta,
-        _RewardedNetwork.liftoff,
-        _RewardedNetwork.appodeal,
-      ]);
+      return _isRewardedReady(_RewardedNetwork.meta)
+          ? _RewardedNetwork.meta
+          : null;
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.liftoff);
-      return _firstReady(const [
-        _RewardedNetwork.liftoff,
-        _RewardedNetwork.appodeal,
-        _RewardedNetwork.meta,
-      ]);
+      return _isRewardedReady(_RewardedNetwork.liftoff)
+          ? _RewardedNetwork.liftoff
+          : null;
     }
     for (var offset = 1; offset <= _rotationOrder.length; offset++) {
       final index = (_lastServedRewardedIndex + offset) % _rotationOrder.length;

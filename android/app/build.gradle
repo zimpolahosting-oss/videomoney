@@ -141,6 +141,7 @@ dependencies {
     implementation ("com.intentsoftware.addapptr:AATKit:3.17.3") {
         transitive = true
     }
+    implementation "com.google.android.ump:user-messaging-platform:3.1.0"
     implementation "com.vungle:vungle-ads:7.7.6"
     implementation "com.facebook.android:audience-network-sdk:6.21.0"
     implementation "com.appnext.sdk:ads:2.7.6.473"

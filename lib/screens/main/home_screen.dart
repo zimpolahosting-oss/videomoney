@@ -618,15 +618,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(
               isGraviteBreak
-                  ? 'No Gravite rewarded ad available. AdMob/Appodeal/Meta/Liftoff fallback was also unavailable.'
+                  ? 'No Gravite rewarded ad available for this turn.'
                   : isAdmobBreak
-                  ? 'No AdMob rewarded ad available. Appodeal/Meta/Liftoff fallback was also unavailable.'
+                  ? 'No AdMob rewarded ad available for this turn.'
                   : isAppodealBreak
-                  ? 'No Appodeal rewarded ad available. Meta/Liftoff fallback was also unavailable.'
+                  ? 'No Appodeal rewarded ad available for this turn.'
                   : isMetaBreak
-                      ? 'No Meta rewarded ad available. Liftoff/Appodeal fallback was also unavailable.'
+                      ? 'No Meta rewarded ad available for this turn.'
                   : isLiftoffBreak
-                      ? 'No Liftoff rewarded ad available. Appodeal/Meta fallback was also unavailable.'
+                      ? 'No Liftoff rewarded ad available for this turn.'
                   : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
