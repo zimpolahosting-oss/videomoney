@@ -62,6 +62,16 @@ def liftoffRewardedPlacementId = (
                 ?: System.getenv('LIFTOFF_REWARDED_PLACEMENT_ID')
                 ?: 'DEFAULT-8375954'
 ).trim()
+def graviteRewardedPlacementName = (
+        localProperties.getProperty('gravite.rewardedPlacementName')
+                ?: System.getenv('GRAVITE_REWARDED_PLACEMENT_NAME')
+                ?: 'VideoMoney_rewarded'
+).trim()
+def graviteTestModeAccountId = (
+        localProperties.getProperty('gravite.testModeAccountId')
+                ?: System.getenv('GRAVITE_TEST_MODE_ACCOUNT_ID')
+                ?: ''
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -97,6 +107,8 @@ android {
         buildConfigField "String", "META_BANNER_PLACEMENT_ID", "\"${metaBannerPlacementId}\""
         buildConfigField "String", "LIFTOFF_APP_ID", "\"${liftoffAppId}\""
         buildConfigField "String", "LIFTOFF_REWARDED_PLACEMENT_ID", "\"${liftoffRewardedPlacementId}\""
+        buildConfigField "String", "GRAVITE_REWARDED_PLACEMENT_NAME", "\"${graviteRewardedPlacementName}\""
+        buildConfigField "String", "GRAVITE_TEST_MODE_ACCOUNT_ID", "\"${graviteTestModeAccountId}\""
     }
     signingConfigs {
         release {
@@ -126,6 +138,9 @@ flutter {
 
 dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.1.2")
+    implementation ("com.intentsoftware.addapptr:AATKit:3.17.3") {
+        transitive = true
+    }
     implementation "com.vungle:vungle-ads:7.7.6"
     implementation "com.facebook.android:audience-network-sdk:6.21.0"
     implementation "com.appnext.sdk:ads:2.7.6.473"

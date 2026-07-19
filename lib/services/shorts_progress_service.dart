@@ -28,7 +28,7 @@ class ShortsProgressSnapshot {
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
-    nextAdBreakProvider: ShortsProgressService.providerAdmob,
+    nextAdBreakProvider: ShortsProgressService.providerGravite,
     pendingAdBreakAttempted: false,
   );
 
@@ -81,6 +81,7 @@ class ShortsProgressService {
   static const int bonusViewsReward = 15;
   static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
+  static const String providerGravite = 'gravite';
   static const String providerAdmob = 'admob';
   static const String providerAppodeal = 'appodeal';
   static const String providerMeta = 'meta';
@@ -214,27 +215,29 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
+      providerGravite => providerAdmob,
       providerAdmob => providerAppodeal,
       providerAppodeal => providerMeta,
       providerMeta => providerLiftoff,
       providerLiftoff => providerMonetag,
-      providerMonetag => providerAdmob,
-      _ => providerAdmob,
+      providerMonetag => providerGravite,
+      _ => providerGravite,
     };
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
     final value = (provider ?? '').trim();
     if (value.isEmpty) {
-      return allowEmpty ? '' : providerAdmob;
+      return allowEmpty ? '' : providerGravite;
     }
-    if (value == providerAdmob ||
+    if (value == providerGravite ||
+        value == providerAdmob ||
         value == providerAppodeal ||
         value == providerMeta ||
         value == providerLiftoff ||
         value == providerMonetag) {
       return value;
     }
-    return providerAdmob;
+    return providerGravite;
   }
 }

@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
+  String _pendingAdBreakProvider = ShortsProgressService.providerGravite;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -499,6 +499,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _isShowingAdBreak = true;
     try {
       final pendingProvider = _pendingAdBreakProvider;
+      final isGraviteBreak =
+          pendingProvider == ShortsProgressService.providerGravite;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
@@ -506,15 +508,21 @@ class _HomeScreenState extends State<HomeScreen> {
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
       final completed =
-          (isAdmobBreak || isAppodealBreak || isMetaBreak || isLiftoffBreak)
+          (isGraviteBreak ||
+                  isAdmobBreak ||
+                  isAppodealBreak ||
+                  isMetaBreak ||
+                  isLiftoffBreak)
           ? await _earningsService.showRewardedBonusAd(
-              provider: isAdmobBreak
-                  ? RewardedAdProvider.admob
-                  : isAppodealBreak
-                      ? RewardedAdProvider.appodeal
-                      : isMetaBreak
-                          ? RewardedAdProvider.meta
-                          : RewardedAdProvider.liftoff,
+              provider: isGraviteBreak
+                  ? RewardedAdProvider.gravite
+                  : isAdmobBreak
+                      ? RewardedAdProvider.admob
+                      : isAppodealBreak
+                          ? RewardedAdProvider.appodeal
+                          : isMetaBreak
+                              ? RewardedAdProvider.meta
+                              : RewardedAdProvider.liftoff,
               onAdStatus: (message) {
                 debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
               },
@@ -550,7 +558,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isAdmobBreak
+              isGraviteBreak
+                  ? 'No Gravite rewarded ad available. AdMob/Appodeal/Meta/Liftoff fallback was also unavailable.'
+                  : isAdmobBreak
                   ? 'No AdMob rewarded ad available. Appodeal/Meta/Liftoff fallback was also unavailable.'
                   : isAppodealBreak
                   ? 'No Appodeal rewarded ad available. Meta/Liftoff fallback was also unavailable.'

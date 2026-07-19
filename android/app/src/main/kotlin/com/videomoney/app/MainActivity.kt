@@ -55,10 +55,21 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        GraviteAatkitManager.setEventListener(::emitEvent)
         initializeLiftoffIfNeeded()
         configureRewardedVideoCallbacks()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        GraviteAatkitManager.onActivityResume(this)
+    }
+
+    override fun onPause() {
+        GraviteAatkitManager.onActivityPause(this)
+        super.onPause()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -69,6 +80,19 @@ class MainActivity : FlutterActivity() {
         ).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "preloadGraviteRewardedVideo" -> {
+                        GraviteAatkitManager.preloadRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "isGraviteRewardedVideoLoaded" -> {
+                        result.success(GraviteAatkitManager.isRewardedVideoLoaded())
+                    }
+
+                    "showGraviteRewardedVideo" -> {
+                        result.success(GraviteAatkitManager.showRewardedVideo())
+                    }
+
                     "preloadLiftoffRewardedVideo" -> {
                         preloadLiftoffRewardedVideo()
                         result.success(null)
@@ -189,6 +213,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         rewardedVideoChannel?.setMethodCallHandler(null)
         rewardedVideoChannel = null
+        GraviteAatkitManager.setEventListener(null)
         liftoffRewardedAd = null
         metaRewardedInterstitialAd?.destroy()
         metaRewardedInterstitialAd = null

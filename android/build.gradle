@@ -2,6 +2,14 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url 'https://gravite-sdk-releases.s3.eu-central-1.amazonaws.com/aatkit/android/maven'
+            content { includeGroupByRegex "com\\.intentsoftware\\..*" }
+        }
+        maven {
+            url 'https://gravite-sdk-releases.s3.eu-central-1.amazonaws.com/rtbsdk/android/maven'
+            content { includeGroupByRegex "com\\.rtb\\..*" }
+        }
         maven { url "https://dl.appnext.com/" }
         maven { url "https://artifactory.appodeal.com/appodeal" }
     }

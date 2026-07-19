@@ -7,7 +7,7 @@
 
     <application
         android:label="VideoMoney"
-        android:name="${applicationName}"
+        android:name="com.videomoney.app.MainApplication"
         android:icon="@drawable/videomoney_icon"
         android:roundIcon="@drawable/videomoney_icon"
         android:usesCleartextTraffic="true">
