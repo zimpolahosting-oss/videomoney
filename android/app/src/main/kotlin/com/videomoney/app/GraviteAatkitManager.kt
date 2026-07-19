@@ -175,14 +175,14 @@ object GraviteAatkitManager :
 
     override fun managedConsentCMPFailedToLoad(
         managedConsent: ManagedConsent,
-        error: String,
+        error: String?,
     ) {
         Log.w(LOG_TAG, "[consent] managed consent failed to load: $error")
     }
 
     override fun managedConsentCMPFailedToShow(
         managedConsent: ManagedConsent,
-        error: String,
+        error: String?,
     ) {
         Log.w(LOG_TAG, "[consent] managed consent failed to show: $error")
     }
