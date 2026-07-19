@@ -124,19 +124,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        child: IndexedStack(
-          key: ValueKey<int>(_currentIndex),
-          index: _currentIndex,
-          children: [
-            HomeScreen(isActiveTab: _currentIndex == 0),
-            const WalletScreen(),
-            const ProfileScreen(),
-          ],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(isActiveTab: _currentIndex == 0),
+          const WalletScreen(),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
