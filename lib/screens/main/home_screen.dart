@@ -285,8 +285,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       await _webViewController.runJavaScript('''
         try {
+          window.__vmForcePaused = true;
           if (window.player && typeof window.player.pauseVideo === 'function') {
             window.player.pauseVideo();
+          }
+          if (window.player && typeof window.player.stopVideo === 'function') {
+            window.player.stopVideo();
           }
         } catch (_) {}
       ''');
@@ -298,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       await _webViewController.runJavaScript('''
         try {
+          window.__vmForcePaused = false;
           if (window.player && typeof window.player.playVideo === 'function') {
             window.player.playVideo();
           }
@@ -340,6 +345,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     <div id="player"></div>
     <script>
       window.player = null;
+      window.__vmForcePaused = false;
       let tickHandle = null;
       const videoId = $safeVideoId;
       const appOrigin = $safeOrigin;
@@ -390,9 +396,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onReady: function(event) {
               ensureTicker();
               postBridge({ type: 'ready', videoId: videoId });
-              event.target.playVideo();
+              if (!window.__vmForcePaused) {
+                event.target.playVideo();
+              }
             },
             onStateChange: function(event) {
+              if (window.__vmForcePaused &&
+                  (event.data === YT.PlayerState.PLAYING ||
+                   event.data === YT.PlayerState.BUFFERING)) {
+                try {
+                  event.target.pauseVideo();
+                  if (typeof event.target.stopVideo === 'function') {
+                    event.target.stopVideo();
+                  }
+                } catch (_) {}
+              }
               postBridge({ type: 'state', state: Number(event.data), videoId: videoId });
               if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
                 ensureTicker();
@@ -625,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               isGraviteBreak
                   ? 'No Gravite rewarded ad available for this turn.'
                   : isStartioBreak
-                  ? 'No Start.io rewarded ad available for this turn.'
+                  ? 'No Start.io or Liftoff rewarded ad available for this turn.'
                   : isAdmobBreak
                   ? 'No AdMob rewarded ad available for this turn.'
                   : isAppodealBreak

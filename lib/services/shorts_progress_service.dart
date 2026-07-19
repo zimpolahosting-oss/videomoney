@@ -218,7 +218,8 @@ class ShortsProgressService {
     return switch (provider) {
       providerStartio => providerLiftoff,
       providerLiftoff => providerMonetag,
-      providerMonetag => providerStartio,
+      providerMonetag => providerGravite,
+      providerGravite => providerStartio,
       _ => providerStartio,
     };
   }

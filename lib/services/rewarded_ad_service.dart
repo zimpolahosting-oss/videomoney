@@ -28,6 +28,7 @@ class RewardedAdService {
   static const List<_RewardedNetwork> _rotationOrder = [
     _RewardedNetwork.startio,
     _RewardedNetwork.liftoff,
+    _RewardedNetwork.gravite,
   ];
 
   RewardedAd? _rewardedAd;
@@ -228,8 +229,12 @@ class RewardedAdService {
     }
     if (preferredProvider == RewardedAdProvider.startio) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.startio);
-      return _isRewardedReady(_RewardedNetwork.startio)
-          ? _RewardedNetwork.startio
+      if (_isRewardedReady(_RewardedNetwork.startio)) {
+        return _RewardedNetwork.startio;
+      }
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.liftoff);
+      return _isRewardedReady(_RewardedNetwork.liftoff)
+          ? _RewardedNetwork.liftoff
           : null;
     }
     if (preferredProvider == RewardedAdProvider.admob) {
