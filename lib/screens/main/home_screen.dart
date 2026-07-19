@@ -24,7 +24,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.isActiveTab = true});
+
+  final bool isActiveTab;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -68,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isShowingAdBreak = false;
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
+  bool _resumeAfterOverlay = false;
   String? _feedError;
 
   @override
@@ -193,6 +196,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActiveTab == widget.isActiveTab) return;
+    if (widget.isActiveTab) {
+      unawaited(_resumePlaybackIfNeeded());
+    } else {
+      unawaited(_pausePlayback());
+    }
+  }
+
+  @override
   void dispose() {
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
@@ -248,6 +262,31 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _pausePlayback() async {
+    try {
+      await _webViewController.runJavaScript('''
+        try {
+          if (window.player && typeof window.player.pauseVideo === 'function') {
+            window.player.pauseVideo();
+          }
+        } catch (_) {}
+      ''');
+    } catch (_) {}
+  }
+
+  Future<void> _resumePlaybackIfNeeded() async {
+    if (!widget.isActiveTab || _isShowingAdBreak || !_playerReady) return;
+    try {
+      await _webViewController.runJavaScript('''
+        try {
+          if (window.player && typeof window.player.playVideo === 'function') {
+            window.player.playVideo();
+          }
+        } catch (_) {}
+      ''');
+    } catch (_) {}
   }
 
   String _buildYouTubeEmbedHtml(String videoId) {
@@ -497,6 +536,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted || user == null || _isShowingAdBreak) return;
 
     _isShowingAdBreak = true;
+    _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
+    await _pausePlayback();
     try {
       final pendingProvider = _pendingAdBreakProvider;
       final isGraviteBreak =
@@ -581,6 +622,10 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } finally {
       _isShowingAdBreak = false;
+      if (_resumeAfterOverlay) {
+        _resumeAfterOverlay = false;
+        unawaited(_resumePlaybackIfNeeded());
+      }
     }
   }
 

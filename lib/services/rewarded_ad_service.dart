@@ -224,6 +224,7 @@ class RewardedAdService {
   }) async {
     await _refreshNativeRewardedAvailability();
     if (preferredProvider == RewardedAdProvider.gravite) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
       return _firstReady(const [
         _RewardedNetwork.gravite,
         _RewardedNetwork.admob,
@@ -233,6 +234,7 @@ class RewardedAdService {
       ]);
     }
     if (preferredProvider == RewardedAdProvider.admob) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
       return _firstReady(const [
         _RewardedNetwork.admob,
         _RewardedNetwork.appodeal,
@@ -241,6 +243,7 @@ class RewardedAdService {
       ]);
     }
     if (preferredProvider == RewardedAdProvider.appodeal) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.appodeal);
       return _firstReady(const [
         _RewardedNetwork.appodeal,
         _RewardedNetwork.meta,
@@ -248,6 +251,7 @@ class RewardedAdService {
       ]);
     }
     if (preferredProvider == RewardedAdProvider.meta) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.meta);
       return _firstReady(const [
         _RewardedNetwork.meta,
         _RewardedNetwork.liftoff,
@@ -255,6 +259,7 @@ class RewardedAdService {
       ]);
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.liftoff);
       return _firstReady(const [
         _RewardedNetwork.liftoff,
         _RewardedNetwork.appodeal,
@@ -275,6 +280,15 @@ class RewardedAdService {
       return _RewardedNetwork.admob;
     }
     return null;
+  }
+
+  Future<void> _givePreferredNetworkOneMoreChance(
+    _RewardedNetwork preferredNetwork,
+  ) async {
+    if (_isRewardedReady(preferredNetwork)) return;
+    await _reloadNativeRewardedNetwork(preferredNetwork);
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    await _refreshNativeRewardedAvailability();
   }
 
   Future<void> _refreshNativeRewardedAvailability() async {

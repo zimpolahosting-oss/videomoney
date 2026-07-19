@@ -30,12 +30,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   String? _lastSeenPayoutNotificationId;
   bool _isInForeground = true;
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
-    WalletScreen(),
-    ProfileScreen(),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -137,7 +131,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         child: IndexedStack(
           key: ValueKey<int>(_currentIndex),
           index: _currentIndex,
-          children: _screens,
+          children: [
+            HomeScreen(isActiveTab: _currentIndex == 0),
+            const WalletScreen(),
+            const ProfileScreen(),
+          ],
         ),
       ),
       bottomNavigationBar: SafeArea(
