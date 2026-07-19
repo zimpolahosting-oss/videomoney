@@ -155,18 +155,18 @@ object GraviteAatkitManager :
             CMPGoogle(activity),
             activity.applicationContext,
             this,
-            ManagedConsent.ShowIfNeededSetting.SERVER_SIDE_CONTROL,
+            ManagedConsent.ShowIfNeededSetting.ALWAYS,
         )
         managedConsent = consent
         val newConfiguration = AATKitRuntimeConfiguration().apply {
             this.consent = consent
         }
         AATKit.reconfigure(newConfiguration)
-        consent.showIfNeeded(activity)
+        consent.showIfNeededOrRejected(1, activity)
     }
 
     override fun managedConsentNeedsUserInterface(managedConsent: ManagedConsent) {
-        currentActivity?.let { managedConsent.showIfNeeded(it) }
+        currentActivity?.let { managedConsent.showIfNeededOrRejected(1, it) }
     }
 
     override fun managedConsentCMPFinished(state: ManagedConsent.ManagedConsentState) {
