@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   bool _resumeAfterOverlay = false;
+  DateTime _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   String? _feedError;
 
   @override
@@ -300,6 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _resumePlaybackIfNeeded() async {
     if (!widget.isActiveTab || _isShowingAdBreak || !_playerReady) return;
+    if (DateTime.now().isBefore(_playbackResumeBlockedUntil)) return;
     try {
       await _webViewController.runJavaScript('''
         try {
@@ -310,6 +312,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         } catch (_) {}
       ''');
     } catch (_) {}
+  }
+
+  void _blockPlaybackResume([Duration duration = const Duration(seconds: 3)]) {
+    final blockedUntil = DateTime.now().add(duration);
+    if (blockedUntil.isAfter(_playbackResumeBlockedUntil)) {
+      _playbackResumeBlockedUntil = blockedUntil;
+    }
   }
 
   String _buildYouTubeEmbedHtml(String videoId) {
@@ -573,6 +582,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted || user == null || _isShowingAdBreak) return;
 
     _isShowingAdBreak = true;
+    _blockPlaybackResume(const Duration(minutes: 2));
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
     try {
       final pendingProvider = _pendingAdBreakProvider;
@@ -696,10 +706,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
     } finally {
+      _blockPlaybackResume();
       _isShowingAdBreak = false;
       if (_resumeAfterOverlay) {
         _resumeAfterOverlay = false;
-        unawaited(_resumePlaybackIfNeeded());
+        Future<void>.delayed(const Duration(seconds: 3), () {
+          if (!mounted) return;
+          unawaited(_resumePlaybackIfNeeded());
+        });
       }
     }
   }
