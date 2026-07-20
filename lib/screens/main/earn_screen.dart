@@ -9,6 +9,7 @@ import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/watermark_hero_card.dart';
+import 'shorts_ad_break_screen.dart';
 
 class EarnScreen extends StatefulWidget {
   const EarnScreen({super.key});
@@ -36,16 +37,29 @@ class _EarnScreenState extends State<EarnScreen> {
     setState(() => _isLoading = true);
     String? lastStatusMessage;
 
-    final rewardGranted = await _earningsService.watchRewardedVideo(
-      uid: user.uid,
-      onAdStatus: (message) {
-        lastStatusMessage = message;
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      },
-    );
+    final rewardGranted =
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            fullscreenDialog: false,
+            builder: (pageContext) => ShortsAdBreakScreen(
+              providerName: 'Rewarded ad',
+              onPrepare: () async {},
+              onStartAd: (_) {
+                return _earningsService.watchRewardedVideo(
+                  uid: user.uid,
+                  onAdStatus: (message) {
+                    lastStatusMessage = message;
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(message)),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ) ??
+        false;
 
     if (!mounted) return;
 

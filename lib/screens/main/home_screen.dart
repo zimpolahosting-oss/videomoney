@@ -22,6 +22,7 @@ import '../../services/videomoney_ad_sdk.dart';
 import '../../services/video_feed_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
+import 'shorts_ad_break_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.isActiveTab = true});
@@ -573,7 +574,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isShowingAdBreak = true;
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
-    await _pausePlayback();
     try {
       final pendingProvider = _pendingAdBreakProvider;
       final isStartioBreak =
@@ -595,50 +595,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isLiftoffBreak;
       final shouldFallbackToMonetag =
           isAdmobBreak || isAppodealBreak || isLiftoffBreak;
-      var completed = false;
-      if (isRewardedTurn) {
-        completed = await _earningsService.showRewardedBonusAd(
-          provider: isStartioBreak
-              ? RewardedAdProvider.startio
-              : isGraviteBreak
-              ? RewardedAdProvider.gravite
-              : isAdmobBreak
-                  ? RewardedAdProvider.admob
-                  : isAppodealBreak
-                      ? RewardedAdProvider.appodeal
-                      : isMetaBreak
-                          ? RewardedAdProvider.meta
-                          : RewardedAdProvider.liftoff,
-          onAdStatus: (message) {
-            debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
-          },
-        );
-        if (!completed && shouldFallbackToMonetag) {
-          completed = await _videomoneyAdSdk.showInterstitial(
-            context: context,
-            callbacks: VideomoneyAdCallbacks(
-              onFailed: (provider, reason) {
-                debugPrint(
-                  '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
-                  '$reason',
-                );
-              },
+      final completed =
+          await Navigator.of(context).push<bool>(
+            MaterialPageRoute<bool>(
+              fullscreenDialog: false,
+              builder: (pageContext) => ShortsAdBreakScreen(
+                providerName: _providerLabelForAdBreak(pendingProvider),
+                onPrepare: _pausePlayback,
+                onStartAd: (_) async {
+                  if (isRewardedTurn) {
+                    var rewardedCompleted =
+                        await _earningsService.showRewardedBonusAd(
+                          provider: isStartioBreak
+                              ? RewardedAdProvider.startio
+                              : isGraviteBreak
+                              ? RewardedAdProvider.gravite
+                              : isAdmobBreak
+                                  ? RewardedAdProvider.admob
+                                  : isAppodealBreak
+                                      ? RewardedAdProvider.appodeal
+                                      : isMetaBreak
+                                          ? RewardedAdProvider.meta
+                                          : RewardedAdProvider.liftoff,
+                          onAdStatus: (message) {
+                            debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+                          },
+                        );
+                    if (!rewardedCompleted && shouldFallbackToMonetag) {
+                      rewardedCompleted = await _videomoneyAdSdk.showInterstitial(
+                        context: pageContext,
+                        callbacks: VideomoneyAdCallbacks(
+                          onFailed: (provider, reason) {
+                            debugPrint(
+                              '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
+                              '$reason',
+                            );
+                          },
+                        ),
+                      );
+                    }
+                    return rewardedCompleted;
+                  }
+                  return _videomoneyAdSdk.showInterstitial(
+                    context: pageContext,
+                    callbacks: VideomoneyAdCallbacks(
+                      onFailed: (provider, reason) {
+                        debugPrint(
+                          '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
+                          '$reason',
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
-          );
-        }
-      } else {
-        completed = await _videomoneyAdSdk.showInterstitial(
-          context: context,
-          callbacks: VideomoneyAdCallbacks(
-            onFailed: (provider, reason) {
-              debugPrint(
-                '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
-                '$reason',
-              );
-            },
-          ),
-        );
-      }
+          ) ??
+          false;
       if (completed) {
         await _firestoreService.applyUserProgress(
           uid: user.uid,
@@ -689,6 +702,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unawaited(_resumePlaybackIfNeeded());
       }
     }
+  }
+
+  String _providerLabelForAdBreak(String provider) {
+    return switch (provider) {
+      ShortsProgressService.providerAdmob => 'AdMob',
+      ShortsProgressService.providerStartio => 'Start.io',
+      ShortsProgressService.providerLiftoff => 'Liftoff',
+      ShortsProgressService.providerGravite => 'Gravite',
+      ShortsProgressService.providerAppodeal => 'Appodeal',
+      ShortsProgressService.providerMonetag => 'Monetag',
+      _ => 'Ad',
+    };
   }
 
   Future<void> _resetShortCycle() async {
