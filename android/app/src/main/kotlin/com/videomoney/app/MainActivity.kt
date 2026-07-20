@@ -35,7 +35,6 @@ import com.vungle.ads.RewardedAd as LiftoffRewardedAd
 import com.vungle.ads.RewardedAdListener
 import com.vungle.ads.VungleAds
 import com.vungle.ads.VungleError
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -55,21 +54,6 @@ class MainActivity : FlutterActivity() {
     private var mobFoxRewardedLoaded = false
     private var startioRewardedLoaded = false
     private var startioInterstitialLoaded = false
-    private val mobFoxRewardedLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val data = result.data
-            val rewarded =
-                data?.getBooleanExtra(MobFoxRewardedActivity.EXTRA_REWARDED, false) == true
-            val error = data?.getStringExtra(MobFoxRewardedActivity.EXTRA_ERROR)
-            if (rewarded) {
-                emitEvent("onMobFoxRewardedVideoCompleted")
-            }
-            if (!error.isNullOrBlank()) {
-                emitEvent("onMobFoxRewardedVideoError", mapOf("error" to error))
-            }
-            emitEvent("onMobFoxRewardedVideoClosed")
-            preloadMobFoxRewardedVideo()
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -257,6 +241,24 @@ class MainActivity : FlutterActivity() {
         startioRewardedAd = null
         startioInterstitialAd = null
         super.onDestroy()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != MOBFOX_REWARDED_REQUEST_CODE) {
+            return
+        }
+        val rewarded =
+            data?.getBooleanExtra(MobFoxRewardedActivity.EXTRA_REWARDED, false) == true
+        val error = data?.getStringExtra(MobFoxRewardedActivity.EXTRA_ERROR)
+        if (rewarded) {
+            emitEvent("onMobFoxRewardedVideoCompleted")
+        }
+        if (!error.isNullOrBlank()) {
+            emitEvent("onMobFoxRewardedVideoError", mapOf("error" to error))
+        }
+        emitEvent("onMobFoxRewardedVideoClosed")
+        preloadMobFoxRewardedVideo()
     }
 
     private fun configureRewardedVideoCallbacks() {
@@ -760,7 +762,11 @@ class MainActivity : FlutterActivity() {
         }
         mobFoxRewardedLoaded = false
         emitEvent("onMobFoxRewardedVideoShown")
-        mobFoxRewardedLauncher.launch(Intent(this, MobFoxRewardedActivity::class.java))
+        @Suppress("DEPRECATION")
+        startActivityForResult(
+            Intent(this, MobFoxRewardedActivity::class.java),
+            MOBFOX_REWARDED_REQUEST_CODE,
+        )
         Log.d(LOG_TAG, "[rewarded][mobfox] showing rewarded video.")
         return true
     }
@@ -773,6 +779,7 @@ class MainActivity : FlutterActivity() {
         private const val REWARDED_VIDEO_CHANNEL = "com.videomoney.app/rewarded_video"
         private const val REWARDED_VIDEO_TYPE = Appodeal.REWARDED_VIDEO
         private const val APP_KEY_PLACEHOLDER = "APPODEAL_APP_KEY"
+        private const val MOBFOX_REWARDED_REQUEST_CODE = 7149
         private const val LOG_TAG = "VideoMoneyAppodeal"
     }
 }
