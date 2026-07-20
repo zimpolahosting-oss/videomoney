@@ -220,7 +220,8 @@ class ShortsProgressService {
       providerStartio => providerLiftoff,
       providerLiftoff => providerMonetag,
       providerMonetag => providerGravite,
-      providerGravite => providerAdmob,
+      providerGravite => providerAppodeal,
+      providerAppodeal => providerAdmob,
       _ => providerAdmob,
     };
   }

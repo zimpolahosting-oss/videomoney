@@ -30,6 +30,7 @@ class RewardedAdService {
     _RewardedNetwork.startio,
     _RewardedNetwork.liftoff,
     _RewardedNetwork.gravite,
+    _RewardedNetwork.appodeal,
   ];
 
   RewardedAd? _rewardedAd;
