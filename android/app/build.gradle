@@ -72,6 +72,11 @@ def graviteTestModeAccountId = (
                 ?: System.getenv('GRAVITE_TEST_MODE_ACCOUNT_ID')
                 ?: ''
 ).trim()
+def mobfoxVastTagUrl = (
+        localProperties.getProperty('mobfox.vastTagUrl')
+                ?: System.getenv('MOBFOX_VAST_TAG_URL')
+                ?: 'https://bes.mobfox.com/?c=v&m=tag&app=1&placementId=3191&videotype=[VIDEO_TYPE]&ip=[IP]&ua=[UA]&name=[APP_NAME]&bundle=[APP_BUNDLE]&ver=[APP_VERSION]&os=[DEVICE_OS]&osv=[DEVICE_OS_VERSION]&make=[DEVICE_MAKE]&model=[DEVICE_MODEL]&w=[DEVICE_W]&h=[DEVICE_H]&wPlayer=[PLAYER_W]&hPlayer=[PLAYER_H]&hwv=[DEVICE_HW_VERSION]&ifa=[IFA]&js=[JS]&carrier=[CARRIER]&paid=[PAID]&country=[GEO_COUNTRY]&geo_type=[GEO_TYPE]&city=[GEO_CITY]&lat=[GEO_LAT]&lon=[GEO_LON]&bidfloor=[BIDFLOOR]&gdpr_consent=[GDPR_CONSENT]&coppa=[COPPA]&gpp=[GPP]&gpp_sid=[GPP_SID]'
+).trim()
 
 android {
     namespace = "com.videomoney.app"
@@ -109,6 +114,7 @@ android {
         buildConfigField "String", "LIFTOFF_REWARDED_PLACEMENT_ID", "\"${liftoffRewardedPlacementId}\""
         buildConfigField "String", "GRAVITE_REWARDED_PLACEMENT_NAME", "\"${graviteRewardedPlacementName}\""
         buildConfigField "String", "GRAVITE_TEST_MODE_ACCOUNT_ID", "\"${graviteTestModeAccountId}\""
+        buildConfigField "String", "MOBFOX_VAST_TAG_URL", "\"${mobfoxVastTagUrl}\""
     }
     signingConfigs {
         release {
@@ -143,6 +149,8 @@ dependencies {
         transitive = true
     }
     implementation "com.google.android.ump:user-messaging-platform:3.1.0"
+    implementation "androidx.media3:media3-exoplayer:1.4.1"
+    implementation "androidx.media3:media3-ui:1.4.1"
     implementation "com.vungle:vungle-ads:7.7.6"
     implementation "com.facebook.android:audience-network-sdk:6.21.0"
     implementation "com.appnext.sdk:ads:2.7.6.473"

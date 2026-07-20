@@ -1,5 +1,6 @@
 package com.videomoney.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import com.appnext.ads.fullscreen.RewardedVideo
@@ -34,6 +35,7 @@ import com.vungle.ads.RewardedAd as LiftoffRewardedAd
 import com.vungle.ads.RewardedAdListener
 import com.vungle.ads.VungleAds
 import com.vungle.ads.VungleError
+import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -50,8 +52,24 @@ class MainActivity : FlutterActivity() {
     private var liftoffInitialized = false
     private var liftoffInitStarted = false
     private var liftoffRewardedLoaded = false
+    private var mobFoxRewardedLoaded = false
     private var startioRewardedLoaded = false
     private var startioInterstitialLoaded = false
+    private val mobFoxRewardedLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val data = result.data
+            val rewarded =
+                data?.getBooleanExtra(MobFoxRewardedActivity.EXTRA_REWARDED, false) == true
+            val error = data?.getStringExtra(MobFoxRewardedActivity.EXTRA_ERROR)
+            if (rewarded) {
+                emitEvent("onMobFoxRewardedVideoCompleted")
+            }
+            if (!error.isNullOrBlank()) {
+                emitEvent("onMobFoxRewardedVideoError", mapOf("error" to error))
+            }
+            emitEvent("onMobFoxRewardedVideoClosed")
+            preloadMobFoxRewardedVideo()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +78,7 @@ class MainActivity : FlutterActivity() {
         configureRewardedVideoCallbacks()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
+        preloadMobFoxRewardedVideo()
     }
 
     override fun onResume() {
@@ -80,6 +99,19 @@ class MainActivity : FlutterActivity() {
         ).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "preloadMobFoxRewardedVideo" -> {
+                        preloadMobFoxRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "isMobFoxRewardedVideoLoaded" -> {
+                        result.success(mobFoxRewardedLoaded && MobFoxRewardedManager.isLoaded())
+                    }
+
+                    "showMobFoxRewardedVideo" -> {
+                        result.success(showMobFoxRewardedVideo())
+                    }
+
                     "preloadGraviteRewardedVideo" -> {
                         GraviteAatkitManager.preloadRewardedVideo()
                         result.success(null)
@@ -221,6 +253,7 @@ class MainActivity : FlutterActivity() {
         metaInterstitialAd = null
         metaBannerAdView?.destroy()
         metaBannerAdView = null
+        MobFoxRewardedManager.clear()
         startioRewardedAd = null
         startioInterstitialAd = null
         super.onDestroy()
@@ -697,6 +730,39 @@ class MainActivity : FlutterActivity() {
             Log.d(LOG_TAG, "[rewarded][appodeal] requesting load.")
             Appodeal.cache(this, REWARDED_VIDEO_TYPE)
         }
+    }
+
+    private fun preloadMobFoxRewardedVideo() {
+        if (mobFoxRewardedLoaded || MobFoxRewardedManager.isLoaded()) {
+            mobFoxRewardedLoaded = true
+            return
+        }
+        MobFoxRewardedManager.preload(
+            context = this,
+            onLoaded = {
+                mobFoxRewardedLoaded = true
+                emitEvent("onMobFoxRewardedVideoLoaded")
+                Log.d(LOG_TAG, "[rewarded][mobfox] loaded VAST tag.")
+            },
+            onError = { message ->
+                mobFoxRewardedLoaded = false
+                emitEvent("onMobFoxRewardedVideoError", mapOf("error" to message))
+                Log.w(LOG_TAG, "[rewarded][mobfox] failed: $message")
+            },
+        )
+    }
+
+    private fun showMobFoxRewardedVideo(): Boolean {
+        if (!MobFoxRewardedManager.isLoaded()) {
+            mobFoxRewardedLoaded = false
+            preloadMobFoxRewardedVideo()
+            return false
+        }
+        mobFoxRewardedLoaded = false
+        emitEvent("onMobFoxRewardedVideoShown")
+        mobFoxRewardedLauncher.launch(Intent(this, MobFoxRewardedActivity::class.java))
+        Log.d(LOG_TAG, "[rewarded][mobfox] showing rewarded video.")
+        return true
     }
 
     private fun emitEvent(method: String, arguments: Map<String, Any?> = emptyMap()) {

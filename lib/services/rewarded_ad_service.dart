@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, startio, liftoff, gravite, admob, appodeal, meta }
+enum RewardedAdProvider { auto, mobfox, startio, liftoff, gravite, admob, appodeal, meta }
 
-enum _RewardedNetwork { gravite, liftoff, admob, appodeal, appnext, meta, startio }
+enum _RewardedNetwork { mobfox, gravite, liftoff, admob, appodeal, appnext, meta, startio }
 
 class RewardedAdService {
   factory RewardedAdService() => _instance;
@@ -26,15 +26,17 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
+    _RewardedNetwork.mobfox,
+    _RewardedNetwork.liftoff,
     _RewardedNetwork.admob,
     _RewardedNetwork.startio,
-    _RewardedNetwork.liftoff,
     _RewardedNetwork.gravite,
     _RewardedNetwork.appodeal,
   ];
 
   RewardedAd? _rewardedAd;
   final Map<_RewardedNetwork, bool> _nativeRewardedReady = {
+    _RewardedNetwork.mobfox: false,
     _RewardedNetwork.gravite: false,
     _RewardedNetwork.liftoff: false,
     _RewardedNetwork.appodeal: false,
@@ -57,6 +59,7 @@ class RewardedAdService {
   Future<void> preloadRewardedAd() async {
     _registerMethodHandler();
     await Future.wait([
+      _invokeVoidMethod('preloadMobFoxRewardedVideo'),
       _invokeVoidMethod('preloadGraviteRewardedVideo'),
       _invokeVoidMethod('preloadRewardedVideo'),
       _invokeVoidMethod('preloadMetaRewardedInterstitial'),
@@ -128,6 +131,7 @@ class RewardedAdService {
           onUserEarnedReward: onUserEarnedReward,
           onAdStatus: onAdStatus,
         );
+      case _RewardedNetwork.mobfox:
       case _RewardedNetwork.gravite:
       case _RewardedNetwork.liftoff:
       case _RewardedNetwork.appodeal:
@@ -223,6 +227,12 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
+    if (preferredProvider == RewardedAdProvider.mobfox) {
+      return _selectReadyWithFallback(
+        primary: _RewardedNetwork.mobfox,
+        fallback: _RewardedNetwork.liftoff,
+      );
+    }
     if (preferredProvider == RewardedAdProvider.gravite) {
       return _selectReadyWithFallback(
         primary: _RewardedNetwork.gravite,
@@ -301,6 +311,10 @@ class RewardedAdService {
 
   Future<void> _refreshNativeRewardedAvailability() async {
     _updateNativeAvailability(
+      _RewardedNetwork.mobfox,
+      await _channel.invokeMethod<bool>('isMobFoxRewardedVideoLoaded') ?? false,
+    );
+    _updateNativeAvailability(
       _RewardedNetwork.gravite,
       await _channel.invokeMethod<bool>('isGraviteRewardedVideoLoaded') ?? false,
     );
@@ -340,6 +354,23 @@ class RewardedAdService {
 
   Future<void> _handleNativeMethodCall(MethodCall call) async {
     switch (call.method) {
+      case 'onMobFoxRewardedVideoLoaded':
+        _updateNativeAvailability(_RewardedNetwork.mobfox, true);
+        break;
+      case 'onMobFoxRewardedVideoShown':
+        _updateNativeAvailability(_RewardedNetwork.mobfox, false);
+        break;
+      case 'onMobFoxRewardedVideoCompleted':
+        await _grantNativeReward();
+        break;
+      case 'onMobFoxRewardedVideoClosed':
+        _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
+        break;
+      case 'onMobFoxRewardedVideoError':
+        _updateNativeAvailability(_RewardedNetwork.mobfox, false);
+        _nativeStatusCallback?.call(adUnavailableMessage);
+        _completeNativeRewardedFlow(false, reloadNextAd: true);
+        break;
       case 'onGraviteRewardedVideoLoaded':
         _updateNativeAvailability(_RewardedNetwork.gravite, true);
         break;
@@ -492,6 +523,9 @@ class RewardedAdService {
 
   Future<void> _reloadNativeRewardedNetwork(_RewardedNetwork? network) async {
     switch (network) {
+      case _RewardedNetwork.mobfox:
+        await _invokeVoidMethod('preloadMobFoxRewardedVideo');
+        return;
       case _RewardedNetwork.gravite:
         await _invokeVoidMethod('preloadGraviteRewardedVideo');
         return;
@@ -534,6 +568,7 @@ class RewardedAdService {
 
   String _labelForNetwork(_RewardedNetwork network) {
     return switch (network) {
+      _RewardedNetwork.mobfox => 'MobFox',
       _RewardedNetwork.gravite => 'Gravite',
       _RewardedNetwork.liftoff => 'Liftoff',
       _RewardedNetwork.admob => 'AdMob',
@@ -546,6 +581,7 @@ class RewardedAdService {
 
   String? _showMethodForNetwork(_RewardedNetwork network) {
     return switch (network) {
+      _RewardedNetwork.mobfox => 'showMobFoxRewardedVideo',
       _RewardedNetwork.gravite => 'showGraviteRewardedVideo',
       _RewardedNetwork.liftoff => 'showLiftoffRewardedVideo',
       _RewardedNetwork.appodeal => 'showRewardedVideo',
