@@ -26,6 +26,7 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
+    _RewardedNetwork.admob,
     _RewardedNetwork.startio,
     _RewardedNetwork.liftoff,
     _RewardedNetwork.gravite,
