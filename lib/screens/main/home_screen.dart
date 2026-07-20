@@ -586,40 +586,59 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
-      final completed =
-          (isGraviteBreak ||
-                  isStartioBreak ||
-                  isAdmobBreak ||
-                  isAppodealBreak ||
-                  isMetaBreak ||
-                  isLiftoffBreak)
-          ? await _earningsService.showRewardedBonusAd(
-              provider: isStartioBreak
-                  ? RewardedAdProvider.startio
-                  : isGraviteBreak
-                  ? RewardedAdProvider.gravite
-                  : isAdmobBreak
-                      ? RewardedAdProvider.admob
-                      : isAppodealBreak
-                          ? RewardedAdProvider.appodeal
-                          : isMetaBreak
-                              ? RewardedAdProvider.meta
-                              : RewardedAdProvider.liftoff,
-              onAdStatus: (message) {
-                debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+      final isRewardedTurn =
+          isGraviteBreak ||
+          isStartioBreak ||
+          isAdmobBreak ||
+          isAppodealBreak ||
+          isMetaBreak ||
+          isLiftoffBreak;
+      final shouldFallbackToMonetag =
+          isAdmobBreak || isAppodealBreak || isLiftoffBreak;
+      var completed = false;
+      if (isRewardedTurn) {
+        completed = await _earningsService.showRewardedBonusAd(
+          provider: isStartioBreak
+              ? RewardedAdProvider.startio
+              : isGraviteBreak
+              ? RewardedAdProvider.gravite
+              : isAdmobBreak
+                  ? RewardedAdProvider.admob
+                  : isAppodealBreak
+                      ? RewardedAdProvider.appodeal
+                      : isMetaBreak
+                          ? RewardedAdProvider.meta
+                          : RewardedAdProvider.liftoff,
+          onAdStatus: (message) {
+            debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+          },
+        );
+        if (!completed && shouldFallbackToMonetag) {
+          completed = await _videomoneyAdSdk.showInterstitial(
+            context: context,
+            callbacks: VideomoneyAdCallbacks(
+              onFailed: (provider, reason) {
+                debugPrint(
+                  '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
+                  '$reason',
+                );
               },
-            )
-          : await _videomoneyAdSdk.showInterstitial(
-              context: context,
-              callbacks: VideomoneyAdCallbacks(
-                onFailed: (provider, reason) {
-                  debugPrint(
-                    '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
-                    '$reason',
-                  );
-                },
-              ),
-            );
+            ),
+          );
+        }
+      } else {
+        completed = await _videomoneyAdSdk.showInterstitial(
+          context: context,
+          callbacks: VideomoneyAdCallbacks(
+            onFailed: (provider, reason) {
+              debugPrint(
+                '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
+                '$reason',
+              );
+            },
+          ),
+        );
+      }
       if (completed) {
         await _firestoreService.applyUserProgress(
           uid: user.uid,
@@ -641,17 +660,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(
               isGraviteBreak
-                  ? 'No Gravite rewarded ad available for this turn.'
+                  ? 'No Gravite or Liftoff rewarded ad available for this turn.'
                   : isStartioBreak
                   ? 'No Start.io or Liftoff rewarded ad available for this turn.'
                   : isAdmobBreak
-                  ? 'No AdMob rewarded ad available for this turn.'
+                  ? 'No AdMob or Monetag ad available for this turn.'
                   : isAppodealBreak
-                  ? 'No Appodeal rewarded ad available for this turn.'
+                  ? 'No Appodeal or Monetag ad available for this turn.'
                   : isMetaBreak
                       ? 'No Meta rewarded ad available for this turn.'
                   : isLiftoffBreak
-                      ? 'No Liftoff rewarded ad available for this turn.'
+                      ? 'No Liftoff or Monetag ad available for this turn.'
                   : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),

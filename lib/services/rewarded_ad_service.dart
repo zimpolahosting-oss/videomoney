@@ -224,20 +224,16 @@ class RewardedAdService {
   }) async {
     await _refreshNativeRewardedAvailability();
     if (preferredProvider == RewardedAdProvider.gravite) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
-      return _isRewardedReady(_RewardedNetwork.gravite)
-          ? _RewardedNetwork.gravite
-          : null;
+      return _selectReadyWithFallback(
+        primary: _RewardedNetwork.gravite,
+        fallback: _RewardedNetwork.liftoff,
+      );
     }
     if (preferredProvider == RewardedAdProvider.startio) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.startio);
-      if (_isRewardedReady(_RewardedNetwork.startio)) {
-        return _RewardedNetwork.startio;
-      }
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.liftoff);
-      return _isRewardedReady(_RewardedNetwork.liftoff)
-          ? _RewardedNetwork.liftoff
-          : null;
+      return _selectReadyWithFallback(
+        primary: _RewardedNetwork.startio,
+        fallback: _RewardedNetwork.liftoff,
+      );
     }
     if (preferredProvider == RewardedAdProvider.admob) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
@@ -277,6 +273,21 @@ class RewardedAdService {
       return _RewardedNetwork.admob;
     }
     return null;
+  }
+
+  Future<_RewardedNetwork?> _selectReadyWithFallback({
+    required _RewardedNetwork primary,
+    _RewardedNetwork? fallback,
+  }) async {
+    await _givePreferredNetworkOneMoreChance(primary);
+    if (_isRewardedReady(primary)) {
+      return primary;
+    }
+    if (fallback == null) {
+      return null;
+    }
+    await _givePreferredNetworkOneMoreChance(fallback);
+    return _isRewardedReady(fallback) ? fallback : null;
   }
 
   Future<void> _givePreferredNetworkOneMoreChance(
