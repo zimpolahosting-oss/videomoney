@@ -2,6 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+class ShortsAdBreakDebugController {
+  void Function(String status)? _setStatus;
+  void Function(String message)? _addStep;
+
+  void setStatus(String status) {
+    _setStatus?.call(status);
+  }
+
+  void addStep(String message) {
+    _addStep?.call(message);
+  }
+}
+
 class ShortsAdBreakScreen extends StatefulWidget {
   const ShortsAdBreakScreen({
     super.key,
@@ -14,7 +27,11 @@ class ShortsAdBreakScreen extends StatefulWidget {
 
   final String providerName;
   final Future<void> Function() onPrepare;
-  final Future<bool> Function(BuildContext context) onStartAd;
+  final Future<bool> Function(
+    BuildContext context,
+    ShortsAdBreakDebugController debug,
+  )
+  onStartAd;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
 
@@ -30,12 +47,17 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
   bool _didAttemptAd = false;
   bool _allowClose = false;
   String _statusText = 'Preparing your next ad break...';
+  final List<String> _debugSteps = <String>[];
+  late final ShortsAdBreakDebugController _debugController;
 
   @override
   void initState() {
     super.initState();
     _openedAt = DateTime.now();
     _secondsUntilAd = widget.adStartDelay.inSeconds;
+    _debugController = ShortsAdBreakDebugController()
+      .._setStatus = _handleExternalStatus
+      .._addStep = _handleExternalStep;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_runFlow());
     });
@@ -53,12 +75,17 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
 
   @override
   void dispose() {
+    _debugController
+      .._setStatus = null
+      .._addStep = null;
     _countdownTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _runFlow() async {
+    _handleExternalStep('Preparing ad break');
     await widget.onPrepare();
+    _handleExternalStep('Playback paused');
     final remainingDelay = widget.adStartDelay - DateTime.now().difference(_openedAt);
     if (remainingDelay > Duration.zero) {
       await Future<void>.delayed(remainingDelay);
@@ -69,7 +96,11 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
       _isStartingAd = true;
       _statusText = 'Starting ${widget.providerName}...';
     });
-    final completed = await widget.onStartAd(context);
+    _handleExternalStep('Trying ${widget.providerName}');
+    final completed = await widget.onStartAd(context, _debugController);
+    _handleExternalStep(
+      completed ? '${widget.providerName} flow finished' : 'Ad flow returned without success',
+    );
     final remainingMinimum =
         widget.minimumVisibleDuration - DateTime.now().difference(_openedAt);
     if (remainingMinimum > Duration.zero) {
@@ -78,6 +109,26 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     if (!mounted) return;
     _allowClose = true;
     Navigator.of(context).pop(completed);
+  }
+
+  void _handleExternalStatus(String status) {
+    if (!mounted) return;
+    setState(() {
+      _statusText = status;
+    });
+  }
+
+  void _handleExternalStep(String message) {
+    if (!mounted) return;
+    setState(() {
+      if (_debugSteps.isNotEmpty && _debugSteps.last == message) {
+        return;
+      }
+      _debugSteps.add(message);
+      if (_debugSteps.length > 6) {
+        _debugSteps.removeAt(0);
+      }
+    });
   }
 
   @override
@@ -148,6 +199,42 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      if (_debugSteps.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Live debug',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              for (final step in _debugSteps)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    '• $step',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: Colors.white70,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (_isStartingAd) ...[
                         const SizedBox(height: 18),
                         const CircularProgressIndicator(color: Color(0xFF5BD0A5)),

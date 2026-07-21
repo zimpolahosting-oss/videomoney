@@ -617,8 +617,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (pageContext) => ShortsAdBreakScreen(
                 providerName: _providerLabelForAdBreak(pendingProvider),
                 onPrepare: _pausePlayback,
-                onStartAd: (_) async {
+                onStartAd: (_, debug) async {
                   if (isRewardedTurn) {
+                    debug.setStatus('Trying ${_providerLabelForAdBreak(pendingProvider)}...');
+                    debug.addStep(
+                      'Trying ${_providerLabelForAdBreak(pendingProvider)} rewarded ad',
+                    );
                     var rewardedCompleted =
                         await _earningsService.showRewardedBonusAd(
                           provider: isMetaBreak
@@ -630,13 +634,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       : RewardedAdProvider.liftoff,
                           onAdStatus: (message) {
                             debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+                            debug.setStatus(message);
+                            debug.addStep(message);
                           },
                         );
+                    if (rewardedCompleted) {
+                      debug.setStatus(
+                        '${_providerLabelForAdBreak(pendingProvider)} ad completed',
+                      );
+                      debug.addStep(
+                        '${_providerLabelForAdBreak(pendingProvider)} completed',
+                      );
+                    }
                     if (!rewardedCompleted && shouldFallbackToMonetag) {
+                      debug.setStatus('Falling back to Monetag...');
+                      debug.addStep('Primary failed, trying Monetag');
                       rewardedCompleted = await _videomoneyAdSdk.showInterstitial(
                         context: pageContext,
                         callbacks: VideomoneyAdCallbacks(
+                          onLoaded: (provider) {
+                            debug.setStatus('${provider.name} loaded');
+                            debug.addStep('${provider.name} loaded');
+                          },
+                          onShown: (provider) {
+                            debug.setStatus('${provider.name} shown');
+                            debug.addStep('${provider.name} shown');
+                          },
+                          onClosed: (provider) {
+                            debug.addStep('${provider.name} closed');
+                          },
                           onFailed: (provider, reason) {
+                            debug.setStatus('${provider.name} failed');
+                            debug.addStep('${provider.name} failed: $reason');
                             debugPrint(
                               '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
                               '$reason',
@@ -644,13 +673,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           },
                         ),
                       );
+                      if (rewardedCompleted) {
+                        debug.setStatus('Monetag completed');
+                        debug.addStep('Fallback completed');
+                      }
                     }
                     return rewardedCompleted;
                   }
+                  debug.setStatus('Trying ${_providerLabelForAdBreak(pendingProvider)}...');
+                  debug.addStep(
+                    'Trying ${_providerLabelForAdBreak(pendingProvider)} interstitial',
+                  );
                   return _videomoneyAdSdk.showInterstitial(
                     context: pageContext,
                     callbacks: VideomoneyAdCallbacks(
+                      onLoaded: (provider) {
+                        debug.setStatus('${provider.name} loaded');
+                        debug.addStep('${provider.name} loaded');
+                      },
+                      onShown: (provider) {
+                        debug.setStatus('${provider.name} shown');
+                        debug.addStep('${provider.name} shown');
+                      },
+                      onClosed: (provider) {
+                        debug.addStep('${provider.name} closed');
+                      },
                       onFailed: (provider, reason) {
+                        debug.setStatus('${provider.name} failed');
+                        debug.addStep('${provider.name} failed: $reason');
                         debugPrint(
                           '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
                           '$reason',
