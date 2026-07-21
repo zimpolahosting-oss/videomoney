@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerMeta;
+  String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _playerStateCode = -1;
@@ -597,19 +597,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
     try {
       final pendingProvider = _pendingAdBreakProvider;
-      final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
       final isRewardedTurn =
-          isMetaBreak ||
           isAdmobBreak ||
           isAppodealBreak ||
           isLiftoffBreak;
       final shouldFallbackToMonetag =
-          isMetaBreak || isAdmobBreak || isAppodealBreak || isLiftoffBreak;
+          isAdmobBreak || isAppodealBreak || isLiftoffBreak;
       final completed =
           await Navigator.of(context).push<bool>(
             MaterialPageRoute<bool>(
@@ -625,9 +623,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     );
                     var rewardedCompleted =
                         await _earningsService.showRewardedBonusAd(
-                          provider: isMetaBreak
-                                  ? RewardedAdProvider.meta
-                                  : isAdmobBreak
+                          provider: isAdmobBreak
                                   ? RewardedAdProvider.admob
                                   : isAppodealBreak
                                       ? RewardedAdProvider.appodeal
@@ -733,9 +729,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isMetaBreak
-                  ? 'No Meta or Monetag ad available for this turn.'
-                  : isAdmobBreak
+              isAdmobBreak
                   ? 'No AdMob or Monetag ad available for this turn.'
                   : isAppodealBreak
                   ? 'No Appodeal or Monetag ad available for this turn.'
@@ -769,7 +763,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   String _providerLabelForAdBreak(String provider) {
     return switch (provider) {
-      ShortsProgressService.providerMeta => 'Meta',
       ShortsProgressService.providerAdmob => 'AdMob',
       ShortsProgressService.providerLiftoff => 'Liftoff',
       ShortsProgressService.providerAppodeal => 'Appodeal',

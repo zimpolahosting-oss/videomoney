@@ -22,12 +22,6 @@ import com.facebook.ads.InterstitialAd
 import com.facebook.ads.InterstitialAdListener
 import com.facebook.ads.RewardedInterstitialAd
 import com.facebook.ads.RewardedInterstitialAdListener
-import com.startapp.sdk.adsbase.Ad as StartioAd
-import com.startapp.sdk.adsbase.StartAppAd
-import com.startapp.sdk.adsbase.StartAppAd.AdMode
-import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
-import com.startapp.sdk.adsbase.adlisteners.AdEventListener
-import com.startapp.sdk.adsbase.adlisteners.VideoListener
 import com.vungle.ads.AdConfig
 import com.vungle.ads.BaseAd
 import com.vungle.ads.InitializationListener
@@ -46,19 +40,14 @@ class MainActivity : FlutterActivity() {
     private var metaRewardedInterstitialAd: RewardedInterstitialAd? = null
     private var metaInterstitialAd: InterstitialAd? = null
     private var metaBannerAdView: AdView? = null
-    private var startioRewardedAd: StartAppAd? = null
-    private var startioInterstitialAd: StartAppAd? = null
     private var liftoffInitialized = false
     private var liftoffInitStarted = false
     private var liftoffRewardedLoaded = false
     private var mobFoxRewardedLoaded = false
-    private var startioRewardedLoaded = false
-    private var startioInterstitialLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         GraviteAatkitManager.setEventListener(::emitEvent)
-        initializeMetaAudienceNetwork()
         initializeLiftoffIfNeeded()
         configureRewardedVideoCallbacks()
         initializeAppnextIfNeeded()
@@ -195,27 +184,6 @@ class MainActivity : FlutterActivity() {
                         }
                     }
 
-                    "preloadStartioRewardedVideo" -> {
-                        preloadStartioRewardedVideo()
-                        result.success(null)
-                    }
-
-                    "isStartioRewardedVideoLoaded" -> {
-                        result.success(startioRewardedLoaded)
-                    }
-
-                    "showStartioRewardedVideo" -> {
-                        val rewardedAd = startioRewardedAd
-                        if (rewardedAd != null && startioRewardedLoaded) {
-                            startioRewardedLoaded = false
-                            rewardedAd.showAd(createStartioRewardedDisplayListener())
-                            result.success(true)
-                        } else {
-                            preloadStartioRewardedVideo()
-                            result.success(false)
-                        }
-                    }
-
                     "isAppnextRewardedVideoLoaded" -> {
                         result.success(appnextRewardedVideo?.isAdLoaded == true)
                     }
@@ -259,8 +227,6 @@ class MainActivity : FlutterActivity() {
         metaBannerAdView?.destroy()
         metaBannerAdView = null
         MobFoxRewardedManager.clear()
-        startioRewardedAd = null
-        startioInterstitialAd = null
         super.onDestroy()
     }
 
@@ -498,11 +464,6 @@ class MainActivity : FlutterActivity() {
         preloadMetaBanner()
     }
 
-    private fun initializeStartioIfNeeded() {
-        preloadStartioRewardedVideo()
-        preloadStartioInterstitial()
-    }
-
     private fun preloadMetaRewardedInterstitial() {
         val placementId = BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID
         if (placementId.isBlank()) {
@@ -635,74 +596,6 @@ class MainActivity : FlutterActivity() {
                     })
                     .build(),
             )
-        }
-    }
-
-    private fun preloadStartioRewardedVideo() {
-        startioRewardedLoaded = false
-        startioRewardedAd = StartAppAd(this).apply {
-            setVideoListener(object : VideoListener {
-                override fun onVideoCompleted() {
-                    emitEvent("onStartioRewardedVideoCompleted")
-                    Log.d(LOG_TAG, "[rewarded][startio] completed.")
-                }
-            })
-            loadAd(
-                AdMode.REWARDED_VIDEO,
-                object : AdEventListener {
-                    override fun onReceiveAd(ad: StartioAd) {
-                        startioRewardedLoaded = true
-                        emitEvent("onStartioRewardedVideoLoaded")
-                        Log.d(LOG_TAG, "[rewarded][startio] loaded.")
-                    }
-
-                    override fun onFailedToReceiveAd(ad: StartioAd?) {
-                        startioRewardedLoaded = false
-                        emitEvent("onStartioRewardedVideoError")
-                        Log.w(LOG_TAG, "[rewarded][startio] failed to load.")
-                    }
-                },
-            )
-        }
-    }
-
-    private fun preloadStartioInterstitial() {
-        startioInterstitialLoaded = false
-        startioInterstitialAd = StartAppAd(this).apply {
-            loadAd(object : AdEventListener {
-                override fun onReceiveAd(ad: StartioAd) {
-                    startioInterstitialLoaded = true
-                    Log.d(LOG_TAG, "[interstitial][startio] loaded.")
-                }
-
-                override fun onFailedToReceiveAd(ad: StartioAd?) {
-                    startioInterstitialLoaded = false
-                    Log.w(LOG_TAG, "[interstitial][startio] failed to load.")
-                }
-            })
-        }
-    }
-
-    private fun createStartioRewardedDisplayListener(): AdDisplayListener {
-        return object : AdDisplayListener {
-            override fun adHidden(ad: StartioAd) {
-                emitEvent("onStartioRewardedVideoClosed")
-                Log.d(LOG_TAG, "[rewarded][startio] closed.")
-                preloadStartioRewardedVideo()
-            }
-
-            override fun adDisplayed(ad: StartioAd) {
-                emitEvent("onStartioRewardedVideoShown")
-                Log.d(LOG_TAG, "[rewarded][startio] shown.")
-            }
-
-            override fun adClicked(ad: StartioAd) = Unit
-
-            override fun adNotDisplayed(ad: StartioAd) {
-                emitEvent("onStartioRewardedVideoError")
-                Log.w(LOG_TAG, "[rewarded][startio] failed to show.")
-                preloadStartioRewardedVideo()
-            }
         }
     }
 

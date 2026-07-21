@@ -28,7 +28,7 @@ class ShortsProgressSnapshot {
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
-    nextAdBreakProvider: ShortsProgressService.providerMeta,
+    nextAdBreakProvider: ShortsProgressService.providerAdmob,
     pendingAdBreakAttempted: false,
   );
 
@@ -216,27 +216,25 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerMeta => providerAdmob,
       providerAdmob => providerLiftoff,
       providerLiftoff => providerMonetag,
       providerMonetag => providerAppodeal,
-      providerAppodeal => providerMeta,
-      _ => providerMeta,
+      providerAppodeal => providerAdmob,
+      _ => providerAdmob,
     };
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
     final value = (provider ?? '').trim();
     if (value.isEmpty) {
-      return allowEmpty ? '' : providerMeta;
+      return allowEmpty ? '' : providerAdmob;
     }
-    if (value == providerMeta ||
-        value == providerAdmob ||
+    if (value == providerAdmob ||
         value == providerAppodeal ||
         value == providerLiftoff ||
         value == providerMonetag) {
       return value;
     }
-    return providerMeta;
+    return providerAdmob;
   }
 }

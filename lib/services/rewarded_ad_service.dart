@@ -26,7 +26,6 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.meta,
     _RewardedNetwork.admob,
     _RewardedNetwork.liftoff,
     _RewardedNetwork.appodeal,
@@ -239,12 +238,6 @@ class RewardedAdService {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.appodeal);
       return _isRewardedReady(_RewardedNetwork.appodeal)
           ? _RewardedNetwork.appodeal
-          : null;
-    }
-    if (preferredProvider == RewardedAdProvider.meta) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.meta);
-      return _isRewardedReady(_RewardedNetwork.meta)
-          ? _RewardedNetwork.meta
           : null;
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {

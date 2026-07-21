@@ -157,6 +157,5 @@ dependencies {
     implementation "com.appodeal.ads.sdk:core:4.2.0"
     implementation "com.appodeal.ads.sdk.adapters:admob:24.7.0.0"
     implementation "com.appodeal.ads.sdk.adapters:iab:1.8.1.0"
-    implementation "com.startapp:inapp-sdk:5.3.1"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
 }
