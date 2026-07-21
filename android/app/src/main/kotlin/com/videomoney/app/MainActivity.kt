@@ -58,6 +58,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         GraviteAatkitManager.setEventListener(::emitEvent)
+        initializeMetaAudienceNetwork()
         initializeLiftoffIfNeeded()
         configureRewardedVideoCallbacks()
         initializeAppnextIfNeeded()
