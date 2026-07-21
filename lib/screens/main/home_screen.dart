@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Timer? _watchTimer;
   Timer? _playlistRefreshTimer;
+  Timer? _adBreakPauseEnforcer;
   List<ShortVideoItem> _feed = const [];
   int _currentIndex = 0;
   int _cycleCompletedShorts = 0;
@@ -214,6 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
+    _adBreakPauseEnforcer?.cancel();
     super.dispose();
   }
 
@@ -221,7 +223,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        unawaited(_resumePlaybackIfNeeded());
+        if (_isShowingAdBreak) {
+          unawaited(_pausePlayback());
+        } else {
+          unawaited(_resumePlaybackIfNeeded());
+        }
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -583,6 +589,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isShowingAdBreak = true;
     _blockPlaybackResume(const Duration(minutes: 2));
+    _adBreakPauseEnforcer?.cancel();
+    _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
+      if (!_isShowingAdBreak) return;
+      unawaited(_pausePlayback());
+    });
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
     try {
       final pendingProvider = _pendingAdBreakProvider;
@@ -706,6 +717,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
     } finally {
+      _adBreakPauseEnforcer?.cancel();
+      _adBreakPauseEnforcer = null;
       _blockPlaybackResume();
       _isShowingAdBreak = false;
       if (_resumeAfterOverlay) {

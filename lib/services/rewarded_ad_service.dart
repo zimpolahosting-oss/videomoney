@@ -53,6 +53,8 @@ class RewardedAdService {
   bool _isNativeRewardEarned = false;
   bool _methodHandlerRegistered = false;
   int _lastServedRewardedIndex = -1;
+  Timer? _nativeFlowTimeout;
+  bool _activeNativeNetworkShown = false;
 
   bool get isAdReady => _rewardedAd != null;
 
@@ -210,7 +212,9 @@ class RewardedAdService {
     _nativeStatusCallback = onAdStatus;
     _activeNativeNetwork = network;
     _isNativeRewardEarned = false;
+    _activeNativeNetworkShown = false;
     _isShowing = true;
+    _armNativeFlowTimeout(network, beforeShow: true);
 
     final shown = await _channel.invokeMethod<bool>(showMethod) ?? false;
     if (!shown) {
@@ -358,6 +362,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.mobfox, true);
         break;
       case 'onMobFoxRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.mobfox);
         _updateNativeAvailability(_RewardedNetwork.mobfox, false);
         break;
       case 'onMobFoxRewardedVideoCompleted':
@@ -375,6 +380,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.gravite, true);
         break;
       case 'onGraviteRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.gravite);
         _updateNativeAvailability(_RewardedNetwork.gravite, false);
         break;
       case 'onGraviteRewardedVideoCompleted':
@@ -392,6 +398,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.liftoff, true);
         break;
       case 'onLiftoffRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.liftoff);
         _updateNativeAvailability(_RewardedNetwork.liftoff, false);
         break;
       case 'onLiftoffRewardedVideoImpression':
@@ -418,6 +425,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.appodeal, false);
         break;
       case 'onRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.appodeal);
         _updateNativeAvailability(_RewardedNetwork.appodeal, false);
         break;
       case 'onRewardedVideoFinished':
@@ -434,6 +442,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.appnext, true);
         break;
       case 'onAppnextRewardedVideoOpened':
+        _markNativeAdShown(_RewardedNetwork.appnext);
         _updateNativeAvailability(_RewardedNetwork.appnext, false);
         break;
       case 'onAppnextRewardedVideoEnded':
@@ -450,6 +459,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.meta, true);
         break;
       case 'onMetaRewardedInterstitialShown':
+        _markNativeAdShown(_RewardedNetwork.meta);
         _updateNativeAvailability(_RewardedNetwork.meta, false);
         break;
       case 'onMetaRewardedInterstitialClicked':
@@ -469,6 +479,7 @@ class RewardedAdService {
         _updateNativeAvailability(_RewardedNetwork.startio, true);
         break;
       case 'onStartioRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.startio);
         _updateNativeAvailability(_RewardedNetwork.startio, false);
         break;
       case 'onStartioRewardedVideoCompleted':
@@ -502,6 +513,8 @@ class RewardedAdService {
     bool rewardGranted, {
     required bool reloadNextAd,
   }) {
+    _nativeFlowTimeout?.cancel();
+    _nativeFlowTimeout = null;
     _isShowing = false;
 
     final completer = _nativeShowCompleter;
@@ -515,10 +528,34 @@ class RewardedAdService {
     _nativeStatusCallback = null;
     _activeNativeNetwork = null;
     _isNativeRewardEarned = false;
+    _activeNativeNetworkShown = false;
 
     if (reloadNextAd) {
       unawaited(_reloadNativeRewardedNetwork(network));
     }
+  }
+
+  void _markNativeAdShown(_RewardedNetwork network) {
+    if (_activeNativeNetwork != network) return;
+    _activeNativeNetworkShown = true;
+    _armNativeFlowTimeout(network, beforeShow: false);
+  }
+
+  void _armNativeFlowTimeout(
+    _RewardedNetwork network, {
+    required bool beforeShow,
+  }) {
+    _nativeFlowTimeout?.cancel();
+    final timeout = beforeShow
+        ? const Duration(seconds: 12)
+        : network == _RewardedNetwork.appodeal
+        ? const Duration(seconds: 75)
+        : const Duration(seconds: 60);
+    _nativeFlowTimeout = Timer(timeout, () {
+      if (_activeNativeNetwork != network) return;
+      _nativeStatusCallback?.call(adUnavailableMessage);
+      _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
+    });
   }
 
   Future<void> _reloadNativeRewardedNetwork(_RewardedNetwork? network) async {
