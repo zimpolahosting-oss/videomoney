@@ -452,7 +452,24 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onMetaRewardedInterstitialError':
-        _nativeStatusCallback?.call(adUnavailableMessage);
+        final error = call.arguments is Map
+            ? (call.arguments as Map)['error']?.toString()
+            : null;
+        final code = call.arguments is Map
+            ? (call.arguments as Map)['code']?.toString()
+            : null;
+        final details = [
+          if (code != null && code.isNotEmpty) 'code=$code',
+          if (error != null && error.isNotEmpty) error,
+        ].join(' | ');
+        _nativeStatusCallback?.call(
+          details.isEmpty ? adUnavailableMessage : 'Meta failed: $details',
+        );
+        debugPrint(
+          details.isEmpty
+              ? '[Ads][rewarded] Meta error.'
+              : '[Ads][rewarded] Meta error: $details',
+        );
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
       case 'onStartioRewardedVideoLoaded':

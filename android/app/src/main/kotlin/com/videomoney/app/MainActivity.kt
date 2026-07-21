@@ -167,9 +167,29 @@ class MainActivity : FlutterActivity() {
                         val canShow = rewardedInterstitialAd?.isAdLoaded == true &&
                             rewardedInterstitialAd.isAdInvalidated != true
                         if (canShow) {
+                            Log.d(
+                                LOG_TAG,
+                                "[rewarded][meta] show requested placement=" +
+                                    "${BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID} " +
+                                    "loaded=${rewardedInterstitialAd?.isAdLoaded} " +
+                                    "invalidated=${rewardedInterstitialAd?.isAdInvalidated}",
+                            )
                             rewardedInterstitialAd?.show()
                             result.success(true)
                         } else {
+                            val loaded = rewardedInterstitialAd?.isAdLoaded == true
+                            val invalidated = rewardedInterstitialAd?.isAdInvalidated == true
+                            val message =
+                                "Meta show blocked: loaded=$loaded invalidated=$invalidated " +
+                                    "placement=${BuildConfig.META_REWARDED_INTERSTITIAL_PLACEMENT_ID}"
+                            Log.w(LOG_TAG, "[rewarded][meta] $message")
+                            emitEvent(
+                                "onMetaRewardedInterstitialError",
+                                mapOf(
+                                    "error" to message,
+                                    "code" to -1,
+                                ),
+                            )
                             preloadMetaRewardedInterstitial()
                             result.success(false)
                         }
@@ -490,7 +510,11 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        Log.d(LOG_TAG, "[rewarded][meta] requesting rewarded interstitial for placement $placementId")
+        Log.d(
+            LOG_TAG,
+            "[rewarded][meta] requesting rewarded interstitial for placement $placementId " +
+                "appId=${BuildConfig.META_APP_ID}",
+        )
         metaRewardedInterstitialAd?.destroy()
         metaRewardedInterstitialAd = RewardedInterstitialAd(this, placementId).apply {
             loadAd(
@@ -499,7 +523,11 @@ class MainActivity : FlutterActivity() {
                         override fun onError(ad: Ad?, adError: AdError) {
                             emitEvent(
                                 "onMetaRewardedInterstitialError",
-                                mapOf("error" to adError.errorMessage),
+                                mapOf(
+                                    "error" to adError.errorMessage,
+                                    "code" to adError.errorCode,
+                                    "placementId" to placementId,
+                                ),
                             )
                             Log.w(
                                 LOG_TAG,
