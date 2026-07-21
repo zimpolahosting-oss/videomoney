@@ -44,15 +44,11 @@ class _EarnScreenState extends State<EarnScreen> {
             builder: (pageContext) => ShortsAdBreakScreen(
               providerName: 'Rewarded ad',
               onPrepare: () async {},
-              onStartAd: (_, debug) {
-                debug.setStatus('Trying rewarded ad...');
-                debug.addStep('Trying rewarded ad');
+              onStartAd: (_) {
                 return _earningsService.watchRewardedVideo(
                   uid: user.uid,
                   onAdStatus: (message) {
                     lastStatusMessage = message;
-                    debug.setStatus(message);
-                    debug.addStep(message);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(message)),
