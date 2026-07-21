@@ -1,7 +1,7 @@
 name: video_money
 description: Video&Money Flutter app with Firebase Auth, Firestore and rewarded ads.
 publish_to: "none"
-version: 1.0.1+27
+version: 1.0.1+28
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
