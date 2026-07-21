@@ -26,11 +26,8 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
-    _RewardedNetwork.mobfox,
-    _RewardedNetwork.liftoff,
     _RewardedNetwork.admob,
-    _RewardedNetwork.startio,
-    _RewardedNetwork.gravite,
+    _RewardedNetwork.liftoff,
     _RewardedNetwork.appodeal,
   ];
 
@@ -231,24 +228,6 @@ class RewardedAdService {
     required RewardedAdProvider preferredProvider,
   }) async {
     await _refreshNativeRewardedAvailability();
-    if (preferredProvider == RewardedAdProvider.mobfox) {
-      return _selectReadyWithFallback(
-        primary: _RewardedNetwork.mobfox,
-        fallback: _RewardedNetwork.liftoff,
-      );
-    }
-    if (preferredProvider == RewardedAdProvider.gravite) {
-      return _selectReadyWithFallback(
-        primary: _RewardedNetwork.gravite,
-        fallback: _RewardedNetwork.liftoff,
-      );
-    }
-    if (preferredProvider == RewardedAdProvider.startio) {
-      return _selectReadyWithFallback(
-        primary: _RewardedNetwork.startio,
-        fallback: _RewardedNetwork.liftoff,
-      );
-    }
     if (preferredProvider == RewardedAdProvider.admob) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
       return _isRewardedReady(_RewardedNetwork.admob)

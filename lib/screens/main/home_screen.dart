@@ -597,22 +597,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
     try {
       final pendingProvider = _pendingAdBreakProvider;
-      final isStartioBreak =
-          pendingProvider == ShortsProgressService.providerStartio;
-      final isGraviteBreak =
-          pendingProvider == ShortsProgressService.providerGravite;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
-      final isMetaBreak = pendingProvider == ShortsProgressService.providerMeta;
       final isLiftoffBreak =
           pendingProvider == ShortsProgressService.providerLiftoff;
       final isRewardedTurn =
-          isGraviteBreak ||
-          isStartioBreak ||
           isAdmobBreak ||
           isAppodealBreak ||
-          isMetaBreak ||
           isLiftoffBreak;
       final shouldFallbackToMonetag =
           isAdmobBreak || isAppodealBreak || isLiftoffBreak;
@@ -627,17 +619,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   if (isRewardedTurn) {
                     var rewardedCompleted =
                         await _earningsService.showRewardedBonusAd(
-                          provider: isStartioBreak
-                              ? RewardedAdProvider.startio
-                              : isGraviteBreak
-                              ? RewardedAdProvider.gravite
-                              : isAdmobBreak
+                          provider: isAdmobBreak
                                   ? RewardedAdProvider.admob
                                   : isAppodealBreak
                                       ? RewardedAdProvider.appodeal
-                                      : isMetaBreak
-                                          ? RewardedAdProvider.meta
-                                          : RewardedAdProvider.liftoff,
+                                      : RewardedAdProvider.liftoff,
                           onAdStatus: (message) {
                             debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                           },
@@ -693,16 +679,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isGraviteBreak
-                  ? 'No Gravite or Liftoff rewarded ad available for this turn.'
-                  : isStartioBreak
-                  ? 'No Start.io or Liftoff rewarded ad available for this turn.'
-                  : isAdmobBreak
+              isAdmobBreak
                   ? 'No AdMob or Monetag ad available for this turn.'
                   : isAppodealBreak
                   ? 'No Appodeal or Monetag ad available for this turn.'
-                  : isMetaBreak
-                      ? 'No Meta rewarded ad available for this turn.'
                   : isLiftoffBreak
                       ? 'No Liftoff or Monetag ad available for this turn.'
                   : 'No interstitial ad available. Continuing to the next short.',
@@ -734,9 +714,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _providerLabelForAdBreak(String provider) {
     return switch (provider) {
       ShortsProgressService.providerAdmob => 'AdMob',
-      ShortsProgressService.providerStartio => 'Start.io',
       ShortsProgressService.providerLiftoff => 'Liftoff',
-      ShortsProgressService.providerGravite => 'Gravite',
       ShortsProgressService.providerAppodeal => 'Appodeal',
       ShortsProgressService.providerMonetag => 'Monetag',
       _ => 'Ad',
