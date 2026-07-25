@@ -29,6 +29,54 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Validate deploy configuration
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: |
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "Missing secret FIREBASE_PROJECT_ID"
+            exit 1
+          fi
+          if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "Missing credentials file path from auth step"
+            exit 1
+          fi
+
+      - name: Configure gcloud project
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: gcloud config set project "$FIREBASE_PROJECT_ID"
+
+      - name: Show authenticated principal
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: |
+          echo "Firebase project: $FIREBASE_PROJECT_ID"
+          echo "Credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+          echo "Active gcloud account(s):"
+          gcloud auth list
+          echo "Resolved ADC principal:"
+          python3 - <<'PY'
+          import json, os
+          path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+          if not path:
+              raise SystemExit("GOOGLE_APPLICATION_CREDENTIALS not set")
+          with open(path, "r", encoding="utf-8") as fh:
+              data = json.load(fh)
+          print(data.get("client_email", "client_email not found"))
+          PY
+
+      - name: Verify Secret Manager access
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          gcloud secrets versions access latest \
+            --secret="PLAYERS_ARE_GAMERS_API_KEY" \
+            --project="$FIREBASE_PROJECT_ID" > /dev/null
+          echo "Secret Manager access verified for PLAYERS_ARE_GAMERS_API_KEY"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -48,6 +96,7 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
           CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: ${{ steps.auth.outputs.credentials_file_path }}
+          GOOGLE_GHA_CREDS_PATH: ${{ steps.auth.outputs.credentials_file_path }}
           GOOGLE_CLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
           GCLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID"
