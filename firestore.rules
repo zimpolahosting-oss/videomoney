@@ -43,6 +43,11 @@ service cloud.firestore {
         ])
       );
       allow delete: if isAdmin();
+
+      match /integrations/{integrationId} {
+        allow read, create, update: if isOwner(userId) || isAdmin();
+        allow delete: if isAdmin();
+      }
     }
 
     match /payouts/{payoutId} {
