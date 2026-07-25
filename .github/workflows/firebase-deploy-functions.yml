@@ -99,4 +99,4 @@ jobs:
           GOOGLE_GHA_CREDS_PATH: ${{ steps.auth.outputs.credentials_file_path }}
           GOOGLE_CLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
           GCLOUD_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID"
+        run: firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --debug
