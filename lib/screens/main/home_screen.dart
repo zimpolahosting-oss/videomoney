@@ -12,9 +12,11 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
+import '../../models/players_are_gamers_profile.dart';
 import '../../models/short_video_item.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/rewarded_ad_service.dart';
 import '../../services/shorts_progress_service.dart';
@@ -41,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
+  final _playersAreGamersService = PlayersAreGamersService();
   final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
@@ -1041,6 +1044,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   value: payoutProgress,
                                   color: AppTheme.primary,
                                 ),
+                                const SizedBox(height: 8),
+                                _PlayersAreGamersProgressLine(
+                                  stream: _playersAreGamersService.watchProfile(),
+                                ),
                               ],
                             ),
                           ),
@@ -1052,6 +1059,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+class _PlayersAreGamersProgressLine extends StatelessWidget {
+  const _PlayersAreGamersProgressLine({
+    required this.stream,
+  });
+
+  final Stream<PlayersAreGamersProfile?> stream;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PlayersAreGamersProfile?>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final profile = snapshot.data;
+        return _CompactProgressLine(
+          title: 'PlayersAreGamers',
+          valueLabel: '${profile?.coins ?? 0} / 100 coins',
+          value: profile?.starterProgress ?? 0,
+          color: const Color(0xFF6B8BFF),
         );
       },
     );

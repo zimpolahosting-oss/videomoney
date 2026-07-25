@@ -2,11 +2,16 @@ const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {defineSecret} = require("firebase-functions/params");
 
 admin.initializeApp();
 setGlobalOptions({region: "europe-west1"});
 
 const db = admin.firestore();
+const playersAreGamersApiKey = defineSecret("PLAYERS_ARE_GAMERS_API_KEY");
+const PLAYERS_ARE_GAMERS_BASE_URL = "https://playersaregamers.nl/api/integration";
+const PLAYERS_ARE_GAMERS_PUBLIC_URL = "https://playersaregamers.nl";
 
 function uniqueTokens(users) {
   return [...new Set(users.flatMap((user) => user.fcmTokens || []).filter(Boolean))];
@@ -336,3 +341,383 @@ exports.dispatchInboxPush = onDocumentCreated(
 // Presence counter is implemented client-side via Realtime Database `/status`.
 // We intentionally do not use RTDB-triggered functions so the online counter
 // can be used without requiring a billing-enabled (Blaze) plan.
+
+function requireAuth(request) {
+  if (!request.auth || !request.auth.uid) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  return {
+    uid: request.auth.uid,
+    email: String(request.auth.token.email || "").trim(),
+  };
+}
+
+function sanitizeString(value) {
+  return String(value || "").trim();
+}
+
+function normalizePagError(status, payload) {
+  const message = sanitizeString(payload?.message || payload?.error || "PlayersAreGamers request failed.");
+  if (status === 400) {
+    return new HttpsError("invalid-argument", message, payload);
+  }
+  if (status === 401 || status === 403) {
+    return new HttpsError("permission-denied", message, payload);
+  }
+  if (status === 404) {
+    return new HttpsError("not-found", message, payload);
+  }
+  if (status === 409) {
+    return new HttpsError("already-exists", message, payload);
+  }
+  return new HttpsError("internal", message, payload);
+}
+
+async function parseJsonResponse(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {raw: text};
+  }
+}
+
+async function pagRequest(apiKey, path, options = {}) {
+  const response = await fetch(`${PLAYERS_ARE_GAMERS_BASE_URL}${path}`, {
+    method: options.method || "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey,
+      ...(options.headers || {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  const payload = await parseJsonResponse(response);
+  return {response, payload};
+}
+
+async function pagPublicRequest(path, body) {
+  const response = await fetch(`${PLAYERS_ARE_GAMERS_PUBLIC_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonResponse(response);
+  return {response, payload};
+}
+
+exports.pagGetPlayer = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const {response, payload} = await pagRequest(
+      playersAreGamersApiKey.value(),
+      `/player/${encodeURIComponent(uid)}`
+    );
+
+    if (response.status === 404) {
+      return {
+        linked: false,
+        exists: false,
+        player: null,
+      };
+    }
+
+    if (!response.ok) {
+      throw normalizePagError(response.status, payload);
+    }
+
+    return {
+      linked: true,
+      ...payload,
+    };
+  }
+);
+
+exports.pagGetStats = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const {response, payload} = await pagRequest(
+      playersAreGamersApiKey.value(),
+      `/player/${encodeURIComponent(uid)}/stats`
+    );
+
+    if (!response.ok) {
+      throw normalizePagError(response.status, payload);
+    }
+
+    return payload;
+  }
+);
+
+exports.pagLinkAccount = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const username = sanitizeString(request.data?.username);
+    const password = String(request.data?.password || "");
+
+    if (!username || !password) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Username and password are required."
+      );
+    }
+
+    const apiKey = playersAreGamersApiKey.value();
+    const linkResult = await pagRequest(apiKey, "/link-account", {
+      method: "PUT",
+      body: {
+        firebaseUid: uid,
+        username,
+        password,
+      },
+    });
+
+    if (!linkResult.response.ok) {
+      throw normalizePagError(linkResult.response.status, linkResult.payload);
+    }
+
+    const playerResult = await pagRequest(
+      apiKey,
+      `/player/${encodeURIComponent(uid)}`
+    );
+    if (!playerResult.response.ok) {
+      throw normalizePagError(playerResult.response.status, playerResult.payload);
+    }
+
+    const statsResult = await pagRequest(
+      apiKey,
+      `/player/${encodeURIComponent(uid)}/stats`
+    );
+
+    return {
+      linked: true,
+      ...playerResult.payload,
+      stats: statsResult.response.ok ? statsResult.payload : {},
+    };
+  }
+);
+
+exports.pagCreateAndLinkAccount = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid, email} = requireAuth(request);
+    const username = sanitizeString(request.data?.username);
+    const password = String(request.data?.password || "");
+
+    if (!email) {
+      throw new HttpsError(
+        "failed-precondition",
+        "A verified email is required to create a PlayersAreGamers account."
+      );
+    }
+
+    if (!username || username.length < 3) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Choose a username with at least 3 characters."
+      );
+    }
+
+    if (password.length < 6) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Choose a password with at least 6 characters."
+      );
+    }
+
+    const registrationResult = await pagPublicRequest("/api/auth/register", {
+      username,
+      email,
+      password,
+      refCode: "",
+    });
+
+    if (!registrationResult.response.ok) {
+      throw normalizePagError(
+        registrationResult.response.status,
+        registrationResult.payload
+      );
+    }
+
+    const apiKey = playersAreGamersApiKey.value();
+    const linkResult = await pagRequest(apiKey, "/link-account", {
+      method: "PUT",
+      body: {
+        firebaseUid: uid,
+        username,
+        password,
+      },
+    });
+
+    if (!linkResult.response.ok) {
+      throw normalizePagError(linkResult.response.status, linkResult.payload);
+    }
+
+    const playerResult = await pagRequest(
+      apiKey,
+      `/player/${encodeURIComponent(uid)}`
+    );
+    if (!playerResult.response.ok) {
+      throw normalizePagError(playerResult.response.status, playerResult.payload);
+    }
+
+    const statsResult = await pagRequest(
+      apiKey,
+      `/player/${encodeURIComponent(uid)}/stats`
+    );
+
+    return {
+      linked: true,
+      ...playerResult.payload,
+      stats: statsResult.response.ok ? statsResult.payload : {},
+    };
+  }
+);
+
+exports.pagSubmitScore = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const gameId = sanitizeString(request.data?.gameId);
+    const score = Number(request.data?.score || 0);
+    const playTime = Number(request.data?.playTime || 0);
+
+    if (!gameId) {
+      throw new HttpsError("invalid-argument", "gameId is required.");
+    }
+
+    if (!Number.isFinite(score) || !Number.isFinite(playTime)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "score and playTime must be numeric values."
+      );
+    }
+
+    const {response, payload} = await pagRequest(
+      playersAreGamersApiKey.value(),
+      "/score",
+      {
+        method: "POST",
+        body: {
+          firebaseUid: uid,
+          gameId,
+          score,
+          playTime,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw normalizePagError(response.status, payload);
+    }
+
+    return payload;
+  }
+);
+
+exports.pagRewardCoins = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const adId = sanitizeString(request.data?.adId);
+    const rewardType = sanitizeString(request.data?.rewardType || "rewarded_ad");
+    const coins = Number(request.data?.coins || 0);
+
+    if (!adId) {
+      throw new HttpsError("invalid-argument", "adId is required.");
+    }
+
+    if (!Number.isFinite(coins) || coins <= 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "coins must be a positive number."
+      );
+    }
+
+    const {response, payload} = await pagRequest(
+      playersAreGamersApiKey.value(),
+      "/reward-coins",
+      {
+        method: "POST",
+        body: {
+          firebaseUid: uid,
+          adId,
+          coins,
+          rewardType,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw normalizePagError(response.status, payload);
+    }
+
+    return payload;
+  }
+);
+
+exports.pagPurchaseCoins = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const coins = Number(request.data?.coins || 0);
+    const amount = Number(request.data?.amount || 0);
+    const currency = sanitizeString(request.data?.currency || "USD");
+    const transactionId = sanitizeString(request.data?.transactionId);
+    const paymentMethod = sanitizeString(request.data?.paymentMethod);
+
+    if (!transactionId || !paymentMethod) {
+      throw new HttpsError(
+        "invalid-argument",
+        "transactionId and paymentMethod are required."
+      );
+    }
+
+    if (!Number.isFinite(coins) || coins <= 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "coins must be a positive number."
+      );
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "amount must be a positive number."
+      );
+    }
+
+    const {response, payload} = await pagRequest(
+      playersAreGamersApiKey.value(),
+      "/purchase-coins",
+      {
+        method: "POST",
+        body: {
+          firebaseUid: uid,
+          coins,
+          amount,
+          currency,
+          transactionId,
+          paymentMethod,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw normalizePagError(response.status, payload);
+    }
+
+    return payload;
+  }
+);

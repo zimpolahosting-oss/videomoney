@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
+import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
+import 'games_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'wallet_screen.dart';
@@ -24,6 +26,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       'last_seen_payout_notification_id';
 
   final FirestoreService _firestoreService = FirestoreService();
+  final PlayersAreGamersService _playersAreGamersService = PlayersAreGamersService();
   int _currentIndex = 0;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
       _payoutNotificationSubscription;
@@ -36,6 +39,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _startPresence();
     unawaited(_initializePayoutNotifications());
+    unawaited(_syncPlayersAreGamersProfile());
   }
 
   @override
@@ -92,6 +96,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     unawaited(PresenceService.instance.start(uid: uid));
   }
 
+  Future<void> _syncPlayersAreGamersProfile() async {
+    try {
+      await _playersAreGamersService.refreshProfile(includeStats: false);
+    } catch (_) {}
+  }
+
   void _listenForPayoutNotifications() {
     _payoutNotificationSubscription?.cancel();
     _payoutNotificationSubscription = _firestoreService
@@ -128,6 +138,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         index: _currentIndex,
         children: [
           HomeScreen(isActiveTab: _currentIndex == 0),
+          const GamesScreen(),
           const WalletScreen(),
           const ProfileScreen(),
         ],
@@ -148,6 +159,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home),
                 label: l10n.home,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.sports_esports_outlined),
+                selectedIcon: const Icon(Icons.sports_esports),
+                label: 'Games',
               ),
               NavigationDestination(
                 icon: const Icon(Icons.account_balance_wallet_outlined),
