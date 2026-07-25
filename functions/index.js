@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
+const functionsV1 = require("firebase-functions/v1");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
@@ -198,16 +199,16 @@ async function sendPushToUsers(users, payload) {
   };
 }
 
-exports.dispatchAdminNotification = onDocumentCreated(
-  "adminNotifications/{notificationId}",
-  async (event) => {
-    const snapshot = event.data;
+exports.dispatchAdminNotification = functionsV1
+  .region("europe-west1")
+  .firestore.document("adminNotifications/{notificationId}")
+  .onCreate(async (snapshot, context) => {
     if (!snapshot) {
-      logger.warn("dispatchAdminNotification received no snapshot data", event);
+      logger.warn("dispatchAdminNotification received no snapshot data", context);
       return;
     }
 
-    const notificationId = event.params.notificationId;
+    const notificationId = context.params.notificationId;
     const data = snapshot.data() || {};
     const title = String(data.title || "").trim();
     const message = String(data.message || "").trim();
@@ -221,7 +222,7 @@ exports.dispatchAdminNotification = onDocumentCreated(
         errorMessage: "",
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
-      { merge: true }
+      {merge: true}
     );
 
     if (!title || !message) {
@@ -231,7 +232,7 @@ exports.dispatchAdminNotification = onDocumentCreated(
           errorMessage: "Missing title or message.",
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
-        { merge: true }
+        {merge: true}
       );
       return;
     }
@@ -262,7 +263,7 @@ exports.dispatchAdminNotification = onDocumentCreated(
           sentAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
-        { merge: true }
+        {merge: true}
       );
     } catch (error) {
       logger.error("dispatchAdminNotification failed", error);
@@ -273,22 +274,21 @@ exports.dispatchAdminNotification = onDocumentCreated(
             error instanceof Error ? error.message : String(error),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
-        { merge: true }
+        {merge: true}
       );
     }
-  }
-);
+  });
 
-exports.dispatchInboxPush = onDocumentCreated(
-  "inboxMessages/{messageId}",
-  async (event) => {
-    const snapshot = event.data;
+exports.dispatchInboxPush = functionsV1
+  .region("europe-west1")
+  .firestore.document("inboxMessages/{messageId}")
+  .onCreate(async (snapshot, context) => {
     if (!snapshot) {
-      logger.warn("dispatchInboxPush received no snapshot data", event);
+      logger.warn("dispatchInboxPush received no snapshot data", context);
       return;
     }
 
-    const messageId = event.params.messageId;
+    const messageId = context.params.messageId;
     const data = snapshot.data() || {};
     const userId = String(data.userId || "").trim();
     const title = String(data.title || "VideoMoney").trim();
@@ -323,7 +323,7 @@ exports.dispatchInboxPush = onDocumentCreated(
           pushTokenCount: result.tokenCount,
           pushInboxOnly: result.inboxOnly,
         },
-        { merge: true }
+        {merge: true}
       );
     } catch (error) {
       logger.error("dispatchInboxPush failed", error);
@@ -332,11 +332,10 @@ exports.dispatchInboxPush = onDocumentCreated(
           pushError:
             error instanceof Error ? error.message : String(error),
         },
-        { merge: true }
+        {merge: true}
       );
     }
-  }
-);
+  });
 
 // Presence counter is implemented client-side via Realtime Database `/status`.
 // We intentionally do not use RTDB-triggered functions so the online counter
