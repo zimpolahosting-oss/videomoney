@@ -95,6 +95,27 @@ jobs:
         run: npm ci
         working-directory: functions
 
+      - name: Remove conflicting 1st Gen functions
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          LEGACY_GEN1_FUNCTIONS: "dispatchAnimation dispatchAdminNotification dispatchInboxPush"
+          LEGACY_FUNCTION_REGION: "europe-west1"
+        run: |
+          echo "Checking for conflicting 1st Gen functions in ${LEGACY_FUNCTION_REGION}..."
+          for FUNCTION_NAME in $LEGACY_GEN1_FUNCTIONS; do
+            if gcloud functions describe "$FUNCTION_NAME" \
+              --region="$LEGACY_FUNCTION_REGION" \
+              --project="$FIREBASE_PROJECT_ID" > /dev/null 2>&1; then
+              echo "Deleting legacy 1st Gen function: ${FUNCTION_NAME}"
+              gcloud functions delete "$FUNCTION_NAME" \
+                --region="$LEGACY_FUNCTION_REGION" \
+                --project="$FIREBASE_PROJECT_ID" \
+                --quiet
+            else
+              echo "No legacy 1st Gen function found for ${FUNCTION_NAME}"
+            fi
+          done
+
       - name: Deploy functions
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
