@@ -55,7 +55,7 @@ class _GamesScreenState extends State<GamesScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = _formatGamesError(error);
+        _error = error.toString();
       });
     } finally {
       if (!mounted) return;
@@ -63,15 +63,6 @@ class _GamesScreenState extends State<GamesScreen> {
         _loading = false;
       });
     }
-  }
-
-  String _formatGamesError(Object error) {
-    final text = error.toString();
-    if (text.contains('[firebase_functions/internal]') ||
-        text.contains('[firebase_functions/unavailable]')) {
-      return 'PlayersAreGamers is tijdelijk niet bereikbaar. Je kunt wel alvast de website openen of later opnieuw synchroniseren.';
-    }
-    return text;
   }
 
   Future<void> _openLobby() async {

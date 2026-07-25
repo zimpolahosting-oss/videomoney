@@ -67,24 +67,7 @@ class PlayersAreGamersService {
   }
 
   Future<PlayersAreGamersProfile> refreshProfile({bool includeStats = true}) async {
-    Map<String, dynamic> response;
-    try {
-      response = await _call('pagGetPlayer');
-    } on FirebaseFunctionsException catch (error) {
-      if (_shouldUseProfileFallback(error)) {
-        final cachedProfile = await getCachedProfile();
-        if (cachedProfile != null) {
-          return cachedProfile;
-        }
-        final fallbackProfile = PlayersAreGamersProfile.unlinked(
-          firebaseUid: _currentUser.uid,
-          syncedAt: DateTime.now(),
-        );
-        await _saveProfile(fallbackProfile);
-        return fallbackProfile;
-      }
-      rethrow;
-    }
+    final response = await _call('pagGetPlayer');
     final linked = response['linked'] == true;
     if (!linked) {
       await _clearSession();
@@ -238,13 +221,6 @@ class PlayersAreGamersService {
       return data.map((key, value) => MapEntry(key.toString(), value));
     }
     return <String, dynamic>{};
-  }
-
-  bool _shouldUseProfileFallback(FirebaseFunctionsException error) {
-    return error.code == 'internal' ||
-        error.code == 'unknown' ||
-        error.code == 'unavailable' ||
-        error.code == 'deadline-exceeded';
   }
 
   Future<void> _saveProfile(PlayersAreGamersProfile profile) async {

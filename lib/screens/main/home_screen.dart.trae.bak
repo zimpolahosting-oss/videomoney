@@ -153,18 +153,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _isLoadingFeed = false;
-        _feedError = _formatFeedError(error);
+        _feedError = error.toString();
       });
     }
-  }
-
-  String _formatFeedError(Object error) {
-    final text = error.toString();
-    if (text.contains('Unable to load playlist feed (403)') ||
-        text.contains('Unable to validate embeddable playlist items (403)')) {
-      return 'YouTube blokkeerde de playlist-API. De app schakelt over naar de publieke playlist zodra je opnieuw ververst.';
-    }
-    return text;
   }
 
   Future<void> _refreshFeedSilently() async {

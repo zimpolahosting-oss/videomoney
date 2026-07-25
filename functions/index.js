@@ -11,7 +11,11 @@ setGlobalOptions({region: "europe-west1"});
 
 const db = admin.firestore();
 const playersAreGamersApiKey = defineSecret("PLAYERS_ARE_GAMERS_API_KEY");
-const PLAYERS_ARE_GAMERS_BASE_URL = "https://playersaregamers.nl/api/integration";
+const PLAYERS_ARE_GAMERS_BASE_URLS = [
+  "https://playersaregamers.nl/api/integration",
+  "http://playersaregamers.nl:3000/api/integration",
+  "http://34.144.184.237:3000/api/integration",
+];
 const PLAYERS_ARE_GAMERS_PUBLIC_URL = "https://playersaregamers.nl";
 
 function uniqueTokens(users) {
@@ -386,18 +390,38 @@ async function parseJsonResponse(response) {
 }
 
 async function pagRequest(apiKey, path, options = {}) {
-  const response = await fetch(`${PLAYERS_ARE_GAMERS_BASE_URL}${path}`, {
-    method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiKey,
-      ...(options.headers || {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let lastError = null;
 
-  const payload = await parseJsonResponse(response);
-  return {response, payload};
+  for (const baseUrl of PLAYERS_ARE_GAMERS_BASE_URLS) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: options.method || "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey,
+          ...(options.headers || {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      const payload = await parseJsonResponse(response);
+      return {response, payload, baseUrl};
+    } catch (error) {
+      lastError = error;
+      logger.warn("PlayersAreGamers request failed, trying next base URL", {
+        baseUrl,
+        path,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  throw new HttpsError(
+    "unavailable",
+    `PlayersAreGamers API is currently unreachable: ${
+      lastError instanceof Error ? lastError.message : "unknown error"
+    }`
+  );
 }
 
 async function pagPublicRequest(path, body) {
