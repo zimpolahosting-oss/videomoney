@@ -671,10 +671,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ) ??
           false;
+      PlayersAreGamersAdRewardResult? rewardResult;
       if (completed) {
-        await _firestoreService.applyUserProgress(
-          uid: user.uid,
-          viewsDelta: ShortsProgressService.adBreakViewsReward,
+        final currentShortId =
+            _feed.isNotEmpty && _currentIndex >= 0 && _currentIndex < _feed.length
+                ? _feed[_currentIndex].id
+                : 'short';
+        rewardResult = await _playersAreGamersService.grantAdReward(
+          adId:
+              'vm-video-ad-${currentShortId}-${DateTime.now().millisecondsSinceEpoch}',
+          pagCoins: 2,
+          videomoneyViews: ShortsProgressService.adBreakViewsReward,
+          autoCreateIfMissing: true,
         );
       }
       if (!mounted) return;
@@ -703,8 +711,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('+10 views for completed ad'),
+          SnackBar(
+            content: Text(
+              rewardResult?.pagCoinsGranted == true
+                  ? '+10 views and +2 game coins for completed ad'
+                  : '+10 views added. Game coins could not be added right now.',
+            ),
           ),
         );
       }

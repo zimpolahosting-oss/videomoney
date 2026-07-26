@@ -194,6 +194,41 @@ class PlayersAreGamersService {
     return profile;
   }
 
+  Future<PlayersAreGamersAdRewardResult> grantAdReward({
+    required String adId,
+    int pagCoins = 2,
+    int videomoneyViews = 0,
+    int videomoneyVideosWatched = 0,
+    bool autoCreateIfMissing = true,
+  }) async {
+    final hasVideomoneyReward =
+        videomoneyViews != 0 || videomoneyVideosWatched != 0;
+    if (hasVideomoneyReward) {
+      await _firestoreService.applyUserProgress(
+        uid: _currentUser.uid,
+        viewsDelta: videomoneyViews,
+        videosWatchedDelta: videomoneyVideosWatched,
+      );
+    }
+
+    var pagCoinsGranted = false;
+    try {
+      await ensureLinkedProfile(
+        includeStats: false,
+        autoCreateIfMissing: autoCreateIfMissing,
+      );
+      await rewardCoins(adId: adId, coins: pagCoins);
+      pagCoinsGranted = true;
+    } catch (_) {
+      pagCoinsGranted = false;
+    }
+
+    return PlayersAreGamersAdRewardResult(
+      pagCoinsGranted: pagCoinsGranted,
+      videomoneyRewardGranted: hasVideomoneyReward,
+    );
+  }
+
   Future<Map<String, dynamic>> submitScore({
     required String gameId,
     required int score,
@@ -291,16 +326,17 @@ class PlayersAreGamersService {
     );
   }
 
-  Future<void> grantReplayReward({
+  Future<PlayersAreGamersAdRewardResult> grantReplayReward({
     int videomoneyViews = 3,
     int gameCoins = 2,
     required String adId,
   }) async {
-    await rewardCoins(adId: adId, coins: gameCoins);
-    await _firestoreService.applyUserProgress(
-      uid: _currentUser.uid,
-      viewsDelta: videomoneyViews,
-      videosWatchedDelta: 1,
+    return grantAdReward(
+      adId: adId,
+      pagCoins: gameCoins,
+      videomoneyViews: videomoneyViews,
+      videomoneyVideosWatched: 1,
+      autoCreateIfMissing: true,
     );
   }
 

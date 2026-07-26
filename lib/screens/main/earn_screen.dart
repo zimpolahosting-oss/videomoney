@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/players_are_gamers_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/watermark_hero_card.dart';
 import 'shorts_ad_break_screen.dart';
@@ -21,6 +22,7 @@ class EarnScreen extends StatefulWidget {
 class _EarnScreenState extends State<EarnScreen> {
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
+  final _playersAreGamersService = PlayersAreGamersService();
   bool _isLoading = false;
 
   @override
@@ -64,8 +66,20 @@ class _EarnScreenState extends State<EarnScreen> {
     if (!mounted) return;
 
     if (rewardGranted) {
+      final pagReward = await _playersAreGamersService.grantAdReward(
+        adId: 'vm-earn-ad-${DateTime.now().millisecondsSinceEpoch}',
+        pagCoins: 2,
+        videomoneyViews: 0,
+        autoCreateIfMissing: true,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.rewardConfirmedViewsAdded)),
+        SnackBar(
+          content: Text(
+            pagReward.pagCoinsGranted
+                ? '${l10n.rewardConfirmedViewsAdded} +2 game coins added.'
+                : '${l10n.rewardConfirmedViewsAdded} Game coins could not be added right now.',
+          ),
+        ),
       );
     } else if (lastStatusMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(

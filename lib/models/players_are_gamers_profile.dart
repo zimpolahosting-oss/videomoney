@@ -301,3 +301,13 @@ class PlayersAreGamersCookie {
   final String path;
   final bool isSecure;
 }
+
+class PlayersAreGamersAdRewardResult {
+  const PlayersAreGamersAdRewardResult({
+    required this.pagCoinsGranted,
+    required this.videomoneyRewardGranted,
+  });
+
+  final bool pagCoinsGranted;
+  final bool videomoneyRewardGranted;
+}

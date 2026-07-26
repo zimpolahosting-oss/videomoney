@@ -200,7 +200,7 @@ class _PlayersAreGamersWebViewScreenState
       if (!rewarded) {
         return;
       }
-      await widget.service.grantReplayReward(
+      final rewardResult = await widget.service.grantReplayReward(
         adId: replayId,
         gameCoins: 2,
         videomoneyViews: 3,
@@ -208,8 +208,12 @@ class _PlayersAreGamersWebViewScreenState
       await _controller.runJavaScript('window.__vmResumePlayAgain && window.__vmResumePlayAgain();');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Reward granted: +2 game coins and +3 views. Starting a new game...'),
+        SnackBar(
+          content: Text(
+            rewardResult.pagCoinsGranted
+                ? 'Reward granted: +2 game coins and +3 views. Starting a new game...'
+                : 'Views granted. PAG coins could not be added right now, but the next game is starting.',
+          ),
         ),
       );
     } catch (error) {
