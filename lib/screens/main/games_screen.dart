@@ -21,24 +21,9 @@ class _GamesScreenState extends State<GamesScreen> {
 
   static const List<_PagGameDefinition> _multiplayerGames = [
     _PagGameDefinition(
-      '8-ball-pool-mp',
-      '8 Ball Pool',
-      'https://playersaregamers.nl/games/pool-multiplayer/pool-multiplayer.php',
-    ),
-    _PagGameDefinition(
-      'neon-tiktak-connect',
-      'NEON EDITION TikTak Connect',
-      'https://playersaregamers.nl/Ticktak-Neon/index.html',
-    ),
-    _PagGameDefinition(
       'jewel-quest',
       'Jewel Quest',
       'https://playersaregamers.nl/jewel-quest/',
-    ),
-    _PagGameDefinition(
-      'duck-shooter',
-      'Duck Shooter',
-      'https://playersaregamers.nl/duck-shooter/',
     ),
     _PagGameDefinition(
       'fruit-matching',
@@ -58,11 +43,6 @@ class _GamesScreenState extends State<GamesScreen> {
   ];
 
   static const List<_PagGameDefinition> _singlePlayerGames = [
-    _PagGameDefinition(
-      '8-ball-pool-sp',
-      '8 Ball Pool',
-      'https://playersaregamers.nl/games/8ball-pool/',
-    ),
     _PagGameDefinition(
       'crazy-nurse',
       'Crazy Nurse',
@@ -92,37 +72,6 @@ class _GamesScreenState extends State<GamesScreen> {
       'lily-in-danger',
       'Lily in Danger',
       'https://playersaregamers.nl/lily-in-danger/',
-    ),
-    _PagGameDefinition(
-      'subway-trainrun',
-      'Subway TrainRun',
-      'https://playersaregamers.nl/Subway-TrainRun/',
-    ),
-    _PagGameDefinition(
-      'the-bandit-hunter',
-      'The Bandit Hunter',
-      'https://playersaregamers.nl/Thebandit-hunter/',
-      landscapeOnly: true,
-    ),
-    _PagGameDefinition(
-      'bomberman',
-      'Bomberman',
-      'https://playersaregamers.nl/bomberman/',
-    ),
-    _PagGameDefinition(
-      'pac-man',
-      'Pac-Man',
-      'https://playersaregamers.nl/pacman/',
-    ),
-    _PagGameDefinition(
-      'bio-race',
-      'Bio-Race',
-      'https://playersaregamers.nl/bio-race/',
-    ),
-    _PagGameDefinition(
-      'halloween-bubble-shooter',
-      'Halloween Bubble Shooter',
-      'https://playersaregamers.nl/halloweenbubble-shooter/',
     ),
   ];
 
