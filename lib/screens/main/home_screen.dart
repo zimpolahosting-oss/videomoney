@@ -1073,12 +1073,12 @@ class _PlayersAreGamersProgressLine extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         final profile = snapshot.data;
+        final progress = (profile?.starterProgress ?? 0).clamp(0, 1).toDouble();
         return _CompactProgressLine(
           title: 'PlayersAreGamers coins',
           valueLabel: '${profile?.coins ?? 0} coins',
-          value: 0,
+          value: progress,
           color: const Color(0xFF6B8BFF),
-          showBar: false,
         );
       },
     );
