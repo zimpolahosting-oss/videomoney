@@ -458,6 +458,40 @@ async function pagPublicRequest(path, body) {
   return {response, payload};
 }
 
+async function fetchPagPlayerAndStats(apiKey, uid, token = "") {
+  const playerResult = await pagRequest(
+    apiKey,
+    `/player/${encodeURIComponent(uid)}`,
+    token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      : {}
+  );
+  if (!playerResult.response.ok) {
+    throw normalizePagError(playerResult.response.status, playerResult.payload);
+  }
+
+  const statsResult = await pagRequest(
+    apiKey,
+    `/player/${encodeURIComponent(uid)}/stats`,
+    token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      : {}
+  );
+
+  return {
+    playerPayload: playerResult.payload,
+    statsPayload: statsResult.response.ok ? statsResult.payload : {},
+  };
+}
+
 exports.pagGetPlayer = onCall(
   {secrets: [playersAreGamersApiKey]},
   async (request) => {
@@ -531,23 +565,16 @@ exports.pagLinkAccount = onCall(
       throw normalizePagError(linkResult.response.status, linkResult.payload);
     }
 
-    const playerResult = await pagRequest(
-      apiKey,
-      `/player/${encodeURIComponent(uid)}`
-    );
-    if (!playerResult.response.ok) {
-      throw normalizePagError(playerResult.response.status, playerResult.payload);
-    }
-
-    const statsResult = await pagRequest(
-      apiKey,
-      `/player/${encodeURIComponent(uid)}/stats`
-    );
+    const {
+      playerPayload,
+      statsPayload,
+    } = await fetchPagPlayerAndStats(apiKey, uid, sanitizeString(linkResult.payload?.token));
 
     return {
       linked: true,
-      ...playerResult.payload,
-      stats: statsResult.response.ok ? statsResult.payload : {},
+      ...playerPayload,
+      token: sanitizeString(linkResult.payload?.token),
+      stats: statsPayload,
     };
   }
 );
@@ -608,23 +635,16 @@ exports.pagCreateAndLinkAccount = onCall(
       throw normalizePagError(linkResult.response.status, linkResult.payload);
     }
 
-    const playerResult = await pagRequest(
-      apiKey,
-      `/player/${encodeURIComponent(uid)}`
-    );
-    if (!playerResult.response.ok) {
-      throw normalizePagError(playerResult.response.status, playerResult.payload);
-    }
-
-    const statsResult = await pagRequest(
-      apiKey,
-      `/player/${encodeURIComponent(uid)}/stats`
-    );
+    const {
+      playerPayload,
+      statsPayload,
+    } = await fetchPagPlayerAndStats(apiKey, uid, sanitizeString(registrationResult.payload?.token));
 
     return {
       linked: true,
-      ...playerResult.payload,
-      stats: statsResult.response.ok ? statsResult.payload : {},
+      ...playerPayload,
+      token: sanitizeString(registrationResult.payload?.token),
+      stats: statsPayload,
     };
   }
 );
@@ -672,20 +692,30 @@ exports.pagCreateAutomaticAccount = onCall(
         result.response.status === 409 &&
         sanitizeString(result.payload?.message).toLowerCase().includes("firebase uid")
       ) {
-        const playerResult = await pagRequest(apiKey, `/player/${encodeURIComponent(uid)}`);
-        if (!playerResult.response.ok) {
-          throw normalizePagError(playerResult.response.status, playerResult.payload);
+        const generatedTokenResult = await pagRequest(apiKey, "/generate-token", {
+          method: "POST",
+          body: {
+            firebaseUid: uid,
+          },
+        });
+        if (!generatedTokenResult.response.ok) {
+          throw normalizePagError(
+            generatedTokenResult.response.status,
+            generatedTokenResult.payload
+          );
         }
 
-        const statsResult = await pagRequest(
-          apiKey,
-          `/player/${encodeURIComponent(uid)}/stats`
-        );
+        const generatedToken = sanitizeString(generatedTokenResult.payload?.token);
+        const {
+          playerPayload,
+          statsPayload,
+        } = await fetchPagPlayerAndStats(apiKey, uid, generatedToken);
 
         return {
           linked: true,
-          ...playerResult.payload,
-          stats: statsResult.response.ok ? statsResult.payload : {},
+          ...playerPayload,
+          token: generatedToken,
+          stats: statsPayload,
         };
       }
 
@@ -698,21 +728,47 @@ exports.pagCreateAutomaticAccount = onCall(
       });
     }
 
-    const playerResult = await pagRequest(apiKey, `/player/${encodeURIComponent(uid)}`);
-    if (!playerResult.response.ok) {
-      throw normalizePagError(playerResult.response.status, playerResult.payload);
-    }
-
-    const statsResult = await pagRequest(
-      apiKey,
-      `/player/${encodeURIComponent(uid)}/stats`
-    );
+    const {
+      playerPayload,
+      statsPayload,
+    } = await fetchPagPlayerAndStats(apiKey, uid, sanitizeString(createResult.payload?.token));
 
     return {
       linked: true,
-      ...playerResult.payload,
+      ...playerPayload,
       token: sanitizeString(createResult.payload?.token),
-      stats: statsResult.response.ok ? statsResult.payload : {},
+      stats: statsPayload,
+    };
+  }
+);
+
+exports.pagGenerateToken = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid} = requireAuth(request);
+    const apiKey = playersAreGamersApiKey.value();
+    const tokenResult = await pagRequest(apiKey, "/generate-token", {
+      method: "POST",
+      body: {
+        firebaseUid: uid,
+      },
+    });
+
+    if (!tokenResult.response.ok) {
+      throw normalizePagError(tokenResult.response.status, tokenResult.payload);
+    }
+
+    const generatedToken = sanitizeString(tokenResult.payload?.token);
+    const {
+      playerPayload,
+      statsPayload,
+    } = await fetchPagPlayerAndStats(apiKey, uid, generatedToken);
+
+    return {
+      linked: true,
+      ...playerPayload,
+      token: generatedToken,
+      stats: statsPayload,
     };
   }
 );
@@ -779,7 +835,7 @@ exports.pagRewardCoins = onCall(
 
     const {response, payload} = await pagRequest(
       playersAreGamersApiKey.value(),
-      "/reward-coins",
+      "/bonus-coins",
       {
         method: "POST",
         body: {
@@ -803,16 +859,16 @@ exports.pagPurchaseCoins = onCall(
   {secrets: [playersAreGamersApiKey]},
   async (request) => {
     const {uid} = requireAuth(request);
-    const coins = Number(request.data?.coins || 0);
+    const packageId = sanitizeString(request.data?.packageId);
     const amount = Number(request.data?.amount || 0);
     const currency = sanitizeString(request.data?.currency || "USD");
     const transactionId = sanitizeString(request.data?.transactionId);
-    const paymentMethod = sanitizeString(request.data?.paymentMethod);
+    const coins = Number(request.data?.coins || 0);
 
-    if (!transactionId || !paymentMethod) {
+    if (!transactionId || !packageId) {
       throw new HttpsError(
         "invalid-argument",
-        "transactionId and paymentMethod are required."
+        "transactionId and packageId are required."
       );
     }
 
@@ -837,11 +893,11 @@ exports.pagPurchaseCoins = onCall(
         method: "POST",
         body: {
           firebaseUid: uid,
-          coins,
+          packageId,
           amount,
           currency,
           transactionId,
-          paymentMethod,
+          ...(Number.isFinite(coins) && coins > 0 ? {coins} : {}),
         },
       }
     );

@@ -224,7 +224,7 @@ class PlayersAreGamersService {
     required int coins,
     required double amount,
     required String transactionId,
-    required String paymentMethod,
+    required String packageId,
     String currency = 'USD',
   }) async {
     final response = await _call('pagPurchaseCoins', {
@@ -232,7 +232,7 @@ class PlayersAreGamersService {
       'amount': amount,
       'currency': currency,
       'transactionId': transactionId,
-      'paymentMethod': paymentMethod,
+      'packageId': packageId,
     });
     await refreshProfile(includeStats: true);
     return response;
@@ -248,14 +248,29 @@ class PlayersAreGamersService {
   }
 
   Future<PlayersAreGamersLaunchContext?> buildLaunchContext() async {
-    final session = await getStoredSession();
-    if (session == null) return null;
+    var session = await getStoredSession();
+    if (session == null) {
+      session = await _generateSession();
+      if (session == null) return null;
+    }
 
-    final response = await http.post(
+    http.Response response = await http.post(
       Uri.parse(autoLoginUrl),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({'token': session.token}),
     );
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      final refreshedSession = await _generateSession();
+      if (refreshedSession != null) {
+        session = refreshedSession;
+        response = await http.post(
+          Uri.parse(autoLoginUrl),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'token': session.token}),
+        );
+      }
+    }
 
     final payload = _decodeJson(response.body);
     if (response.statusCode != 200) {
@@ -330,6 +345,17 @@ class PlayersAreGamersService {
   Future<void> _clearSession() async {
     await _secureStorage.delete(key: _tokenStorageKey);
     await _secureStorage.delete(key: _userStorageKey);
+  }
+
+  Future<PlayersAreGamersSession?> _generateSession() async {
+    final response = await _call('pagGenerateToken');
+    final token = response['token']?.toString();
+    final player = response['player'];
+    if (token == null || token.isEmpty || player is! Map) {
+      return null;
+    }
+    await _persistSession(response);
+    return getStoredSession();
   }
 
   Map<String, dynamic> _decodeJson(String body) {
