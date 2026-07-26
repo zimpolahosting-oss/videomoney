@@ -47,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
-  final _random = Random();
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
   late final WebViewController _webViewController;
@@ -126,9 +125,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     try {
-      final feed = _randomizeFeed(
-        await _videoFeedService.loadFeed(userId: user.uid),
-      );
+      final feed = await _videoFeedService.loadFeed(userId: user.uid);
       final progress = await ShortsProgressService.instance.load(user.uid);
 
       if (!mounted) return;
@@ -173,10 +170,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final currentVideoId =
           _feed.isNotEmpty ? _feed[_currentIndex].videoId : null;
-      final freshFeed = _randomizeFeed(
-        await _videoFeedService.loadFeed(userId: user.uid),
-        keepVideoId: currentVideoId,
-      );
+      final freshFeed = await _videoFeedService.loadFeed(userId: user.uid);
       if (!mounted || freshFeed.isEmpty) return;
       setState(() {
         _feed = freshFeed;
@@ -189,26 +183,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
       await _loadCurrentVideoIntoWebView();
     } catch (_) {}
-  }
-
-  List<ShortVideoItem> _randomizeFeed(
-    List<ShortVideoItem> feed, {
-    String? keepVideoId,
-  }) {
-    if (feed.length <= 1) return List<ShortVideoItem>.from(feed);
-    final shuffled = List<ShortVideoItem>.from(feed)..shuffle(_random);
-    if (keepVideoId == null) {
-      return shuffled;
-    }
-
-    final keptIndex = shuffled.indexWhere((item) => item.videoId == keepVideoId);
-    if (keptIndex <= 0) {
-      return shuffled;
-    }
-
-    final keptItem = shuffled.removeAt(keptIndex);
-    shuffled.insert(0, keptItem);
-    return shuffled;
   }
 
   @override
@@ -1100,10 +1074,11 @@ class _PlayersAreGamersProgressLine extends StatelessWidget {
       builder: (context, snapshot) {
         final profile = snapshot.data;
         return _CompactProgressLine(
-          title: 'PlayersAreGamers',
-          valueLabel: '${profile?.coins ?? 0} / 100 coins',
-          value: profile?.starterProgress ?? 0,
+          title: 'PlayersAreGamers coins',
+          valueLabel: '${profile?.coins ?? 0} coins',
+          value: 0,
           color: const Color(0xFF6B8BFF),
+          showBar: false,
         );
       },
     );
@@ -1255,12 +1230,14 @@ class _CompactProgressLine extends StatelessWidget {
     required this.valueLabel,
     required this.value,
     required this.color,
+    this.showBar = true,
   });
 
   final String title;
   final String valueLabel;
   final double value;
   final Color color;
+  final bool showBar;
 
   @override
   Widget build(BuildContext context) {
@@ -1288,16 +1265,18 @@ class _CompactProgressLine extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            minHeight: 6,
-            value: value,
-            backgroundColor: Colors.white.withOpacity(0.10),
-            valueColor: AlwaysStoppedAnimation(color),
+        if (showBar) ...[
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 6,
+              value: value,
+              backgroundColor: Colors.white.withOpacity(0.10),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

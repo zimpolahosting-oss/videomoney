@@ -352,8 +352,6 @@ class _GamesScreenState extends State<GamesScreen> {
                     const SizedBox(height: 16),
                     _buildLobbyCard(),
                     const SizedBox(height: 16),
-                    _buildRecentGames(profile),
-                    const SizedBox(height: 16),
                     _buildGameBreakdown(profile),
                     const SizedBox(height: 16),
                     _buildGamesList(),
@@ -520,42 +518,6 @@ class _GamesScreenState extends State<GamesScreen> {
               icon: const Icon(Icons.play_circle_outline_rounded),
               label: const Text('Open PlayersAreGamers'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentGames(PlayersAreGamersProfile profile) {
-    if (profile.recentGames.isEmpty) {
-      return const _StatusCard(
-        title: 'Recent games',
-        message: 'Your recent game history will appear here after your first finished match.',
-        icon: Icons.history_rounded,
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recent games',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (final game in profile.recentGames.take(5))
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  child: Icon(Icons.sports_esports_rounded),
-                ),
-                title: Text(game.gameId),
-                subtitle: Text('Score ${game.score} • ${game.playTime}s'),
-                trailing: Text('+${game.coinsAwarded}'),
-              ),
           ],
         ),
       ),
