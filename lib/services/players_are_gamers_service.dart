@@ -282,8 +282,10 @@ class PlayersAreGamersService {
     return PlayersAreGamersSession(token: token, userJson: userJson);
   }
 
-  Future<PlayersAreGamersLaunchContext?> buildLaunchContext() async {
-    var session = await getStoredSession();
+  Future<PlayersAreGamersLaunchContext?> buildLaunchContext({
+    bool forceRefreshToken = false,
+  }) async {
+    var session = forceRefreshToken ? null : await getStoredSession();
     if (session == null) {
       session = await _generateSession();
       if (session == null) return null;
@@ -319,10 +321,14 @@ class PlayersAreGamersService {
         (payload['redirectUrl'] ?? payload['redirect_url'] ?? dashboardUrl)
             .toString();
     final cookies = _extractCookies(response.headers);
+    final cookieHeader = cookies
+        .map((cookie) => '${cookie.name}=${cookie.value}')
+        .join('; ');
 
     return PlayersAreGamersLaunchContext(
       redirectUrl: redirectUrl.isEmpty ? dashboardUrl : redirectUrl,
       cookies: cookies,
+      cookieHeader: cookieHeader,
     );
   }
 
@@ -411,27 +417,35 @@ class PlayersAreGamersService {
     if (rawCookie == null || rawCookie.isEmpty) {
       return const <PlayersAreGamersCookie>[];
     }
-
-    final matches = RegExp(r'([A-Za-z0-9_]+)=([^;,]+)').allMatches(rawCookie);
     final cookies = <PlayersAreGamersCookie>[];
-    for (final match in matches) {
-      final name = match.group(1);
-      final value = match.group(2);
-      if (name == null || value == null) continue;
-      if (name.toLowerCase() == 'path' ||
-          name.toLowerCase() == 'expires' ||
-          name.toLowerCase() == 'domain' ||
-          name.toLowerCase() == 'samesite' ||
-          name.toLowerCase() == 'max-age') {
-        continue;
+    final cookieChunks = rawCookie.split(RegExp(r',(?=[A-Za-z0-9_]+=)'));
+    for (final chunk in cookieChunks) {
+      final parts = chunk.split(';').map((item) => item.trim()).toList();
+      if (parts.isEmpty || !parts.first.contains('=')) continue;
+      final nameValue = parts.first.split('=');
+      if (nameValue.length < 2) continue;
+      final name = nameValue.first.trim();
+      final value = nameValue.sublist(1).join('=').trim();
+      var domain = 'playersaregamers.nl';
+      var path = '/';
+      var isSecure = true;
+      for (final attribute in parts.skip(1)) {
+        final lower = attribute.toLowerCase();
+        if (lower.startsWith('domain=')) {
+          domain = attribute.substring(attribute.indexOf('=') + 1).trim();
+        } else if (lower.startsWith('path=')) {
+          path = attribute.substring(attribute.indexOf('=') + 1).trim();
+        } else if (lower == 'secure') {
+          isSecure = true;
+        }
       }
       cookies.add(
         PlayersAreGamersCookie(
           name: name,
           value: value,
-          domain: 'playersaregamers.nl',
-          path: '/',
-          isSecure: true,
+          domain: domain,
+          path: path,
+          isSecure: isSecure,
         ),
       );
     }

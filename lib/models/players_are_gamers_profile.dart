@@ -280,10 +280,12 @@ class PlayersAreGamersLaunchContext {
   const PlayersAreGamersLaunchContext({
     required this.redirectUrl,
     required this.cookies,
+    required this.cookieHeader,
   });
 
   final String redirectUrl;
   final List<PlayersAreGamersCookie> cookies;
+  final String cookieHeader;
 }
 
 class PlayersAreGamersCookie {

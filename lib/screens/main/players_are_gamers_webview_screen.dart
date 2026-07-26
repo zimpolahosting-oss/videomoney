@@ -28,6 +28,7 @@ class _PlayersAreGamersWebViewScreenState
   final EarningsService _earningsService = EarningsService();
   bool _loading = true;
   bool _replayRewardInProgress = false;
+  bool _sessionRecoveryAttempted = false;
 
   @override
   void initState() {
@@ -43,8 +44,13 @@ class _PlayersAreGamersWebViewScreenState
                   _loading = true;
                 });
               },
-              onPageFinished: (_) async {
+              onPageFinished: (url) async {
                 await _injectSessionAndReplayBridge();
+                if (_looksLikeLoginPage(url) && !_sessionRecoveryAttempted) {
+                  _sessionRecoveryAttempted = true;
+                  await _bootstrapSession();
+                  return;
+                }
                 if (!mounted) return;
                 setState(() {
                   _loading = false;
@@ -63,9 +69,12 @@ class _PlayersAreGamersWebViewScreenState
 
   Future<void> _bootstrapSession() async {
     try {
-      final launchContext = await widget.service.buildLaunchContext();
+      final launchContext = await widget.service.buildLaunchContext(
+        forceRefreshToken: _sessionRecoveryAttempted,
+      );
       final targetUrl =
           launchContext?.redirectUrl ?? PlayersAreGamersService.dashboardUrl;
+      await _cookieManager.clearCookies();
       for (final cookie in launchContext?.cookies ?? const []) {
         await _cookieManager.setCookie(
           WebViewCookie(
@@ -75,8 +84,26 @@ class _PlayersAreGamersWebViewScreenState
             path: cookie.path,
           ),
         );
+        if (!cookie.domain.startsWith('.')) {
+          await _cookieManager.setCookie(
+            WebViewCookie(
+              name: cookie.name,
+              value: cookie.value,
+              domain: '.${cookie.domain}',
+              path: cookie.path,
+            ),
+          );
+        }
       }
-      await _controller.loadRequest(Uri.parse(targetUrl));
+      await _controller.loadRequest(
+        Uri.parse(targetUrl),
+        headers: {
+          if ((launchContext?.cookieHeader ?? '').isNotEmpty)
+            'Cookie': launchContext!.cookieHeader,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      );
     } catch (_) {
       await _controller.loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
     }
@@ -165,6 +192,13 @@ class _PlayersAreGamersWebViewScreenState
         } catch (_) {}
       })();
     ''');
+  }
+
+  bool _looksLikeLoginPage(String? url) {
+    final value = (url ?? '').toLowerCase();
+    return value.contains('/login.php') ||
+        value.contains('/index.html') ||
+        value.endsWith('/');
   }
 
   Future<void> _handleBridgeMessage(String message) async {
