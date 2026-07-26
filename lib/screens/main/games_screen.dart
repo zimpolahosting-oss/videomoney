@@ -30,7 +30,6 @@ class _GamesScreenState extends State<GamesScreen> {
       'NEON EDITION TikTak Connect',
       'https://playersaregamers.nl/Ticktak-Neon/index.html',
     ),
-    _PagGameDefinition('ludo', 'Ludo', null),
     _PagGameDefinition(
       'jewel-quest',
       'Jewel Quest',
