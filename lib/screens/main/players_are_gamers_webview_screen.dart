@@ -13,9 +13,11 @@ class PlayersAreGamersWebViewScreen extends StatefulWidget {
   const PlayersAreGamersWebViewScreen({
     super.key,
     required this.service,
+    this.initialUrl,
   });
 
   final PlayersAreGamersService service;
+  final String? initialUrl;
 
   @override
   State<PlayersAreGamersWebViewScreen> createState() =>
@@ -32,6 +34,7 @@ class _PlayersAreGamersWebViewScreenState
   bool _replayRewardInProgress = false;
   bool _resultRewardInProgress = false;
   bool _sessionRecoveryAttempted = false;
+  bool _initialTargetOpened = false;
 
   @override
   void initState() {
@@ -53,6 +56,17 @@ class _PlayersAreGamersWebViewScreenState
                   return;
                 }
                 await _injectSessionAndReplayBridge();
+                if (_shouldOpenInitialTarget(url)) {
+                  _initialTargetOpened = true;
+                  await _controller.loadRequest(
+                    Uri.parse(widget.initialUrl!),
+                    headers: const {
+                      'Cache-Control': 'no-cache',
+                      'Pragma': 'no-cache',
+                    },
+                  );
+                  return;
+                }
                 if (_looksLikeLoginPage(url) && !_sessionRecoveryAttempted) {
                   _sessionRecoveryAttempted = true;
                   await _bootstrapSession();
@@ -209,8 +223,7 @@ class _PlayersAreGamersWebViewScreenState
 
           const needsDashboardRedirect =
             location.pathname.endsWith('/login.php') ||
-            location.pathname.endsWith('/index.html') ||
-            (document.body && document.body.innerText && document.body.innerText.includes('Please login to continue.'));
+            location.pathname.endsWith('/index.html');
           if (needsDashboardRedirect && localStorage.getItem('token')) {
             const nextUrl = '/dashboard.php?vmSession=' + Date.now();
             if (!window.__vmLastRedirect || window.__vmLastRedirect !== nextUrl) {
@@ -231,6 +244,36 @@ class _PlayersAreGamersWebViewScreenState
   bool _isAutoLoginResponsePage(String? url) {
     final value = (url ?? '').toLowerCase();
     return value.contains('/auto-login.php');
+  }
+
+  bool _shouldOpenInitialTarget(String? currentUrl) {
+    final target = widget.initialUrl;
+    if (target == null || target.isEmpty || _initialTargetOpened) {
+      return false;
+    }
+    final current = (currentUrl ?? '').trim();
+    if (current.isEmpty) {
+      return false;
+    }
+    if (_isAutoLoginResponsePage(current)) {
+      return false;
+    }
+    if (_looksLikeLoginPage(current)) {
+      return false;
+    }
+    return !_sameUrl(current, target);
+  }
+
+  bool _sameUrl(String a, String b) {
+    final left = Uri.tryParse(a);
+    final right = Uri.tryParse(b);
+    if (left == null || right == null) {
+      return a == b;
+    }
+    return left.scheme == right.scheme &&
+        left.host == right.host &&
+        left.path == right.path &&
+        left.query == right.query;
   }
 
   String _normalizeJavaScriptResult(Object? value) {

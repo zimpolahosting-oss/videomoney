@@ -20,31 +20,31 @@ class _GamesScreenState extends State<GamesScreen> {
   String? _error;
 
   static const List<_PagGameDefinition> _multiplayerGames = [
-    _PagGameDefinition('8-ball-pool-mp', '8 Ball Pool'),
-    _PagGameDefinition('neon-tiktak-connect', 'NEON EDITION TikTak Connect'),
-    _PagGameDefinition('ludo', 'Ludo'),
-    _PagGameDefinition('jewel-quest', 'Jewel Quest'),
-    _PagGameDefinition('duck-shooter', 'Duck Shooter'),
-    _PagGameDefinition('fruit-matching', 'Fruit Matching'),
-    _PagGameDefinition('memory-match', 'Memory Match'),
-    _PagGameDefinition('tap-the-rat', 'Tap The Rat'),
+    _PagGameDefinition('8-ball-pool-mp', '8 Ball Pool', '/games/pool-multiplayer/'),
+    _PagGameDefinition('neon-tiktak-connect', 'NEON EDITION TikTak Connect', '/games/connect-four/'),
+    _PagGameDefinition('ludo', 'Ludo', '/games/ludo/'),
+    _PagGameDefinition('jewel-quest', 'Jewel Quest', '/jewel-quest/'),
+    _PagGameDefinition('duck-shooter', 'Duck Shooter', '/games/duck-shooter/'),
+    _PagGameDefinition('fruit-matching', 'Fruit Matching', '/games/fruit-matching/'),
+    _PagGameDefinition('memory-match', 'Memory Match', '/memory-match/'),
+    _PagGameDefinition('tap-the-rat', 'Tap The Rat', '/tap-rat/'),
   ];
 
   static const List<_PagGameDefinition> _singlePlayerGames = [
-    _PagGameDefinition('8-ball-pool-sp', '8 Ball Pool'),
-    _PagGameDefinition('chicken-road', 'Chicken Road'),
-    _PagGameDefinition('crazy-nurse', 'Crazy Nurse'),
-    _PagGameDefinition('stick-boy', 'Stick Boy'),
-    _PagGameDefinition('stone-pile', 'Stone Pile'),
-    _PagGameDefinition('space-destroyer', 'Space Destroyer'),
-    _PagGameDefinition('falling-balled-man', 'Falling Balled Man'),
-    _PagGameDefinition('lily-in-danger', 'Lily in Danger'),
-    _PagGameDefinition('subway-trainrun', 'Subway TrainRun'),
-    _PagGameDefinition('the-bandit-hunter', 'The Bandit Hunter'),
-    _PagGameDefinition('bomberman', 'Bomberman'),
-    _PagGameDefinition('pac-man', 'Pac-Man'),
-    _PagGameDefinition('bio-race', 'Bio-Race'),
-    _PagGameDefinition('halloween-bubble-shooter', 'Halloween Bubble Shooter'),
+    _PagGameDefinition('8-ball-pool-sp', '8 Ball Pool', '/games/pool-multiplayer/'),
+    _PagGameDefinition('chicken-road', 'Chicken Road', '/games/chicken-road/'),
+    _PagGameDefinition('crazy-nurse', 'Crazy Nurse', '/games/crazy-nurse/'),
+    _PagGameDefinition('stick-boy', 'Stick Boy', '/games/stick-boy/'),
+    _PagGameDefinition('stone-pile', 'Stone Pile', '/games/stone-pile/'),
+    _PagGameDefinition('space-destroyer', 'Space Destroyer', '/games/space-destroyer/'),
+    _PagGameDefinition('falling-balled-man', 'Falling Balled Man', '/games/falling-balled-man/'),
+    _PagGameDefinition('lily-in-danger', 'Lily in Danger', '/games/lily-in-danger/'),
+    _PagGameDefinition('subway-trainrun', 'Subway TrainRun', '/games/subway-trainrun/'),
+    _PagGameDefinition('the-bandit-hunter', 'The Bandit Hunter', '/games/the-bandit-hunter/'),
+    _PagGameDefinition('bomberman', 'Bomberman', '/games/bomberman/'),
+    _PagGameDefinition('pac-man', 'Pac-Man', '/games/pac-man/'),
+    _PagGameDefinition('bio-race', 'Bio-Race', '/games/bio-race/'),
+    _PagGameDefinition('halloween-bubble-shooter', 'Halloween Bubble Shooter', '/games/halloween-bubble-shooter/'),
   ];
 
   @override
@@ -91,9 +91,19 @@ class _GamesScreenState extends State<GamesScreen> {
   }
 
   Future<void> _openLobby() async {
+    await _openGame();
+  }
+
+  Future<void> _openGame([_PagGameDefinition? game]) async {
+    final initialUrl = game?.targetPath == null
+        ? null
+        : 'https://playersaregamers.nl${game!.targetPath}';
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PlayersAreGamersWebViewScreen(service: _service),
+        builder: (_) => PlayersAreGamersWebViewScreen(
+          service: _service,
+          initialUrl: initialUrl,
+        ),
       ),
     );
     await _refresh();
@@ -424,7 +434,7 @@ class _GamesScreenState extends State<GamesScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Open the embedded PlayersAreGamers lobby to launch games without logging in again. The same lobby also contains the live profile, leaderboard and game results pages.',
+              'Open de ingebouwde PlayersAreGamers omgeving. Vanuit de gamelijst hieronder kun je ook direct een specifieke game openen zonder eerst in de lobby te zoeken.',
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
@@ -554,7 +564,7 @@ class _GamesScreenState extends State<GamesScreen> {
             title: Text(game.name),
             subtitle: Text(game.id),
             trailing: TextButton(
-              onPressed: _openLobby,
+              onPressed: () => _openGame(game),
               child: const Text('Play'),
             ),
           ),
@@ -640,8 +650,9 @@ class _StatusCard extends StatelessWidget {
 }
 
 class _PagGameDefinition {
-  const _PagGameDefinition(this.id, this.name);
+  const _PagGameDefinition(this.id, this.name, this.targetPath);
 
   final String id;
   final String name;
+  final String? targetPath;
 }
