@@ -24,6 +24,7 @@ class PlayersAreGamersWebViewScreen extends StatefulWidget {
 class _PlayersAreGamersWebViewScreenState
     extends State<PlayersAreGamersWebViewScreen> {
   late final WebViewController _controller;
+  final WebViewCookieManager _cookieManager = WebViewCookieManager();
   final EarningsService _earningsService = EarningsService();
   bool _loading = true;
   bool _replayRewardInProgress = false;
@@ -56,8 +57,29 @@ class _PlayersAreGamersWebViewScreenState
             onMessageReceived: (message) {
               unawaited(_handleBridgeMessage(message.message));
             },
-          )
-          ..loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
+          );
+    unawaited(_bootstrapSession());
+  }
+
+  Future<void> _bootstrapSession() async {
+    try {
+      final launchContext = await widget.service.buildLaunchContext();
+      final targetUrl =
+          launchContext?.redirectUrl ?? PlayersAreGamersService.dashboardUrl;
+      for (final cookie in launchContext?.cookies ?? const []) {
+        await _cookieManager.setCookie(
+          WebViewCookie(
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path,
+          ),
+        );
+      }
+      await _controller.loadRequest(Uri.parse(targetUrl));
+    } catch (_) {
+      await _controller.loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
+    }
   }
 
   Future<void> _injectSessionAndReplayBridge() async {

@@ -275,3 +275,29 @@ class PlayersAreGamersSession {
   final String token;
   final String userJson;
 }
+
+class PlayersAreGamersLaunchContext {
+  const PlayersAreGamersLaunchContext({
+    required this.redirectUrl,
+    required this.cookies,
+  });
+
+  final String redirectUrl;
+  final List<PlayersAreGamersCookie> cookies;
+}
+
+class PlayersAreGamersCookie {
+  const PlayersAreGamersCookie({
+    required this.name,
+    required this.value,
+    required this.domain,
+    this.path = '/',
+    this.isSecure = true,
+  });
+
+  final String name;
+  final String value;
+  final String domain;
+  final String path;
+  final bool isSecure;
+}

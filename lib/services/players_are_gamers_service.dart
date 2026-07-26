@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/players_are_gamers_profile.dart';
 import 'firestore_service.dart';
@@ -23,6 +24,7 @@ class PlayersAreGamersService {
   static const String registrationUrl = 'https://playersaregamers.nl/register.html';
   static const String loginUrl = 'https://playersaregamers.nl/login.php';
   static const String dashboardUrl = 'https://playersaregamers.nl/dashboard.php';
+  static const String autoLoginUrl = 'https://playersaregamers.nl/auto-login.php';
   static const String _tokenStorageKey = 'pag_session_token';
   static const String _userStorageKey = 'pag_session_user';
   static const String _integrationCollection = 'integrations';
@@ -114,6 +116,17 @@ class PlayersAreGamersService {
     return profile;
   }
 
+  Future<PlayersAreGamersProfile> ensureLinkedProfile({
+    bool includeStats = true,
+    bool autoCreateIfMissing = true,
+  }) async {
+    final profile = await refreshProfile(includeStats: includeStats);
+    if (profile.linked || !autoCreateIfMissing) {
+      return profile;
+    }
+    return createAutomaticAccount(includeStats: includeStats);
+  }
+
   Future<PlayersAreGamersProfile> linkExistingAccount({
     required String username,
     required String password,
@@ -144,6 +157,27 @@ class PlayersAreGamersService {
     final response = await _call('pagCreateAndLinkAccount', {
       'username': username.trim(),
       'password': password,
+    });
+    final stats =
+        response['stats'] is Map
+            ? (response['stats'] as Map).map(
+              (key, value) => MapEntry(key.toString(), value),
+            )
+            : null;
+    final profile = PlayersAreGamersProfile.fromApi(
+      response,
+      statsPayload: stats,
+    );
+    await _persistSession(response);
+    await _saveProfile(profile);
+    return profile;
+  }
+
+  Future<PlayersAreGamersProfile> createAutomaticAccount({
+    bool includeStats = true,
+  }) async {
+    final response = await _call('pagCreateAutomaticAccount', {
+      'includeStats': includeStats,
     });
     final stats =
         response['stats'] is Map
@@ -213,6 +247,35 @@ class PlayersAreGamersService {
     return PlayersAreGamersSession(token: token, userJson: userJson);
   }
 
+  Future<PlayersAreGamersLaunchContext?> buildLaunchContext() async {
+    final session = await getStoredSession();
+    if (session == null) return null;
+
+    final response = await http.post(
+      Uri.parse(autoLoginUrl),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': session.token}),
+    );
+
+    final payload = _decodeJson(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(
+        (payload['message'] ?? payload['error'] ?? 'PlayersAreGamers auto-login failed.')
+            .toString(),
+      );
+    }
+
+    final redirectUrl =
+        (payload['redirectUrl'] ?? payload['redirect_url'] ?? dashboardUrl)
+            .toString();
+    final cookies = _extractCookies(response.headers);
+
+    return PlayersAreGamersLaunchContext(
+      redirectUrl: redirectUrl.isEmpty ? dashboardUrl : redirectUrl,
+      cookies: cookies,
+    );
+  }
+
   Future<void> grantReplayReward({
     int videomoneyViews = 3,
     int gameCoins = 2,
@@ -267,5 +330,49 @@ class PlayersAreGamersService {
   Future<void> _clearSession() async {
     await _secureStorage.delete(key: _tokenStorageKey);
     await _secureStorage.delete(key: _userStorageKey);
+  }
+
+  Map<String, dynamic> _decodeJson(String body) {
+    if (body.trim().isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  List<PlayersAreGamersCookie> _extractCookies(Map<String, String> headers) {
+    final rawCookie = headers['set-cookie'];
+    if (rawCookie == null || rawCookie.isEmpty) {
+      return const <PlayersAreGamersCookie>[];
+    }
+
+    final matches = RegExp(r'([A-Za-z0-9_]+)=([^;,]+)').allMatches(rawCookie);
+    final cookies = <PlayersAreGamersCookie>[];
+    for (final match in matches) {
+      final name = match.group(1);
+      final value = match.group(2);
+      if (name == null || value == null) continue;
+      if (name.toLowerCase() == 'path' ||
+          name.toLowerCase() == 'expires' ||
+          name.toLowerCase() == 'domain' ||
+          name.toLowerCase() == 'samesite' ||
+          name.toLowerCase() == 'max-age') {
+        continue;
+      }
+      cookies.add(
+        PlayersAreGamersCookie(
+          name: name,
+          value: value,
+          domain: 'playersaregamers.nl',
+          path: '/',
+          isSecure: true,
+        ),
+      );
+    }
+    return cookies;
   }
 }

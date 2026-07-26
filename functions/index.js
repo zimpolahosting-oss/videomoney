@@ -359,6 +359,27 @@ function sanitizeString(value) {
   return String(value || "").trim();
 }
 
+function sanitizePagUsername(value) {
+  return sanitizeString(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+function buildPagUsernameCandidates(uid, email) {
+  const uidPart = sanitizePagUsername(uid).slice(0, 8) || "player";
+  const emailPrefix = sanitizePagUsername(email.split("@")[0] || "");
+  const base = (emailPrefix || `videomoney_${uidPart}`).slice(0, 20);
+  const candidates = [
+    base,
+    `vm_${uidPart}`,
+    `${base.slice(0, 15)}_${uidPart.slice(0, 4)}`,
+    `videomoney_${uidPart.slice(0, 6)}`,
+  ];
+  return [...new Set(candidates.filter((item) => item.length >= 3).map((item) => item.slice(0, 20)))];
+}
+
 function normalizePagError(status, payload) {
   const message = sanitizeString(payload?.message || payload?.error || "PlayersAreGamers request failed.");
   if (status === 400) {
@@ -603,6 +624,94 @@ exports.pagCreateAndLinkAccount = onCall(
     return {
       linked: true,
       ...playerResult.payload,
+      stats: statsResult.response.ok ? statsResult.payload : {},
+    };
+  }
+);
+
+exports.pagCreateAutomaticAccount = onCall(
+  {secrets: [playersAreGamersApiKey]},
+  async (request) => {
+    const {uid, email} = requireAuth(request);
+    if (!email) {
+      throw new HttpsError(
+        "failed-precondition",
+        "A verified email is required to create a PlayersAreGamers account."
+      );
+    }
+
+    const apiKey = playersAreGamersApiKey.value();
+    const usernameCandidates = buildPagUsernameCandidates(uid, email);
+    let createResult = null;
+    let lastConflictPayload = null;
+
+    for (const username of usernameCandidates) {
+      const result = await pagRequest(apiKey, "/player", {
+        method: "POST",
+        body: {
+          firebaseUid: uid,
+          username,
+          email,
+        },
+      });
+
+      if (result.response.ok) {
+        createResult = result;
+        break;
+      }
+
+      if (
+        result.response.status === 409 &&
+        sanitizeString(result.payload?.message).toLowerCase().includes("username")
+      ) {
+        lastConflictPayload = result.payload;
+        continue;
+      }
+
+      if (
+        result.response.status === 409 &&
+        sanitizeString(result.payload?.message).toLowerCase().includes("firebase uid")
+      ) {
+        const playerResult = await pagRequest(apiKey, `/player/${encodeURIComponent(uid)}`);
+        if (!playerResult.response.ok) {
+          throw normalizePagError(playerResult.response.status, playerResult.payload);
+        }
+
+        const statsResult = await pagRequest(
+          apiKey,
+          `/player/${encodeURIComponent(uid)}/stats`
+        );
+
+        return {
+          linked: true,
+          ...playerResult.payload,
+          stats: statsResult.response.ok ? statsResult.payload : {},
+        };
+      }
+
+      throw normalizePagError(result.response.status, result.payload);
+    }
+
+    if (!createResult) {
+      throw normalizePagError(409, lastConflictPayload || {
+        message: "Unable to reserve a PlayersAreGamers username automatically.",
+      });
+    }
+
+    const playerResult = await pagRequest(apiKey, `/player/${encodeURIComponent(uid)}`);
+    if (!playerResult.response.ok) {
+      throw normalizePagError(playerResult.response.status, playerResult.payload);
+    }
+
+    const statsResult = await pagRequest(
+      apiKey,
+      `/player/${encodeURIComponent(uid)}/stats`
+    );
+
+    return {
+      linked: true,
+      ...playerResult.payload,
+      token: sanitizeString(createResult.payload?.token),
       stats: statsResult.response.ok ? statsResult.payload : {},
     };
   }

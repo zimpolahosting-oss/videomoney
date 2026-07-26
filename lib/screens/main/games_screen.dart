@@ -19,22 +19,32 @@ class _GamesScreenState extends State<GamesScreen> {
   bool _loading = true;
   String? _error;
 
-  static const List<_PagGameDefinition> _games = [
-    _PagGameDefinition('bionic-race', 'Bionic Race'),
-    _PagGameDefinition('bomberman', 'Bomberman'),
-    _PagGameDefinition('chicken-road', 'Chicken Road'),
-    _PagGameDefinition('cookie-match', 'Cookie Match'),
-    _PagGameDefinition('crazy-nurse', 'Crazy Nurse'),
-    _PagGameDefinition('donkey-kong', 'Donkey Kong'),
+  static const List<_PagGameDefinition> _multiplayerGames = [
+    _PagGameDefinition('8-ball-pool-mp', '8 Ball Pool'),
+    _PagGameDefinition('neon-tiktak-connect', 'NEON EDITION TikTak Connect'),
+    _PagGameDefinition('ludo', 'Ludo'),
+    _PagGameDefinition('jewel-quest', 'Jewel Quest'),
     _PagGameDefinition('duck-shooter', 'Duck Shooter'),
-    _PagGameDefinition('falling-baldman', 'Falling Baldman'),
     _PagGameDefinition('fruit-matching', 'Fruit Matching'),
-    _PagGameDefinition('halloween-bubble', 'Halloween Bubble'),
-    _PagGameDefinition('highway-moto-rider', 'Highway Moto Rider'),
-    _PagGameDefinition('minesweeper', 'Minesweeper'),
-    _PagGameDefinition('moons', 'Moons'),
-    _PagGameDefinition('rider-online', 'Rider Online'),
-    _PagGameDefinition('word-search-classic', 'Word Search Classic'),
+    _PagGameDefinition('memory-match', 'Memory Match'),
+    _PagGameDefinition('tap-the-rat', 'Tap The Rat'),
+  ];
+
+  static const List<_PagGameDefinition> _singlePlayerGames = [
+    _PagGameDefinition('8-ball-pool-sp', '8 Ball Pool'),
+    _PagGameDefinition('chicken-road', 'Chicken Road'),
+    _PagGameDefinition('crazy-nurse', 'Crazy Nurse'),
+    _PagGameDefinition('stick-boy', 'Stick Boy'),
+    _PagGameDefinition('stone-pile', 'Stone Pile'),
+    _PagGameDefinition('space-destroyer', 'Space Destroyer'),
+    _PagGameDefinition('falling-balled-man', 'Falling Balled Man'),
+    _PagGameDefinition('lily-in-danger', 'Lily in Danger'),
+    _PagGameDefinition('subway-trainrun', 'Subway TrainRun'),
+    _PagGameDefinition('the-bandit-hunter', 'The Bandit Hunter'),
+    _PagGameDefinition('bomberman', 'Bomberman'),
+    _PagGameDefinition('pac-man', 'Pac-Man'),
+    _PagGameDefinition('bio-race', 'Bio-Race'),
+    _PagGameDefinition('halloween-bubble-shooter', 'Halloween Bubble Shooter'),
   ];
 
   @override
@@ -51,7 +61,10 @@ class _GamesScreenState extends State<GamesScreen> {
       });
     }
     try {
-      await _service.refreshProfile(includeStats: true);
+      await _service.ensureLinkedProfile(
+        includeStats: true,
+        autoCreateIfMissing: true,
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -70,6 +83,9 @@ class _GamesScreenState extends State<GamesScreen> {
     if (text.contains('[firebase_functions/internal]') ||
         text.contains('[firebase_functions/unavailable]')) {
       return 'PlayersAreGamers is tijdelijk niet bereikbaar. Je kunt wel alvast de website openen of later opnieuw synchroniseren.';
+    }
+    if (text.contains('[firebase_functions/already-exists]')) {
+      return 'Er lijkt al een bestaand PlayersAreGamers-account te bestaan voor deze gebruiker. Link dat account hieronder met je username en wachtwoord.';
     }
     return text;
   }
@@ -312,14 +328,20 @@ class _GamesScreenState extends State<GamesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Set up your game account',
+              'Games-account voorbereiden',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             const Text(
-              'Videomoney keeps your Firebase login. To start games without a second login later, first link an existing PlayersAreGamers account or create a new one.',
+              'Videomoney probeert automatisch een PlayersAreGamers-account voor je klaar te zetten zodra je Games opent. Als jij al een oud PAG-account had, link dat dan hieronder met je username en wachtwoord zodat je bestaande coins en progress behouden blijven.',
             ),
             const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _loading ? null : _refresh,
+              icon: const Icon(Icons.play_circle_outline_rounded),
+              label: const Text('Probeer automatische start opnieuw'),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: () => _showLinkDialog(createMode: false),
               icon: const Icon(Icons.link_rounded),
@@ -495,23 +517,48 @@ class _GamesScreenState extends State<GamesScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'All supported PlayersAreGamers titles are available from the embedded lobby.',
+              'Deze lijst volgt de huidige PlayersAreGamers lobby. Tik op Play om de embedded lobby in de app te openen.',
             ),
             const SizedBox(height: 8),
-            for (final game in _games)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.gamepad_rounded),
-                title: Text(game.name),
-                subtitle: Text(game.id),
-                trailing: TextButton(
-                  onPressed: _openLobby,
-                  child: const Text('Play'),
-                ),
-              ),
+            _buildGameSection(
+              title: 'Real-Time Multiplayer',
+              games: _multiplayerGames,
+            ),
+            const SizedBox(height: 12),
+            _buildGameSection(
+              title: 'Single Player',
+              games: _singlePlayerGames,
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGameSection({
+    required String title,
+    required List<_PagGameDefinition> games,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 6),
+        for (final game in games)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.gamepad_rounded),
+            title: Text(game.name),
+            subtitle: Text(game.id),
+            trailing: TextButton(
+              onPressed: _openLobby,
+              child: const Text('Play'),
+            ),
+          ),
+      ],
     );
   }
 }
