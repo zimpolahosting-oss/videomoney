@@ -86,7 +86,6 @@ class ShortsProgressService {
   static const String providerAdmob = 'admob';
   static const String providerAppodeal = 'appodeal';
   static const String providerMeta = 'meta';
-  static const String providerLiftoff = 'liftoff';
   static const String providerMonetag = 'monetag';
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
@@ -216,8 +215,7 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerAdmob => providerLiftoff,
-      providerLiftoff => providerMonetag,
+      providerAdmob => providerMonetag,
       providerMonetag => providerAppodeal,
       providerAppodeal => providerAdmob,
       _ => providerAdmob,
@@ -231,7 +229,6 @@ class ShortsProgressService {
     }
     if (value == providerAdmob ||
         value == providerAppodeal ||
-        value == providerLiftoff ||
         value == providerMonetag) {
       return value;
     }

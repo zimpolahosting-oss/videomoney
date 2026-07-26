@@ -21,6 +21,10 @@ class PlaylistVideoFeedProvider implements VideoFeedProvider {
   }) {
     return _playlistFeedService.loadPlaylistItems();
   }
+
+  Future<List<ShortVideoItem>> fetchCachedFeed() {
+    return _playlistFeedService.loadCachedPlaylistItems();
+  }
 }
 
 class VideoFeedService {
@@ -28,6 +32,14 @@ class VideoFeedService {
       : _provider = provider ?? PlaylistVideoFeedProvider();
 
   final VideoFeedProvider _provider;
+
+  Future<List<ShortVideoItem>> loadCachedFeed() async {
+    final provider = _provider;
+    if (provider is PlaylistVideoFeedProvider) {
+      return provider.fetchCachedFeed();
+    }
+    return const [];
+  }
 
   Future<List<ShortVideoItem>> loadFeed({
     String? userId,

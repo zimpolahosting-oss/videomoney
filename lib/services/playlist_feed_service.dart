@@ -33,6 +33,11 @@ class PlaylistFeedService {
 
   final http.Client _client;
 
+  Future<List<ShortVideoItem>> loadCachedPlaylistItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _readCachedItems(prefs);
+  }
+
   Future<List<ShortVideoItem>> loadPlaylistItems({
     bool forceRefresh = false,
   }) async {

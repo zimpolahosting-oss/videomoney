@@ -6,7 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 enum RewardedAdProvider { auto, mobfox, startio, liftoff, gravite, admob, appodeal, meta }
 
-enum _RewardedNetwork { mobfox, gravite, liftoff, admob, appodeal, appnext, meta, startio }
+enum _RewardedNetwork { mobfox, gravite, admob, appodeal, appnext, meta, startio }
 
 class RewardedAdService {
   factory RewardedAdService() => _instance;
@@ -27,7 +27,6 @@ class RewardedAdService {
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
     _RewardedNetwork.admob,
-    _RewardedNetwork.liftoff,
     _RewardedNetwork.appodeal,
   ];
 
@@ -35,7 +34,6 @@ class RewardedAdService {
   final Map<_RewardedNetwork, bool> _nativeRewardedReady = {
     _RewardedNetwork.mobfox: false,
     _RewardedNetwork.gravite: false,
-    _RewardedNetwork.liftoff: false,
     _RewardedNetwork.appodeal: false,
     _RewardedNetwork.appnext: false,
     _RewardedNetwork.meta: false,
@@ -62,7 +60,6 @@ class RewardedAdService {
       _invokeVoidMethod('preloadGraviteRewardedVideo'),
       _invokeVoidMethod('preloadRewardedVideo'),
       _invokeVoidMethod('preloadMetaRewardedInterstitial'),
-      _invokeVoidMethod('preloadLiftoffRewardedVideo'),
     ]);
     await _loadRewardedAd();
     if (disableOtherLegacySdkAds) {
@@ -132,7 +129,6 @@ class RewardedAdService {
         );
       case _RewardedNetwork.mobfox:
       case _RewardedNetwork.gravite:
-      case _RewardedNetwork.liftoff:
       case _RewardedNetwork.appodeal:
       case _RewardedNetwork.appnext:
       case _RewardedNetwork.meta:
@@ -241,9 +237,9 @@ class RewardedAdService {
           : null;
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.liftoff);
-      return _isRewardedReady(_RewardedNetwork.liftoff)
-          ? _RewardedNetwork.liftoff
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
+      return _isRewardedReady(_RewardedNetwork.admob)
+          ? _RewardedNetwork.admob
           : null;
     }
     for (var offset = 1; offset <= _rotationOrder.length; offset++) {
@@ -303,10 +299,6 @@ class RewardedAdService {
       _RewardedNetwork.meta,
       await _channel.invokeMethod<bool>('isMetaRewardedInterstitialLoaded') ?? false,
     );
-    _updateNativeAvailability(
-      _RewardedNetwork.liftoff,
-      await _channel.invokeMethod<bool>('isLiftoffRewardedVideoLoaded') ?? false,
-    );
     if (disableOtherLegacySdkAds) {
       return;
     }
@@ -364,29 +356,6 @@ class RewardedAdService {
         break;
       case 'onGraviteRewardedVideoError':
         _updateNativeAvailability(_RewardedNetwork.gravite, false);
-        _nativeStatusCallback?.call(adUnavailableMessage);
-        _completeNativeRewardedFlow(false, reloadNextAd: true);
-        break;
-      case 'onLiftoffRewardedVideoLoaded':
-        _updateNativeAvailability(_RewardedNetwork.liftoff, true);
-        break;
-      case 'onLiftoffRewardedVideoShown':
-        _markNativeAdShown(_RewardedNetwork.liftoff);
-        _updateNativeAvailability(_RewardedNetwork.liftoff, false);
-        break;
-      case 'onLiftoffRewardedVideoImpression':
-        debugPrint('[Ads][rewarded] Liftoff impression.');
-        break;
-      case 'onLiftoffRewardedVideoClicked':
-        debugPrint('[Ads][rewarded] Liftoff clicked.');
-        break;
-      case 'onLiftoffRewardedVideoCompleted':
-        await _grantNativeReward();
-        break;
-      case 'onLiftoffRewardedVideoClosed':
-        _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
-        break;
-      case 'onLiftoffRewardedVideoError':
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -556,9 +525,6 @@ class RewardedAdService {
       case _RewardedNetwork.gravite:
         await _invokeVoidMethod('preloadGraviteRewardedVideo');
         return;
-      case _RewardedNetwork.liftoff:
-        await _invokeVoidMethod('preloadLiftoffRewardedVideo');
-        return;
       case _RewardedNetwork.appodeal:
         await _invokeVoidMethod('preloadRewardedVideo');
         return;
@@ -597,7 +563,6 @@ class RewardedAdService {
     return switch (network) {
       _RewardedNetwork.mobfox => 'MobFox',
       _RewardedNetwork.gravite => 'Gravite',
-      _RewardedNetwork.liftoff => 'Liftoff',
       _RewardedNetwork.admob => 'AdMob',
       _RewardedNetwork.appodeal => 'Appodeal',
       _RewardedNetwork.appnext => 'Appnext',
@@ -610,7 +575,6 @@ class RewardedAdService {
     return switch (network) {
       _RewardedNetwork.mobfox => 'showMobFoxRewardedVideo',
       _RewardedNetwork.gravite => 'showGraviteRewardedVideo',
-      _RewardedNetwork.liftoff => 'showLiftoffRewardedVideo',
       _RewardedNetwork.appodeal => 'showRewardedVideo',
       _RewardedNetwork.appnext => 'showAppnextRewardedVideo',
       _RewardedNetwork.meta => 'showMetaRewardedInterstitial',

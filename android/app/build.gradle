@@ -52,16 +52,6 @@ def metaBannerPlacementId = (
                 ?: System.getenv('META_BANNER_PLACEMENT_ID')
                 ?: '1741013560433241_1741019897099274'
 ).trim()
-def liftoffAppId = (
-        localProperties.getProperty('liftoff.appId')
-                ?: System.getenv('LIFTOFF_APP_ID')
-                ?: '6a5bfc42a675fb0e69db341b'
-).trim()
-def liftoffRewardedPlacementId = (
-        localProperties.getProperty('liftoff.rewardedPlacementId')
-                ?: System.getenv('LIFTOFF_REWARDED_PLACEMENT_ID')
-                ?: 'DEFAULT-8375954'
-).trim()
 def graviteRewardedPlacementName = (
         localProperties.getProperty('gravite.rewardedPlacementName')
                 ?: System.getenv('GRAVITE_REWARDED_PLACEMENT_NAME')
@@ -110,8 +100,6 @@ android {
         buildConfigField "String", "META_REWARDED_INTERSTITIAL_PLACEMENT_ID", "\"${metaRewardedInterstitialPlacementId}\""
         buildConfigField "String", "META_INTERSTITIAL_PLACEMENT_ID", "\"${metaInterstitialPlacementId}\""
         buildConfigField "String", "META_BANNER_PLACEMENT_ID", "\"${metaBannerPlacementId}\""
-        buildConfigField "String", "LIFTOFF_APP_ID", "\"${liftoffAppId}\""
-        buildConfigField "String", "LIFTOFF_REWARDED_PLACEMENT_ID", "\"${liftoffRewardedPlacementId}\""
         buildConfigField "String", "GRAVITE_REWARDED_PLACEMENT_NAME", "\"${graviteRewardedPlacementName}\""
         buildConfigField "String", "GRAVITE_TEST_MODE_ACCOUNT_ID", "\"${graviteTestModeAccountId}\""
         buildConfigField "String", "MOBFOX_VAST_TAG_URL", "\"${mobfoxVastTagUrl}\""
@@ -151,7 +139,6 @@ dependencies {
     implementation "com.google.android.ump:user-messaging-platform:3.1.0"
     implementation "androidx.media3:media3-exoplayer:1.4.1"
     implementation "androidx.media3:media3-ui:1.4.1"
-    implementation "com.vungle:vungle-ads:7.7.6"
     implementation "com.facebook.android:audience-network-sdk:6.21.0"
     implementation "com.appnext.sdk:ads:2.7.6.473"
     implementation "com.appodeal.ads.sdk:core:4.2.0"

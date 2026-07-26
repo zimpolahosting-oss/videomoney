@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -122,6 +121,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         setState(() => _isLoadingFeed = false);
       }
       return;
+    }
+
+    final cachedFeed = await _videoFeedService.loadCachedFeed();
+    if (mounted && cachedFeed.isNotEmpty) {
+      setState(() {
+        _feed = cachedFeed;
+        _currentIndex = 0;
+        _isLoadingFeed = false;
+      });
+      unawaited(_loadCurrentVideoIntoWebView());
     }
 
     try {
@@ -586,14 +595,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
-      final isLiftoffBreak =
-          pendingProvider == ShortsProgressService.providerLiftoff;
       final isRewardedTurn =
           isAdmobBreak ||
-          isAppodealBreak ||
-          isLiftoffBreak;
+          isAppodealBreak;
       final shouldFallbackToMonetag =
-          isAdmobBreak || isAppodealBreak || isLiftoffBreak;
+          isAdmobBreak || isAppodealBreak;
       final completed =
           await Navigator.of(context).push<bool>(
             MaterialPageRoute<bool>(
@@ -607,9 +613,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         await _earningsService.showRewardedBonusAd(
                           provider: isAdmobBreak
                                   ? RewardedAdProvider.admob
-                                  : isAppodealBreak
-                                      ? RewardedAdProvider.appodeal
-                                      : RewardedAdProvider.liftoff,
+                                  : RewardedAdProvider.appodeal,
                           onAdStatus: (message) {
                             debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                           },
@@ -677,8 +681,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ? 'No AdMob or Monetag ad available for this turn.'
                   : isAppodealBreak
                   ? 'No Appodeal or Monetag ad available for this turn.'
-                  : isLiftoffBreak
-                      ? 'No Liftoff or Monetag ad available for this turn.'
                   : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
@@ -712,7 +714,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _providerLabelForAdBreak(String provider) {
     return switch (provider) {
       ShortsProgressService.providerAdmob => 'AdMob',
-      ShortsProgressService.providerLiftoff => 'Liftoff',
       ShortsProgressService.providerAppodeal => 'Appodeal',
       ShortsProgressService.providerMonetag => 'Monetag',
       _ => 'Ad',
