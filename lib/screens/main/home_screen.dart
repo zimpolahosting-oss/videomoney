@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _resumeAfterOverlay = false;
   DateTime _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   String? _feedError;
+  int? _sessionStartIndex;
 
   @override
   void initState() {
@@ -127,20 +128,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted && cachedFeed.isNotEmpty) {
       setState(() {
         _feed = cachedFeed;
-        _currentIndex = 0;
+        _currentIndex = _pickInitialFeedIndex(cachedFeed.length);
         _isLoadingFeed = false;
       });
       unawaited(_loadCurrentVideoIntoWebView());
     }
 
     try {
+      final currentVideoId =
+          _feed.isNotEmpty ? _feed[_currentIndex.clamp(0, _feed.length - 1)].videoId : null;
       final feed = await _videoFeedService.loadFeed(userId: user.uid);
       final progress = await ShortsProgressService.instance.load(user.uid);
 
       if (!mounted) return;
+      final nextIndex = currentVideoId == null
+          ? _pickInitialFeedIndex(feed.length)
+          : feed.indexWhere((item) => item.videoId == currentVideoId);
       setState(() {
         _feed = feed;
-        _currentIndex = 0;
+        _currentIndex = (nextIndex < 0 || nextIndex >= feed.length)
+            ? _pickInitialFeedIndex(feed.length)
+            : nextIndex;
         _syncProgressFromSnapshot(progress);
         _isLoadingFeed = false;
         _feedError = null;
@@ -171,6 +179,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return 'YouTube blokkeerde de playlist-API. De app schakelt over naar de publieke playlist zodra je opnieuw ververst.';
     }
     return text;
+  }
+
+  int _pickInitialFeedIndex(int feedLength) {
+    if (feedLength <= 1) return 0;
+    _sessionStartIndex ??= DateTime.now().millisecondsSinceEpoch % feedLength;
+    if (_sessionStartIndex! >= feedLength) {
+      _sessionStartIndex = _sessionStartIndex! % feedLength;
+    }
+    return _sessionStartIndex!;
   }
 
   Future<void> _refreshFeedSilently() async {
