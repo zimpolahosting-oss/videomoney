@@ -282,6 +282,12 @@ class PlayersAreGamersService {
     return PlayersAreGamersSession(token: token, userJson: userJson);
   }
 
+  Future<String?> getSessionToken({bool forceRefresh = false}) async {
+    var session = forceRefresh ? null : await getStoredSession();
+    session ??= await _generateSession();
+    return session?.token;
+  }
+
   Future<PlayersAreGamersLaunchContext?> buildLaunchContext({
     bool forceRefreshToken = false,
   }) async {

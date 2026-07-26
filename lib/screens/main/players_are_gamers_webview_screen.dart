@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +46,10 @@ class _PlayersAreGamersWebViewScreenState
                 });
               },
               onPageFinished: (url) async {
+                if (_isAutoLoginResponsePage(url)) {
+                  await _completeAutoLoginResponse();
+                  return;
+                }
                 await _injectSessionAndReplayBridge();
                 if (_looksLikeLoginPage(url) && !_sessionRecoveryAttempted) {
                   _sessionRecoveryAttempted = true;
@@ -69,42 +74,64 @@ class _PlayersAreGamersWebViewScreenState
 
   Future<void> _bootstrapSession() async {
     try {
-      final launchContext = await widget.service.buildLaunchContext(
-        forceRefreshToken: _sessionRecoveryAttempted,
+      final token = await widget.service.getSessionToken(
+        forceRefresh: _sessionRecoveryAttempted,
       );
-      final targetUrl =
-          launchContext?.redirectUrl ?? PlayersAreGamersService.dashboardUrl;
-      await _cookieManager.clearCookies();
-      for (final cookie in launchContext?.cookies ?? const []) {
-        await _cookieManager.setCookie(
-          WebViewCookie(
-            name: cookie.name,
-            value: cookie.value,
-            domain: cookie.domain,
-            path: cookie.path,
-          ),
-        );
-        if (!cookie.domain.startsWith('.')) {
-          await _cookieManager.setCookie(
-            WebViewCookie(
-              name: cookie.name,
-              value: cookie.value,
-              domain: '.${cookie.domain}',
-              path: cookie.path,
-            ),
-          );
-        }
+      if (token == null || token.isEmpty) {
+        throw Exception('No PlayersAreGamers session token available.');
       }
+      await _cookieManager.clearCookies();
       await _controller.loadRequest(
-        Uri.parse(targetUrl),
+        Uri.parse(PlayersAreGamersService.autoLoginUrl),
+        method: LoadRequestMethod.post,
         headers: {
-          if ((launchContext?.cookieHeader ?? '').isNotEmpty)
-            'Cookie': launchContext!.cookieHeader,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+        body: Uint8List.fromList(
+          utf8.encode(jsonEncode({'token': token})),
+        ),
+      );
+    } catch (_) {
+      await _controller.loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
+    }
+  }
+
+  Future<void> _completeAutoLoginResponse() async {
+    try {
+      final rawBody = await _controller.runJavaScriptReturningResult(
+        '(function() { return document.body ? document.body.innerText : ""; })();',
+      );
+      final body = _normalizeJavaScriptResult(rawBody).trim();
+      final payload =
+          body.isEmpty ? <String, dynamic>{} : jsonDecode(body) as Map<String, dynamic>;
+      final redirectUrl =
+          (payload['redirectUrl'] ?? payload['redirect_url'] ?? '').toString().trim();
+
+      if (redirectUrl.isEmpty) {
+        if (!_sessionRecoveryAttempted) {
+          _sessionRecoveryAttempted = true;
+          await _bootstrapSession();
+          return;
+        }
+        await _controller.loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
+        return;
+      }
+
+      await _controller.loadRequest(
+        Uri.parse(redirectUrl),
+        headers: const {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
         },
       );
     } catch (_) {
+      if (!_sessionRecoveryAttempted) {
+        _sessionRecoveryAttempted = true;
+        await _bootstrapSession();
+        return;
+      }
       await _controller.loadRequest(Uri.parse(PlayersAreGamersService.dashboardUrl));
     }
   }
@@ -199,6 +226,21 @@ class _PlayersAreGamersWebViewScreenState
     return value.contains('/login.php') ||
         value.contains('/index.html') ||
         value.endsWith('/');
+  }
+
+  bool _isAutoLoginResponsePage(String? url) {
+    final value = (url ?? '').toLowerCase();
+    return value.contains('/auto-login.php');
+  }
+
+  String _normalizeJavaScriptResult(Object? value) {
+    if (value == null) return '';
+    final raw = value.toString();
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is String) return decoded;
+    } catch (_) {}
+    return raw;
   }
 
   Future<void> _handleBridgeMessage(String message) async {
