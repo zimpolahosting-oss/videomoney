@@ -27,8 +27,10 @@ class _PlayersAreGamersWebViewScreenState
   late final WebViewController _controller;
   final WebViewCookieManager _cookieManager = WebViewCookieManager();
   final EarningsService _earningsService = EarningsService();
+  final Set<String> _processedResultRunIds = <String>{};
   bool _loading = true;
   bool _replayRewardInProgress = false;
+  bool _resultRewardInProgress = false;
   bool _sessionRecoveryAttempted = false;
 
   @override
@@ -223,9 +225,7 @@ class _PlayersAreGamersWebViewScreenState
 
   bool _looksLikeLoginPage(String? url) {
     final value = (url ?? '').toLowerCase();
-    return value.contains('/login.php') ||
-        value.contains('/index.html') ||
-        value.endsWith('/');
+    return value.contains('/login.php') || value.contains('/index.html');
   }
 
   bool _isAutoLoginResponsePage(String? url) {
@@ -251,20 +251,84 @@ class _PlayersAreGamersWebViewScreenState
       payload = <String, dynamic>{};
     }
 
-    if (payload['type'] != 'playAgainRequested' || _replayRewardInProgress) {
+    final type = payload['type']?.toString();
+    if (type == 'playAgainRequested') {
+      if (_replayRewardInProgress) {
+        return;
+      }
+      _replayRewardInProgress = true;
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('You need to be signed in.');
+        }
+        final replayId =
+            payload['replayId']?.toString().trim().isNotEmpty == true
+                ? payload['replayId'].toString().trim()
+                : 'pag-replay-${DateTime.now().millisecondsSinceEpoch}';
+        final rewarded = await _earningsService.showRewardedBonusAd(
+          onAdStatus: (message) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message)),
+            );
+          },
+        );
+        if (!rewarded) {
+          return;
+        }
+        final rewardResult = await widget.service.grantReplayReward(
+          adId: replayId,
+          gameCoins: 2,
+          videomoneyViews: 3,
+        );
+        await _controller.runJavaScript('window.__vmResumePlayAgain && window.__vmResumePlayAgain();');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              rewardResult.pagCoinsGranted
+                  ? 'Reward granted: +2 game coins and +3 views. Starting a new game...'
+                  : 'Views granted. PAG coins could not be added right now, but the next game is starting.',
+            ),
+          ),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+          ),
+        );
+      } finally {
+        _replayRewardInProgress = false;
+      }
       return;
     }
 
-    _replayRewardInProgress = true;
+    if (type == 'vmGameResultShown') {
+      await _handleGameResultShown(payload);
+    }
+  }
+
+  Future<void> _handleGameResultShown(Map<String, dynamic> payload) async {
+    if (_resultRewardInProgress) return;
+
+    final runId =
+        payload['runId']?.toString().trim().isNotEmpty == true
+            ? payload['runId'].toString().trim()
+            : 'pag-result-${DateTime.now().millisecondsSinceEpoch}';
+    if (_processedResultRunIds.contains(runId)) {
+      return;
+    }
+
+    _resultRewardInProgress = true;
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('You need to be signed in.');
       }
-      final replayId =
-          payload['replayId']?.toString().trim().isNotEmpty == true
-              ? payload['replayId'].toString().trim()
-              : 'pag-replay-${DateTime.now().millisecondsSinceEpoch}';
+
       final rewarded = await _earningsService.showRewardedBonusAd(
         onAdStatus: (message) {
           if (!mounted) return;
@@ -276,31 +340,37 @@ class _PlayersAreGamersWebViewScreenState
       if (!rewarded) {
         return;
       }
-      final rewardResult = await widget.service.grantReplayReward(
-        adId: replayId,
-        gameCoins: 2,
+
+      final gameId =
+          payload['gameId']?.toString().trim().isNotEmpty == true
+              ? payload['gameId'].toString().trim()
+              : 'unknown-game';
+      final rewardResult = await widget.service.grantAdReward(
+        adId: 'pag-result-$gameId-$runId',
+        pagCoins: 2,
         videomoneyViews: 3,
+        videomoneyVideosWatched: 1,
+        autoCreateIfMissing: true,
       );
-      await _controller.runJavaScript('window.__vmResumePlayAgain && window.__vmResumePlayAgain();');
+      _processedResultRunIds.add(runId);
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             rewardResult.pagCoinsGranted
-                ? 'Reward granted: +2 game coins and +3 views. Starting a new game...'
-                : 'Views granted. PAG coins could not be added right now, but the next game is starting.',
+                ? 'Reward granted: +2 game coins and +3 views.'
+                : 'Views granted. Game coins could not be added right now.',
           ),
         ),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-        ),
+        SnackBar(content: Text(error.toString())),
       );
     } finally {
-      _replayRewardInProgress = false;
+      _resultRewardInProgress = false;
     }
   }
 
