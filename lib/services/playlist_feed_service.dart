@@ -55,9 +55,12 @@ class PlaylistFeedService {
     }
 
     try {
-      final freshItems = _apiKey.isEmpty
-          ? await _fetchPlaylistItemsFromPublicPage()
-          : await _fetchPlaylistItems();
+      final freshItems = _mergeWithCachedMetadata(
+        _apiKey.isEmpty
+            ? await _fetchPlaylistItemsFromPublicPage()
+            : await _fetchPlaylistItems(),
+        cachedItems,
+      );
       await prefs.setString(
         _cacheItemsKey,
         jsonEncode(
@@ -85,7 +88,10 @@ class PlaylistFeedService {
     } catch (error) {
       if (_shouldUsePublicFallback(error)) {
         try {
-          final fallbackItems = await _fetchPlaylistItemsFromPublicPage();
+          final fallbackItems = _mergeWithCachedMetadata(
+            await _fetchPlaylistItemsFromPublicPage(),
+            cachedItems,
+          );
           await prefs.setString(
             _cacheItemsKey,
             jsonEncode(
@@ -127,6 +133,41 @@ class PlaylistFeedService {
         message.contains('(401)') ||
         message.contains('(403)') ||
         message.contains('not configured yet');
+  }
+
+  List<ShortVideoItem> _mergeWithCachedMetadata(
+    List<ShortVideoItem> freshItems,
+    List<ShortVideoItem> cachedItems,
+  ) {
+    if (freshItems.isEmpty || cachedItems.isEmpty) {
+      return freshItems;
+    }
+
+    final cachedByVideoId = {
+      for (final item in cachedItems)
+        if (item.videoId.isNotEmpty) item.videoId: item,
+    };
+
+    return freshItems.map((item) {
+      final cached = cachedByVideoId[item.videoId];
+      if (cached == null) return item;
+
+      final hasGenericCaption =
+          item.caption.trim().isEmpty || item.caption == 'YouTube playlist video';
+      final hasGenericCreator =
+          item.creator.trim().isEmpty || item.creator == '@YouTube';
+
+      return ShortVideoItem(
+        id: item.id,
+        videoId: item.videoId,
+        sourceUrl: item.sourceUrl,
+        caption: hasGenericCaption ? cached.caption : item.caption,
+        creator: hasGenericCreator ? cached.creator : item.creator,
+        category: item.category,
+        durationHintSeconds: item.durationHintSeconds,
+        thumbnailUrl: item.thumbnailUrl ?? cached.thumbnailUrl,
+      );
+    }).toList(growable: false);
   }
 
   List<ShortVideoItem> _readCachedItems(SharedPreferences prefs) {

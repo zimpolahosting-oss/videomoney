@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -77,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   DateTime _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   String? _feedError;
   int? _sessionStartIndex;
+  final Random _random = Random();
 
   @override
   void initState() {
@@ -183,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   int _pickInitialFeedIndex(int feedLength) {
     if (feedLength <= 1) return 0;
-    _sessionStartIndex ??= DateTime.now().millisecondsSinceEpoch % feedLength;
+    _sessionStartIndex ??= _random.nextInt(feedLength);
     if (_sessionStartIndex! >= feedLength) {
       _sessionStartIndex = _sessionStartIndex! % feedLength;
     }
@@ -256,9 +258,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _loadCurrentVideoIntoWebView();
   }
 
-  Future<void> _goToNextVideo() => _showVideoAtIndex(_currentIndex + 1);
+  Future<void> _goToNextVideo() async {
+    if (_feed.isEmpty) return;
+    final nextIndex = (_currentIndex + 1) % _feed.length;
+    await _showVideoAtIndex(nextIndex);
+  }
 
-  Future<void> _goToPreviousVideo() => _showVideoAtIndex(_currentIndex - 1);
+  Future<void> _goToPreviousVideo() async {
+    if (_feed.isEmpty) return;
+    final previousIndex = (_currentIndex - 1 + _feed.length) % _feed.length;
+    await _showVideoAtIndex(previousIndex);
+  }
 
   void _onSwipePointerDown(PointerDownEvent event) {
     _swipeStartPosition = event.position;
