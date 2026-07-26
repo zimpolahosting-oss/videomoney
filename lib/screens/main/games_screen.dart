@@ -20,31 +20,111 @@ class _GamesScreenState extends State<GamesScreen> {
   String? _error;
 
   static const List<_PagGameDefinition> _multiplayerGames = [
-    _PagGameDefinition('8-ball-pool-mp', '8 Ball Pool', '/games/pool-multiplayer/'),
-    _PagGameDefinition('neon-tiktak-connect', 'NEON EDITION TikTak Connect', '/games/connect-four/'),
-    _PagGameDefinition('ludo', 'Ludo', '/games/ludo/'),
-    _PagGameDefinition('jewel-quest', 'Jewel Quest', '/jewel-quest/'),
-    _PagGameDefinition('duck-shooter', 'Duck Shooter', '/games/duck-shooter/'),
-    _PagGameDefinition('fruit-matching', 'Fruit Matching', '/games/fruit-matching/'),
-    _PagGameDefinition('memory-match', 'Memory Match', '/memory-match/'),
-    _PagGameDefinition('tap-the-rat', 'Tap The Rat', '/tap-rat/'),
+    _PagGameDefinition(
+      '8-ball-pool-mp',
+      '8 Ball Pool',
+      'https://playersaregamers.nl/games/pool-multiplayer/pool-multiplayer.php',
+    ),
+    _PagGameDefinition(
+      'neon-tiktak-connect',
+      'NEON EDITION TikTak Connect',
+      'https://playersaregamers.nl/Ticktak-Neon/index.html',
+    ),
+    _PagGameDefinition('ludo', 'Ludo', null),
+    _PagGameDefinition(
+      'jewel-quest',
+      'Jewel Quest',
+      'https://playersaregamers.nl/jewel-quest/',
+    ),
+    _PagGameDefinition(
+      'duck-shooter',
+      'Duck Shooter',
+      'https://playersaregamers.nl/duck-shooter/',
+    ),
+    _PagGameDefinition(
+      'fruit-matching',
+      'Fruit Matching',
+      'https://playersaregamers.nl/fruit-matching/',
+    ),
+    _PagGameDefinition(
+      'memory-match',
+      'Memory Match',
+      'https://playersaregamers.nl/memory-match/',
+    ),
+    _PagGameDefinition(
+      'tap-the-rat',
+      'Tap The Rat',
+      'https://playersaregamers.nl/tap-rat/',
+    ),
   ];
 
   static const List<_PagGameDefinition> _singlePlayerGames = [
-    _PagGameDefinition('8-ball-pool-sp', '8 Ball Pool', '/games/pool-multiplayer/'),
-    _PagGameDefinition('chicken-road', 'Chicken Road', '/games/chicken-road/'),
-    _PagGameDefinition('crazy-nurse', 'Crazy Nurse', '/games/crazy-nurse/'),
-    _PagGameDefinition('stick-boy', 'Stick Boy', '/games/stick-boy/'),
-    _PagGameDefinition('stone-pile', 'Stone Pile', '/games/stone-pile/'),
-    _PagGameDefinition('space-destroyer', 'Space Destroyer', '/games/space-destroyer/'),
-    _PagGameDefinition('falling-balled-man', 'Falling Balled Man', '/games/falling-balled-man/'),
-    _PagGameDefinition('lily-in-danger', 'Lily in Danger', '/games/lily-in-danger/'),
-    _PagGameDefinition('subway-trainrun', 'Subway TrainRun', '/games/subway-trainrun/'),
-    _PagGameDefinition('the-bandit-hunter', 'The Bandit Hunter', '/games/the-bandit-hunter/'),
-    _PagGameDefinition('bomberman', 'Bomberman', '/games/bomberman/'),
-    _PagGameDefinition('pac-man', 'Pac-Man', '/games/pac-man/'),
-    _PagGameDefinition('bio-race', 'Bio-Race', '/games/bio-race/'),
-    _PagGameDefinition('halloween-bubble-shooter', 'Halloween Bubble Shooter', '/games/halloween-bubble-shooter/'),
+    _PagGameDefinition(
+      '8-ball-pool-sp',
+      '8 Ball Pool',
+      'https://playersaregamers.nl/games/8ball-pool/',
+    ),
+    _PagGameDefinition(
+      'crazy-nurse',
+      'Crazy Nurse',
+      'https://playersaregamers.nl/crazy-nurse/',
+    ),
+    _PagGameDefinition(
+      'stick-boy',
+      'Stick Boy',
+      'https://playersaregamers.nl/stick-boy/',
+    ),
+    _PagGameDefinition(
+      'stone-pile',
+      'Stone Pile',
+      'https://playersaregamers.nl/stone-pile/',
+    ),
+    _PagGameDefinition(
+      'space-destroyer',
+      'Space Destroyer',
+      'https://playersaregamers.nl/Space-Destroyer/',
+    ),
+    _PagGameDefinition(
+      'falling-balled-man',
+      'Falling Balled Man',
+      'https://playersaregamers.nl/Falling-Baldman/',
+    ),
+    _PagGameDefinition(
+      'lily-in-danger',
+      'Lily in Danger',
+      'https://playersaregamers.nl/lily-in-danger/',
+    ),
+    _PagGameDefinition(
+      'subway-trainrun',
+      'Subway TrainRun',
+      'https://playersaregamers.nl/Subway-TrainRun/',
+    ),
+    _PagGameDefinition(
+      'the-bandit-hunter',
+      'The Bandit Hunter',
+      'https://playersaregamers.nl/Thebandit-hunter/',
+      landscapeOnly: true,
+    ),
+    _PagGameDefinition(
+      'bomberman',
+      'Bomberman',
+      'https://playersaregamers.nl/bomberman/',
+    ),
+    _PagGameDefinition(
+      'pac-man',
+      'Pac-Man',
+      'https://playersaregamers.nl/pacman/',
+    ),
+    _PagGameDefinition(
+      'bio-race',
+      'Bio-Race',
+      'https://playersaregamers.nl/bio-race/',
+    ),
+    _PagGameDefinition(
+      'halloween-bubble-shooter',
+      'Halloween Bubble Shooter',
+      'https://playersaregamers.nl/halloweenbubble-shooter/',
+    ),
   ];
 
   @override
@@ -95,14 +175,13 @@ class _GamesScreenState extends State<GamesScreen> {
   }
 
   Future<void> _openGame([_PagGameDefinition? game]) async {
-    final initialUrl = game?.targetPath == null
-        ? null
-        : 'https://playersaregamers.nl${game!.targetPath}';
+    final initialUrl = game?.targetUrl;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlayersAreGamersWebViewScreen(
           service: _service,
           initialUrl: initialUrl,
+          landscapeOnly: game?.landscapeOnly ?? false,
         ),
       ),
     );
@@ -564,9 +643,9 @@ class _GamesScreenState extends State<GamesScreen> {
             title: Text(game.name),
             subtitle: Text(game.id),
             trailing: TextButton(
-              onPressed: () => _openGame(game),
-              child: const Text('Play'),
-            ),
+                onPressed: () => _openGame(game),
+                child: Text(game.targetUrl == null ? 'Open lobby' : 'Play'),
+              ),
           ),
       ],
     );
@@ -650,9 +729,15 @@ class _StatusCard extends StatelessWidget {
 }
 
 class _PagGameDefinition {
-  const _PagGameDefinition(this.id, this.name, this.targetPath);
+  const _PagGameDefinition(
+    this.id,
+    this.name,
+    this.targetUrl, {
+    this.landscapeOnly = false,
+  });
 
   final String id;
   final String name;
-  final String? targetPath;
+  final String? targetUrl;
+  final bool landscapeOnly;
 }

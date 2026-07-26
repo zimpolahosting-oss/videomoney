@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../services/earnings_service.dart';
@@ -14,10 +15,12 @@ class PlayersAreGamersWebViewScreen extends StatefulWidget {
     super.key,
     required this.service,
     this.initialUrl,
+    this.landscapeOnly = false,
   });
 
   final PlayersAreGamersService service;
   final String? initialUrl;
+  final bool landscapeOnly;
 
   @override
   State<PlayersAreGamersWebViewScreen> createState() =>
@@ -39,6 +42,14 @@ class _PlayersAreGamersWebViewScreenState
   @override
   void initState() {
     super.initState();
+    if (widget.landscapeOnly) {
+      unawaited(
+        SystemChrome.setPreferredOrientations(const [
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]),
+      );
+    }
     _controller =
         WebViewController()
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -86,6 +97,18 @@ class _PlayersAreGamersWebViewScreenState
             },
           );
     unawaited(_bootstrapSession());
+  }
+
+  @override
+  void dispose() {
+    if (widget.landscapeOnly) {
+      unawaited(
+        SystemChrome.setPreferredOrientations(const [
+          DeviceOrientation.portraitUp,
+        ]),
+      );
+    }
+    super.dispose();
   }
 
   Future<void> _bootstrapSession() async {
