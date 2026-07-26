@@ -343,7 +343,7 @@ class _PlayersAreGamersWebViewScreenState
         if (!rewarded) {
           return;
         }
-        final rewardResult = await widget.service.grantReplayReward(
+        await widget.service.grantReplayReward(
           adId: replayId,
           gameCoins: 2,
           videomoneyViews: 3,
@@ -353,9 +353,7 @@ class _PlayersAreGamersWebViewScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              rewardResult.pagCoinsGranted
-                  ? 'Reward granted: +2 game coins and +3 views. Starting a new game...'
-                  : 'Views granted. PAG coins could not be added right now, but the next game is starting.',
+              'Reward granted: +3 views. Starting a new game...',
             ),
           ),
         );
@@ -400,7 +398,6 @@ class _PlayersAreGamersWebViewScreenState
         onAdStatus: (message) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message)),
           );
         },
@@ -413,7 +410,7 @@ class _PlayersAreGamersWebViewScreenState
           payload['gameId']?.toString().trim().isNotEmpty == true
               ? payload['gameId'].toString().trim()
               : 'unknown-game';
-      final rewardResult = await widget.service.grantAdReward(
+      await widget.service.grantAdReward(
         adId: 'pag-result-$gameId-$runId',
         pagCoins: 2,
         videomoneyViews: 3,
@@ -426,9 +423,7 @@ class _PlayersAreGamersWebViewScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            rewardResult.pagCoinsGranted
-                ? 'Reward granted: +2 game coins and +3 views.'
-                : 'Views granted. Game coins could not be added right now.',
+            'Reward granted: +3 views.',
           ),
         ),
       );

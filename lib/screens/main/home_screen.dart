@@ -689,9 +689,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              rewardResult?.pagCoinsGranted == true
-                  ? '+10 views and +2 game coins for completed ad'
-                  : '+10 views added. Game coins could not be added right now.',
+              '+10 views added.',
             ),
           ),
         );

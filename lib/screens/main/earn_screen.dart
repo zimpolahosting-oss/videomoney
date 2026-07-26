@@ -66,7 +66,7 @@ class _EarnScreenState extends State<EarnScreen> {
     if (!mounted) return;
 
     if (rewardGranted) {
-      final pagReward = await _playersAreGamersService.grantAdReward(
+      await _playersAreGamersService.grantAdReward(
         adId: 'vm-earn-ad-${DateTime.now().millisecondsSinceEpoch}',
         pagCoins: 2,
         videomoneyViews: 0,
@@ -75,9 +75,7 @@ class _EarnScreenState extends State<EarnScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            pagReward.pagCoinsGranted
-                ? '${l10n.rewardConfirmedViewsAdded} +2 game coins added.'
-                : '${l10n.rewardConfirmedViewsAdded} Game coins could not be added right now.',
+            l10n.rewardConfirmedViewsAdded,
           ),
         ),
       );
