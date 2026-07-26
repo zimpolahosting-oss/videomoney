@@ -9,6 +9,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../services/earnings_service.dart';
 import '../../services/players_are_gamers_service.dart';
+import '../../services/rewarded_ad_service.dart';
 
 class PlayersAreGamersWebViewScreen extends StatefulWidget {
   const PlayersAreGamersWebViewScreen({
