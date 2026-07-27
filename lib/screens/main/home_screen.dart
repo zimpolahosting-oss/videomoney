@@ -832,7 +832,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               Positioned.fill(
-                child: _ShortVideoPage(item: _feed[_currentIndex]),
+                child: _ShortVideoPage(
+                  item: _feed[_currentIndex],
+                  bottomInset: 108,
+                ),
               ),
               Positioned(
                 top: 0,
@@ -1246,9 +1249,11 @@ class _MatchmakingPromptCard extends StatelessWidget {
 class _ShortVideoPage extends StatelessWidget {
   const _ShortVideoPage({
     required this.item,
+    this.bottomInset = 18,
   });
 
   final ShortVideoItem item;
+  final double bottomInset;
 
   @override
   Widget build(BuildContext context) {
@@ -1274,7 +1279,7 @@ class _ShortVideoPage extends StatelessWidget {
           Positioned(
             left: 18,
             right: 18,
-            bottom: 18,
+            bottom: bottomInset,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
