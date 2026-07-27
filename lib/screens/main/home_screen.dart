@@ -1005,7 +1005,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Align(
                         alignment: Alignment.bottomLeft,
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 74),
+                          padding: const EdgeInsets.only(bottom: 62),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 270),
                             child: _OverlayCard(
