@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/players_are_gamers_profile.dart';
+import '../../services/pag_matchmaking_service.dart';
 import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
 import 'players_are_gamers_webview_screen.dart';
@@ -19,6 +20,7 @@ class GamesScreen extends StatefulWidget {
 
 class _GamesScreenState extends State<GamesScreen> {
   final PlayersAreGamersService _service = PlayersAreGamersService();
+  final PagMatchmakingService _matchmakingService = PagMatchmakingService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late final Stream<Set<String>> _onlineUserIdsStream =
       PresenceService.instance.watchOnlineUserIds();
@@ -131,6 +133,17 @@ class _GamesScreenState extends State<GamesScreen> {
 
   Future<void> _openGame([_PagGameDefinition? game]) async {
     final initialUrl = game?.targetUrl;
+    final shouldPublishWaitingSignal =
+        game != null && _multiplayerGames.contains(game);
+    if (shouldPublishWaitingSignal) {
+      try {
+        await _matchmakingService.publishWaitingSignal(
+          gameId: game.id,
+          gameName: game.name,
+          gameUrl: game.targetUrl ?? PlayersAreGamersService.dashboardUrl,
+        );
+      } catch (_) {}
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlayersAreGamersWebViewScreen(
@@ -140,6 +153,9 @@ class _GamesScreenState extends State<GamesScreen> {
         ),
       ),
     );
+    if (shouldPublishWaitingSignal) {
+      await _matchmakingService.clearOwnSignal();
+    }
     await _refresh();
   }
 

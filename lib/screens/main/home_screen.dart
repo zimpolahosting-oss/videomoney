@@ -16,6 +16,7 @@ import '../../models/players_are_gamers_profile.dart';
 import '../../models/short_video_item.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/pag_matchmaking_service.dart';
 import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/rewarded_ad_service.dart';
@@ -24,6 +25,7 @@ import '../../services/videomoney_ad_sdk.dart';
 import '../../services/video_feed_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
+import 'players_are_gamers_webview_screen.dart';
 import 'shorts_ad_break_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
   final _playersAreGamersService = PlayersAreGamersService();
+  final _pagMatchmakingService = PagMatchmakingService();
   final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
@@ -762,6 +765,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _isRewardHandling = false;
   }
 
+  Future<void> _openFeaturedMatch(PagMatchmakingSignal signal) async {
+    if (signal.gameUrl.trim().isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PlayersAreGamersWebViewScreen(
+          service: _playersAreGamersService,
+          initialUrl: signal.gameUrl,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -1020,6 +1035,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         ],
                                       ),
                                     ),
+                                    StreamBuilder<PagMatchmakingSignal?>(
+                                      stream: _pagMatchmakingService.watchFeaturedSignal(
+                                        excludeUid: user.uid,
+                                      ),
+                                      builder: (context, matchmakingSnapshot) {
+                                        final signal = matchmakingSnapshot.data;
+                                        if (signal == null) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Flexible(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 2,
+                                              left: 8,
+                                              right: 8,
+                                            ),
+                                            child: _MatchmakingPromptCard(
+                                              gameName: signal.gameName,
+                                              onTap: () => _openFeaturedMatch(signal),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
@@ -1107,6 +1146,99 @@ class _PlayersAreGamersProgressLine extends StatelessWidget {
           color: const Color(0xFF6B8BFF),
         );
       },
+    );
+  }
+}
+
+class _MatchmakingPromptCard extends StatelessWidget {
+  const _MatchmakingPromptCard({
+    required this.gameName,
+    required this.onTap,
+  });
+
+  final String gameName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A2015).withOpacity(0.92),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF1AE47A).withOpacity(0.34),
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2200FF88),
+                blurRadius: 18,
+                spreadRadius: -10,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                gameName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Player waiting',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.72),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1AE47A),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Flexible(
+                    child: Text(
+                      'Join now',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xFF96FFBF),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
