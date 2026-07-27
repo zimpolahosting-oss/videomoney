@@ -282,13 +282,13 @@ class _GamesScreenState extends State<GamesScreen> {
       if (data == null) return null;
       final profile = PlayersAreGamersProfile.fromFirestore(data);
       if (!profile.linked) return null;
-      return _PagCoinLeaderboardEntry(
       final username = profile.username.trim().isNotEmpty
           ? profile.username.trim()
           : _fallbackLeaderboardName(profile.email, uid);
+      return _PagCoinLeaderboardEntry(
         uid: uid,
-        username: profile.username.trim(),
         username: username,
+        coins: profile.coins,
       );
     });
 
