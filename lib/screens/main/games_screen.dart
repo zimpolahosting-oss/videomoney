@@ -119,6 +119,10 @@ class _GamesScreenState extends State<GamesScreen> {
         text.contains('[firebase_functions/unavailable]')) {
       return copy.syncUnavailable;
     }
+    if (text.contains('[firebase_functions/not-found]') ||
+        text.contains('NOT_FOUND')) {
+      return copy.syncNotConfigured;
+    }
     if (text.contains('[firebase_functions/already-exists]')) {
       return copy.linkExistingHint;
     }
@@ -1228,6 +1232,7 @@ class _GamesCopy {
     required this.gamesSubtitle,
     required this.syncIssue,
     required this.syncUnavailable,
+    required this.syncNotConfigured,
     required this.linkExistingHint,
     required this.pagCoinsTitle,
     required this.coinsUnitLabel,
@@ -1273,6 +1278,7 @@ class _GamesCopy {
   final String gamesSubtitle;
   final String syncIssue;
   final String syncUnavailable;
+  final String syncNotConfigured;
   final String linkExistingHint;
   final String pagCoinsTitle;
   final String coinsUnitLabel;
@@ -1324,6 +1330,7 @@ class _GamesCopy {
         gamesSubtitle: 'Speel games, verdien coins en klim omhoog op het leaderboard.',
         syncIssue: 'Synchronisatieprobleem',
         syncUnavailable: 'PlayersAreGamers is tijdelijk niet bereikbaar. Je kunt later opnieuw synchroniseren.',
+        syncNotConfigured: 'Games zijn nog niet beschikbaar op deze versie. Update de app of probeer later opnieuw.',
         linkExistingHint: 'Er lijkt al een bestaand PlayersAreGamers-account te bestaan. Link dat hieronder met je username en wachtwoord.',
         pagCoinsTitle: 'PlayersAreGamers coins',
         coinsUnitLabel: 'coins',
@@ -1382,6 +1389,7 @@ class _GamesCopy {
       gamesSubtitle: 'Play games, earn coins and climb higher on the leaderboard.',
       syncIssue: 'Sync issue',
       syncUnavailable: 'PlayersAreGamers is temporarily unavailable. You can sync again later.',
+      syncNotConfigured: 'Games are not available on this version yet. Please update the app or try again later.',
       linkExistingHint: 'It looks like a PlayersAreGamers account already exists. Link it below with your username and password.',
       pagCoinsTitle: 'PlayersAreGamers coins',
       coinsUnitLabel: 'coins',

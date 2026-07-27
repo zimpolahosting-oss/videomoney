@@ -12,11 +12,13 @@ import 'firestore_service.dart';
 class PlayersAreGamersService {
   PlayersAreGamersService({
     FirebaseFunctions? functions,
+    FirebaseFunctions? fallbackFunctions,
     FirebaseFirestore? firestore,
     FlutterSecureStorage? secureStorage,
     FirestoreService? firestoreService,
   }) : _functions =
            functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1'),
+       _fallbackFunctions = fallbackFunctions ?? FirebaseFunctions.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _firestoreService = firestoreService ?? FirestoreService();
@@ -31,6 +33,7 @@ class PlayersAreGamersService {
   static const String _integrationDoc = 'playersAreGamers';
 
   final FirebaseFunctions _functions;
+  final FirebaseFunctions _fallbackFunctions;
   final FirebaseFirestore _firestore;
   final FlutterSecureStorage _secureStorage;
   final FirestoreService _firestoreService;
@@ -356,9 +359,24 @@ class PlayersAreGamersService {
     String name, [
     Map<String, dynamic>? payload,
   ]) async {
-    final callable = _functions.httpsCallable(name);
-    final result = await callable.call<Map<dynamic, dynamic>>(payload);
-    final data = result.data;
+    try {
+      final callable = _functions.httpsCallable(name);
+      final result = await callable.call<Map<dynamic, dynamic>>(payload);
+      return _normalizeCallableResult(result.data);
+    } on FirebaseFunctionsException catch (error) {
+      // Some installs may hit NOT_FOUND when the Cloud Function is deployed
+      // in a different region. Retry once using the default functions instance
+      // (typically us-central1) before failing.
+      if (error.code == 'not-found') {
+        final callable = _fallbackFunctions.httpsCallable(name);
+        final result = await callable.call<Map<dynamic, dynamic>>(payload);
+        return _normalizeCallableResult(result.data);
+      }
+      rethrow;
+    }
+  }
+
+  Map<String, dynamic> _normalizeCallableResult(Object? data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) {
       return data.map((key, value) => MapEntry(key.toString(), value));
