@@ -909,7 +909,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 102),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
                   child: Column(
                     children: [
                       Row(
