@@ -265,7 +265,13 @@ class _GamesScreenState extends State<GamesScreen> {
     Set<String> onlineUserIds,
   ) async {
     if (onlineUserIds.isEmpty) return const [];
-    final futures = onlineUserIds.take(40).map((uid) async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final selectedUserIds = <String>{
+      ...onlineUserIds,
+      if (currentUid != null && currentUid.isNotEmpty) currentUid,
+    };
+
+    final futures = selectedUserIds.take(80).map((uid) async {
       final snapshot = await _firestore
           .collection('users')
           .doc(uid)
@@ -275,15 +281,17 @@ class _GamesScreenState extends State<GamesScreen> {
       final data = snapshot.data();
       if (data == null) return null;
       final profile = PlayersAreGamersProfile.fromFirestore(data);
-      if (!profile.linked || profile.username.trim().isEmpty) {
-        return null;
-      }
+      if (!profile.linked) return null;
       return _PagCoinLeaderboardEntry(
+      final username = profile.username.trim().isNotEmpty
+          ? profile.username.trim()
+          : _fallbackLeaderboardName(profile.email, uid);
         uid: uid,
         username: profile.username.trim(),
-        coins: profile.coins,
+        username: username,
       );
     });
+
 
     final entries =
         (await Future.wait(futures)).whereType<_PagCoinLeaderboardEntry>().toList();
@@ -293,6 +301,19 @@ class _GamesScreenState extends State<GamesScreen> {
       return a.username.toLowerCase().compareTo(b.username.toLowerCase());
     });
     return entries.take(20).toList(growable: false);
+  }
+
+  String _fallbackLeaderboardName(String email, String uid) {
+    final trimmed = email.trim();
+    if (trimmed.isNotEmpty) {
+      final atIndex = trimmed.indexOf('@');
+      if (atIndex > 0) {
+        return trimmed.substring(0, atIndex);
+      }
+      return trimmed;
+    }
+    if (uid.length >= 6) return 'player-${uid.substring(0, 6)}';
+    return 'player';
   }
 
   @override
