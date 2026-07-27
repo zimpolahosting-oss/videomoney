@@ -834,7 +834,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Positioned.fill(
                 child: _ShortVideoPage(
                   item: _feed[_currentIndex],
-                  bottomInset: 108,
+                  bottomInset: 18,
                 ),
               ),
               Positioned(
@@ -1004,114 +1004,117 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const Spacer(),
                       Align(
                         alignment: Alignment.bottomLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 270),
-                          child: _OverlayCard(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 92),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 270),
+                            child: _OverlayCard(
+                              padding: const EdgeInsets.all(10),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              l10n.currentViews,
+                                              style: const TextStyle(
+                                                color: AppTheme.textMuted,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            AnimatedIntText(
+                                              value: currentViews,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      StreamBuilder<PagMatchmakingSignal?>(
+                                        stream: _pagMatchmakingService.watchFeaturedSignal(
+                                          excludeUid: user.uid,
+                                        ),
+                                        builder: (context, matchmakingSnapshot) {
+                                          final signal = matchmakingSnapshot.data;
+                                          if (signal == null) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Flexible(
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 2,
+                                                left: 8,
+                                                right: 8,
+                                              ),
+                                              child: _MatchmakingPromptCard(
+                                                gameName: signal.gameName,
+                                                onTap: () => _openFeaturedMatch(signal),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text(
-                                            l10n.currentViews,
-                                            style: const TextStyle(
-                                              color: AppTheme.textMuted,
-                                              fontSize: 11,
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primary.withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: AppTheme.primary.withOpacity(0.28),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _feed[_currentIndex].category,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 11,
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          AnimatedIntText(
-                                            value: currentViews,
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w900,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    StreamBuilder<PagMatchmakingSignal?>(
-                                      stream: _pagMatchmakingService.watchFeaturedSignal(
-                                        excludeUid: user.uid,
-                                      ),
-                                      builder: (context, matchmakingSnapshot) {
-                                        final signal = matchmakingSnapshot.data;
-                                        if (signal == null) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return Flexible(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 2,
-                                              left: 8,
-                                              right: 8,
-                                            ),
-                                            child: _MatchmakingPromptCard(
-                                              gameName: signal.gameName,
-                                              onTap: () => _openFeaturedMatch(signal),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primary.withOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(999),
-                                            border: Border.all(
-                                              color: AppTheme.primary.withOpacity(0.28),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _feed[_currentIndex].category,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                _CompactProgressLine(
-                                  title: l10n.progressToPayout,
-                                  valueLabel:
-                                      '${NumberFormat.decimalPattern().format(currentViews)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)}',
-                                  value: payoutProgress,
-                                  color: AppTheme.primary,
-                                ),
-                                const SizedBox(height: 8),
-                                _PlayersAreGamersProgressLine(
-                                  stream: _playersAreGamersService.watchProfile(),
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _CompactProgressLine(
+                                    title: l10n.progressToPayout,
+                                    valueLabel:
+                                        '${NumberFormat.decimalPattern().format(currentViews)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)}',
+                                    value: payoutProgress,
+                                    color: AppTheme.primary,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _PlayersAreGamersProgressLine(
+                                    stream: _playersAreGamersService.watchProfile(),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
