@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   bool _resumeAfterOverlay = false;
+  bool _playerSuspended = false;
   DateTime _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   String? _feedError;
   int? _sessionStartIndex;
@@ -212,7 +213,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _currentIndex = 0;
         }
       });
-      await _loadCurrentVideoIntoWebView();
+      if (widget.isActiveTab) {
+        await _loadCurrentVideoIntoWebView(force: true);
+      } else {
+        _playerSuspended = true;
+      }
     } catch (_) {}
   }
 
@@ -221,9 +226,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isActiveTab == widget.isActiveTab) return;
     if (widget.isActiveTab) {
-      unawaited(_resumePlaybackIfNeeded());
+      if (_playerSuspended) {
+        unawaited(_loadCurrentVideoIntoWebView(force: true));
+      } else {
+        unawaited(_resumePlaybackIfNeeded());
+      }
     } else {
-      unawaited(_pausePlayback());
+      unawaited(_suspendPlayback(unloadPlayer: true));
     }
   }
 
@@ -258,7 +267,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _showVideoAtIndex(int index) async {
     if (index < 0 || index >= _feed.length || index == _currentIndex) return;
     setState(() => _currentIndex = index);
-    await _loadCurrentVideoIntoWebView();
+    if (widget.isActiveTab) {
+      await _loadCurrentVideoIntoWebView(force: true);
+    } else {
+      _playerSuspended = true;
+    }
   }
 
   Future<void> _goToNextVideo() async {
@@ -297,8 +310,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _swipeGestureConsumed = false;
   }
 
-  Future<void> _loadCurrentVideoIntoWebView() async {
+  Future<void> _loadCurrentVideoIntoWebView({bool force = false}) async {
     if (_feed.isEmpty) return;
+    if (!widget.isActiveTab && !force) {
+      _playerSuspended = true;
+      return;
+    }
+    _playerSuspended = false;
     _lastTrackedPositionMs = 0;
     _playerStateCode = -1;
     _playbackErrorCode = null;
@@ -319,6 +337,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _webViewController.runJavaScript('''
         try {
           window.__vmForcePaused = true;
+          if (window.player && typeof window.player.mute === 'function') {
+            window.player.mute();
+          }
           if (window.player && typeof window.player.pauseVideo === 'function') {
             window.player.pauseVideo();
           }
@@ -330,13 +351,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  Future<void> _suspendPlayback({bool unloadPlayer = false}) async {
+    _playerSuspended = unloadPlayer;
+    _blockPlaybackResume(const Duration(minutes: 10));
+    await _pausePlayback();
+    if (!unloadPlayer) return;
+    try {
+      _playerReady = false;
+      _playerStateCode = -1;
+      _playerCurrentTimeSeconds = 0;
+      _playerDurationSeconds = 0;
+      await _webViewController.loadHtmlString(
+        _buildBlankPlayerHtml(),
+        baseUrl: _appBaseUrl,
+      );
+    } catch (_) {}
+  }
+
   Future<void> _resumePlaybackIfNeeded() async {
-    if (!widget.isActiveTab || _isShowingAdBreak || !_playerReady) return;
+    if (!widget.isActiveTab || _isShowingAdBreak || !_playerReady || _playerSuspended) {
+      return;
+    }
     if (DateTime.now().isBefore(_playbackResumeBlockedUntil)) return;
     try {
       await _webViewController.runJavaScript('''
         try {
           window.__vmForcePaused = false;
+          if (window.player && typeof window.player.unMute === 'function') {
+            window.player.unMute();
+          }
           if (window.player && typeof window.player.playVideo === 'function') {
             window.player.playVideo();
           }
@@ -469,6 +512,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     </script>
   </body>
+</html>
+''';
+  }
+
+  String _buildBlankPlayerHtml() {
+    return '''
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #030806;
+      }
+    </style>
+  </head>
+  <body></body>
 </html>
 ''';
   }
@@ -767,6 +832,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _openFeaturedMatch(PagMatchmakingSignal signal) async {
     if (signal.gameUrl.trim().isEmpty) return;
+    await _suspendPlayback(unloadPlayer: true);
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlayersAreGamersWebViewScreen(
@@ -775,6 +841,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+    if (!mounted || !widget.isActiveTab) return;
+    await _loadCurrentVideoIntoWebView(force: true);
   }
 
   @override
