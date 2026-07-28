@@ -347,14 +347,14 @@ class _PlayersAreGamersWebViewScreenState
         await widget.service.grantReplayReward(
           adId: replayId,
           gameCoins: 2,
-          videomoneyViews: 3,
+          videomoneyViews: 5,
         );
         await _controller.runJavaScript('window.__vmResumePlayAgain && window.__vmResumePlayAgain();');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Reward granted: +3 views. Starting a new game...',
+              'Reward granted: +5 views. Starting a new game...',
             ),
           ),
         );
@@ -414,7 +414,7 @@ class _PlayersAreGamersWebViewScreenState
       await widget.service.grantAdReward(
         adId: 'pag-result-$gameId-$runId',
         pagCoins: 2,
-        videomoneyViews: 3,
+        videomoneyViews: 10,
         videomoneyVideosWatched: 1,
         autoCreateIfMissing: true,
       );
@@ -424,7 +424,7 @@ class _PlayersAreGamersWebViewScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Reward granted: +3 views.',
+            'Reward granted: +10 views.',
           ),
         ),
       );
