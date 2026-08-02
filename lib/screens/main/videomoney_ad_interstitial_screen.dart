@@ -341,8 +341,8 @@ class _VideomoneyAdInterstitialScreenState
                                 color: Colors.white.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(999),
                               ),
-                              child: Text(
-                                widget.providerName,
+                              child: const Text(
+                                'Ad',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -374,10 +374,10 @@ class _VideomoneyAdInterstitialScreenState
                             const SizedBox(height: 12),
                             Text(
                               _isDirectLinkMode
-                                  ? 'Please wait while VideoMoney loads the official ${widget.providerName} page inside the app. '
+                                  ? 'Please wait while VideoMoney loads the ad page inside the app. '
                                         'Use the X button above to close and continue.'
-                                  : 'Please wait while VideoMoney loads your interstitial ad. '
-                                        'If this provider fails, the SDK will try the fallback automatically.',
+                                  : 'Please wait while VideoMoney loads your ad. '
+                                        'If loading fails, a fallback can be tried automatically.',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white70,
@@ -408,8 +408,8 @@ class _VideomoneyAdInterstitialScreenState
                   ),
                   child: Text(
                     _isDirectLinkMode
-                        ? 'Loading ${widget.providerName} inside app…'
-                        : 'Loading ${widget.providerName} ad…',
+                        ? 'Loading ad inside app…'
+                        : 'Loading ad…',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,

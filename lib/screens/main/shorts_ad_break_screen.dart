@@ -67,7 +67,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     setState(() {
       _didAttemptAd = true;
       _isStartingAd = true;
-      _statusText = 'Starting ${widget.providerName}...';
+      _statusText = 'Starting ad...';
     });
     final completed = await widget.onStartAd(context);
     final remainingMinimum =
@@ -122,7 +122,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
                       Text(
                         _didAttemptAd
                             ? _statusText
-                            : '${widget.providerName} starts in ${_secondsUntilAd.clamp(0, widget.adStartDelay.inSeconds)}s',
+                            : 'Ad starts in ${_secondsUntilAd.clamp(0, widget.adStartDelay.inSeconds)}s',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.white70,
                         ),

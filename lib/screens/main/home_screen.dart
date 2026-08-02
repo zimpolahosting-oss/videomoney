@@ -62,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _cycleCompletedShorts = 0;
   int _cycleWatchMs = 0;
   int _bonusProgressShorts = 0;
+  bool _giftReady = false;
   int _pendingAdBreakShorts = 0;
   String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
   bool _pendingAdBreakAttempted = false;
@@ -582,6 +583,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _cycleCompletedShorts = snapshot.completedShortsInCycle;
     _cycleWatchMs = snapshot.watchMsInCycle;
     _bonusProgressShorts = snapshot.bonusProgressShorts;
+    _giftReady = snapshot.giftReady;
     _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
     _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
     _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
@@ -643,6 +645,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
         _bonusProgressShorts = result.snapshot.bonusProgressShorts;
+        _giftReady = result.snapshot.giftReady;
         _pendingAdBreakShorts = result.snapshot.pendingAdBreakShorts;
         _pendingAdBreakProvider = result.snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = result.snapshot.pendingAdBreakAttempted;
@@ -805,12 +808,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _providerLabelForAdBreak(String provider) {
-    return switch (provider) {
-      ShortsProgressService.providerAdmob => 'AdMob',
-      ShortsProgressService.providerAppodeal => 'Appodeal',
-      ShortsProgressService.providerMonetag => 'Monetag',
-      _ => 'Ad',
-    };
+    return 'Ad';
   }
 
   Future<void> _resetShortCycle() async {
@@ -821,6 +819,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _isRewardHandling = true;
     final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
       user.uid,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _syncProgressFromSnapshot(snapshot);
+    });
+    _isRewardHandling = false;
+  }
+
+  Future<void> _claimGiftBox() async {
+    if (_isRewardHandling || !_giftReady) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+
+    _isRewardHandling = true;
+    final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
+      user.uid,
+      rewardedShorts: ShortsProgressService.giftBoxViewsReward,
     );
 
     if (!mounted) return;
@@ -1157,13 +1173,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                             ),
                                           ),
                                           const SizedBox(height: 6),
-                                          Text(
-                                            '$_cycleCompletedShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '$_bonusProgressShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              if (_giftReady) ...[
+                                                const SizedBox(width: 6),
+                                                InkWell(
+                                                  onTap: _claimGiftBox,
+                                                  borderRadius: BorderRadius.circular(999),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFFFFD54A).withOpacity(0.16),
+                                                      borderRadius: BorderRadius.circular(999),
+                                                      border: Border.all(
+                                                        color: const Color(0xFFFFD54A).withOpacity(0.60),
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.card_giftcard_rounded,
+                                                      size: 16,
+                                                      color: Color(0xFFFFD54A),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ],
                                       ),

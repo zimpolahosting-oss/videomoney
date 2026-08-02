@@ -5,6 +5,7 @@ class ShortsProgressSnapshot {
     required this.completedShortsInCycle,
     required this.watchMsInCycle,
     required this.bonusProgressShorts,
+    required this.giftReady,
     required this.adBreakProgressShorts,
     required this.pendingAdBreakShorts,
     required this.pendingAdBreakProvider,
@@ -15,6 +16,7 @@ class ShortsProgressSnapshot {
   final int completedShortsInCycle;
   final int watchMsInCycle;
   final int bonusProgressShorts;
+  final bool giftReady;
   final int adBreakProgressShorts;
   final int pendingAdBreakShorts;
   final String pendingAdBreakProvider;
@@ -25,6 +27,7 @@ class ShortsProgressSnapshot {
     completedShortsInCycle: 0,
     watchMsInCycle: 0,
     bonusProgressShorts: 0,
+    giftReady: false,
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
@@ -36,6 +39,7 @@ class ShortsProgressSnapshot {
     int? completedShortsInCycle,
     int? watchMsInCycle,
     int? bonusProgressShorts,
+    bool? giftReady,
     int? adBreakProgressShorts,
     int? pendingAdBreakShorts,
     String? pendingAdBreakProvider,
@@ -47,6 +51,7 @@ class ShortsProgressSnapshot {
           completedShortsInCycle ?? this.completedShortsInCycle,
       watchMsInCycle: watchMsInCycle ?? this.watchMsInCycle,
       bonusProgressShorts: bonusProgressShorts ?? this.bonusProgressShorts,
+      giftReady: giftReady ?? this.giftReady,
       adBreakProgressShorts: adBreakProgressShorts ?? this.adBreakProgressShorts,
       pendingAdBreakShorts: pendingAdBreakShorts ?? this.pendingAdBreakShorts,
       pendingAdBreakProvider:
@@ -78,7 +83,8 @@ class ShortsProgressService {
   static final ShortsProgressService instance = ShortsProgressService._();
 
   static const int rewardThresholdShorts = 10;
-  static const int bonusViewsReward = 15;
+  static const int bonusViewsReward = 0;
+  static const int giftBoxViewsReward = 45;
   static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
   static const String providerStartio = 'startio';
@@ -91,6 +97,7 @@ class ShortsProgressService {
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
   String _bonusKey(String uid) => 'shorts_bonus_progress_$uid';
+  String _giftReadyKey(String uid) => 'shorts_gift_ready_$uid';
   String _adBreakProgressKey(String uid) => 'shorts_ad_break_progress_$uid';
   String _pendingAdBreakKey(String uid) => 'shorts_pending_ad_break_$uid';
   String _pendingAdBreakProviderKey(String uid) =>
@@ -106,6 +113,7 @@ class ShortsProgressService {
       completedShortsInCycle: prefs.getInt(_completedKey(uid)) ?? 0,
       watchMsInCycle: prefs.getInt(_watchMsKey(uid)) ?? 0,
       bonusProgressShorts: prefs.getInt(_bonusKey(uid)) ?? 0,
+      giftReady: prefs.getBool(_giftReadyKey(uid)) ?? false,
       adBreakProgressShorts: prefs.getInt(_adBreakProgressKey(uid)) ?? 0,
       pendingAdBreakShorts: prefs.getInt(_pendingAdBreakKey(uid)) ?? 0,
       pendingAdBreakProvider: _sanitizeProvider(
@@ -123,8 +131,10 @@ class ShortsProgressService {
   Future<ShortsProgressResult> markShortCompleted(String uid) async {
     final snapshot = await load(uid);
     final nextCompletedShorts = snapshot.completedShortsInCycle + 1;
-    final bonusAwarded =
-        nextCompletedShorts >= rewardThresholdShorts ? bonusViewsReward : 0;
+    final nextBonusProgress =
+        (snapshot.bonusProgressShorts + 1) % rewardThresholdShorts;
+    final giftReady = snapshot.giftReady || snapshot.bonusProgressShorts == 9;
+    final bonusAwarded = 0;
     final rawAdBreakProgress = snapshot.adBreakProgressShorts + 1;
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
@@ -133,7 +143,8 @@ class ShortsProgressService {
         : snapshot.pendingAdBreakProvider;
     final next = snapshot.copyWith(
       completedShortsInCycle: nextCompletedShorts,
-      bonusProgressShorts: nextCompletedShorts % rewardThresholdShorts,
+      bonusProgressShorts: giftReady ? 0 : nextBonusProgress,
+      giftReady: giftReady,
       adBreakProgressShorts: shouldStartNewAdBreak ? 0 : rawAdBreakProgress,
     );
     final nextPendingAdBreakShorts = shouldStartNewAdBreak
@@ -152,7 +163,7 @@ class ShortsProgressService {
 
     return ShortsProgressResult(
       snapshot: nextWithPending,
-      shortsThresholdReached: nextCompletedShorts >= rewardThresholdShorts,
+      shortsThresholdReached: false,
       adBreakReached: shouldStartNewAdBreak,
       bonusViewsAwarded: bonusAwarded,
     );
@@ -164,6 +175,7 @@ class ShortsProgressService {
       completedShortsInCycle: 0,
       watchMsInCycle: 0,
       bonusProgressShorts: 0,
+      giftReady: false,
       pendingAdBreakShorts: 0,
       pendingAdBreakProvider: '',
       pendingAdBreakAttempted: false,
@@ -197,6 +209,7 @@ class ShortsProgressService {
     await prefs.setInt(_completedKey(uid), snapshot.completedShortsInCycle);
     await prefs.setInt(_watchMsKey(uid), snapshot.watchMsInCycle);
     await prefs.setInt(_bonusKey(uid), snapshot.bonusProgressShorts);
+    await prefs.setBool(_giftReadyKey(uid), snapshot.giftReady);
     await prefs.setInt(_adBreakProgressKey(uid), snapshot.adBreakProgressShorts);
     await prefs.setInt(_pendingAdBreakKey(uid), snapshot.pendingAdBreakShorts);
     await prefs.setString(
