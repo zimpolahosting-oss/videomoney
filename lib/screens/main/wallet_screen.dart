@@ -199,6 +199,30 @@ class WalletScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 10),
+            _MethodTile(
+              icon: Icons.currency_bitcoin_rounded,
+              title: 'Bitcoin',
+              subtitle: 'Payout to your BTC wallet address',
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'btc',
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            _MethodTile(
+              icon: Icons.token_rounded,
+              title: 'USDC',
+              subtitle: 'Payout to your USDC wallet address',
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'usdc',
+                );
+              },
+            ),
             const SizedBox(height: 16),
             _SectionTitle(title: l10n.payoutHistory),
             const SizedBox(height: 10),

@@ -5,7 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
-enum _PayoutMethod { paypal, revolut, bank }
+enum _PayoutMethod { paypal, revolut, bank, btc, usdc }
 enum _PayoutCurrency { eur, gbp, usd }
 
 class PayoutRequestScreen extends StatefulWidget {
@@ -26,6 +26,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   final _bankNameController = TextEditingController();
   final _ibanController = TextEditingController();
   final _bankAccountNumberController = TextEditingController();
+  final _cryptoAddressController = TextEditingController();
   final _firestoreService = FirestoreService();
 
   bool _isSubmitting = false;
@@ -39,6 +40,8 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     _method = switch (initial) {
       'revolut' => _PayoutMethod.revolut,
       'bank' => _PayoutMethod.bank,
+      'btc' => _PayoutMethod.btc,
+      'usdc' => _PayoutMethod.usdc,
       _ => _PayoutMethod.paypal,
     };
   }
@@ -52,6 +55,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     _bankNameController.dispose();
     _ibanController.dispose();
     _bankAccountNumberController.dispose();
+    _cryptoAddressController.dispose();
     super.dispose();
   }
 
@@ -72,16 +76,26 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
           _PayoutMethod.paypal => 'paypal',
           _PayoutMethod.revolut => 'revolut',
           _PayoutMethod.bank => 'bank',
+          _PayoutMethod.btc => 'btc',
+          _PayoutMethod.usdc => 'usdc',
         },
         payPalEmail: _method == _PayoutMethod.paypal ? _payPalController.text : '',
         revolutUsername:
             _method == _PayoutMethod.revolut ? _revolutController.text : '',
         accountHolderName: _accountHolderController.text,
-        payoutCurrency: _currency.name.toUpperCase(),
+        payoutCurrency: switch (_method) {
+          _PayoutMethod.btc => 'BTC',
+          _PayoutMethod.usdc => 'USDC',
+          _ => _currency.name.toUpperCase(),
+        },
         bankName: _method == _PayoutMethod.bank ? _bankNameController.text : '',
         iban: _method == _PayoutMethod.bank ? _ibanController.text : '',
         bankAccountNumber:
             _method == _PayoutMethod.bank ? _bankAccountNumberController.text : '',
+        cryptoAddress:
+            (_method == _PayoutMethod.btc || _method == _PayoutMethod.usdc)
+                ? _cryptoAddressController.text
+                : '',
       );
 
       if (!mounted) return;
@@ -164,46 +178,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ),
               const SizedBox(height: 18),
               Text(
-                l10n.payoutCurrency,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<_PayoutCurrency>(
-                  segments: const [
-                    ButtonSegment(
-                      value: _PayoutCurrency.eur,
-                      label: Text('EUR'),
-                    ),
-                    ButtonSegment(
-                      value: _PayoutCurrency.gbp,
-                      label: Text('GBP'),
-                    ),
-                    ButtonSegment(
-                      value: _PayoutCurrency.usd,
-                      label: Text('USD'),
-                    ),
-                  ],
-                  selected: {_currency},
-                  onSelectionChanged: (value) {
-                    setState(() => _currency = value.first);
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.resolveWith((states) {
-                      if (states.contains(MaterialState.selected)) {
-                        return AppTheme.primary.withOpacity(0.12);
-                      }
-                      return Theme.of(context).colorScheme.surface;
-                    }),
-                    side: MaterialStateProperty.all(
-                      BorderSide(color: AppTheme.outline.withOpacity(0.65)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
                 l10n.payoutMethod,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
@@ -227,6 +201,16 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                       icon: Icon(Icons.account_balance_outlined),
                       label: Text('Bank'),
                     ),
+                    ButtonSegment(
+                      value: _PayoutMethod.btc,
+                      icon: Icon(Icons.currency_bitcoin_rounded),
+                      label: Text('BTC'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutMethod.usdc,
+                      icon: Icon(Icons.token_rounded),
+                      label: Text('USDC'),
+                    ),
                   ],
                   selected: {_method},
                   onSelectionChanged: (value) {
@@ -246,6 +230,48 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (_method != _PayoutMethod.btc && _method != _PayoutMethod.usdc) ...[
+                Text(
+                  l10n.payoutCurrency,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<_PayoutCurrency>(
+                    segments: const [
+                      ButtonSegment(
+                        value: _PayoutCurrency.eur,
+                        label: Text('EUR'),
+                      ),
+                      ButtonSegment(
+                        value: _PayoutCurrency.gbp,
+                        label: Text('GBP'),
+                      ),
+                      ButtonSegment(
+                        value: _PayoutCurrency.usd,
+                        label: Text('USD'),
+                      ),
+                    ],
+                    selected: {_currency},
+                    onSelectionChanged: (value) {
+                      setState(() => _currency = value.first);
+                    },
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppTheme.primary.withOpacity(0.12);
+                        }
+                        return Theme.of(context).colorScheme.surface;
+                      }),
+                      side: MaterialStateProperty.all(
+                        BorderSide(color: AppTheme.outline.withOpacity(0.65)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               TextFormField(
                 controller: _viewsController,
                 keyboardType: TextInputType.number,
@@ -317,7 +343,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     return null;
                   },
                 ),
-              ] else ...[
+              ] else if (_method == _PayoutMethod.bank) ...[
                 TextFormField(
                   controller: _bankNameController,
                   decoration: InputDecoration(
@@ -351,6 +377,27 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     final accountNumber = value?.trim() ?? '';
                     if (iban.isEmpty && accountNumber.isEmpty) {
                       return l10n.enterIbanOrBank;
+                    }
+                    return null;
+                  },
+                ),
+              ] else ...[
+                TextFormField(
+                  controller: _cryptoAddressController,
+                  decoration: InputDecoration(
+                    labelText: _method == _PayoutMethod.btc
+                        ? 'BTC wallet address'
+                        : 'USDC wallet address',
+                    helperText: _method == _PayoutMethod.btc
+                        ? 'Paste your Bitcoin address'
+                        : 'Paste your USDC wallet address',
+                  ),
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return _method == _PayoutMethod.btc
+                          ? 'Enter your BTC address'
+                          : 'Enter your USDC address';
                     }
                     return null;
                   },
