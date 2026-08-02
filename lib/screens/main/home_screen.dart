@@ -836,7 +836,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _isRewardHandling = true;
     final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
       user.uid,
-      rewardedShorts: ShortsProgressService.giftBoxViewsReward,
     );
 
     if (!mounted) return;
