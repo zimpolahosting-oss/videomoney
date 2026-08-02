@@ -29,6 +29,11 @@ class _GamesScreenState extends State<GamesScreen> {
 
   static const List<_PagGameDefinition> _multiplayerGames = [
     _PagGameDefinition(
+      'ludo',
+      'Ludo',
+      'https://playersaregamers.nl/games/ludo/',
+    ),
+    _PagGameDefinition(
       'jewel-quest',
       'Jewel Quest',
       'https://playersaregamers.nl/jewel-quest/',
@@ -51,6 +56,11 @@ class _GamesScreenState extends State<GamesScreen> {
   ];
 
   static const List<_PagGameDefinition> _singlePlayerGames = [
+    _PagGameDefinition(
+      'bio-race',
+      'Bio-Race',
+      'https://playersaregamers.nl/bio-race/',
+    ),
     _PagGameDefinition(
       'crazy-nurse',
       'Crazy Nurse',
@@ -391,11 +401,6 @@ class _GamesScreenState extends State<GamesScreen> {
                           _buildGamesCard(
                             copy: copy,
                             onlineCount: onlineCount,
-                          ),
-                          const SizedBox(height: 18),
-                          _buildPagCoinLeaderboard(
-                            copy: copy,
-                            onlineUserIds: onlineUserIds,
                           ),
                         ],
                       ],
