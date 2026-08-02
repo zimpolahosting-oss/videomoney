@@ -474,6 +474,7 @@ class FirestoreService {
     required String bankName,
     required String iban,
     required String bankAccountNumber,
+    required String cryptoAddress,
   }) async {
     final userRef = _users.doc(uid);
     final payoutRef = _payouts.doc();
@@ -485,6 +486,7 @@ class FirestoreService {
     final trimmedBankName = bankName.trim();
     final trimmedIban = iban.trim();
     final trimmedBankAccountNumber = bankAccountNumber.trim();
+    final trimmedCryptoAddress = cryptoAddress.trim();
     final legacyBankValue =
         trimmedIban.isNotEmpty ? trimmedIban : trimmedBankAccountNumber;
 
@@ -528,6 +530,10 @@ class FirestoreService {
           throw Exception('Enter an IBAN or bank account number.');
         }
       }
+      if ((trimmedMethod == 'btc' || trimmedMethod == 'usdc') &&
+          trimmedCryptoAddress.isEmpty) {
+        throw Exception('Enter your crypto wallet address.');
+      }
       if (currentCoins < coinsRequested) {
         throw Exception('Not enough views available.');
       }
@@ -570,6 +576,7 @@ class FirestoreService {
         'bankName': trimmedBankName,
         'iban': trimmedIban,
         'bankAccountNumber': trimmedBankAccountNumber,
+        'cryptoAddress': trimmedCryptoAddress,
         'minimumPayoutCoins': minimumPayoutCoins,
         'processingDays': payoutProcessingDays,
         'createdAt': FieldValue.serverTimestamp(),
