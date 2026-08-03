@@ -133,7 +133,7 @@ class ShortsProgressService {
     final nextCompletedShorts = snapshot.completedShortsInCycle + 1;
     final nextBonusProgress =
         (snapshot.bonusProgressShorts + 1) % rewardThresholdShorts;
-    final giftReady = snapshot.giftReady || snapshot.bonusProgressShorts == 9;
+    final giftReady = snapshot.giftReady || snapshot.bonusProgressShorts >= rewardThresholdShorts - 1;
     final bonusAwarded = 0;
     final rawAdBreakProgress = snapshot.adBreakProgressShorts + 1;
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
@@ -143,7 +143,7 @@ class ShortsProgressService {
         : snapshot.pendingAdBreakProvider;
     final next = snapshot.copyWith(
       completedShortsInCycle: nextCompletedShorts,
-      bonusProgressShorts: giftReady ? 0 : nextBonusProgress,
+      bonusProgressShorts: giftReady ? rewardThresholdShorts : nextBonusProgress,
       giftReady: giftReady,
       adBreakProgressShorts: shouldStartNewAdBreak ? 0 : rawAdBreakProgress,
     );
