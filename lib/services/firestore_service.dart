@@ -100,10 +100,19 @@ class FirestoreService {
   }) {
     final rewardBalanceResetApplied =
         data[rewardBalanceResetAppliedField] as bool? ?? false;
+    final existingSettings = data['settings'] as Map<String, dynamic>? ?? const {};
     final updates = <String, dynamic>{
       'uid': uid,
       'email': email,
       'appVerified': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'settings': {
+        'notificationsEnabled':
+            existingSettings['notificationsEnabled'] as bool? ?? true,
+        'dailyReminderEnabled':
+            existingSettings['dailyReminderEnabled'] as bool? ?? true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
     };
 
     if (!rewardBalanceResetApplied) {
@@ -119,13 +128,6 @@ class FirestoreService {
     if (!data.containsKey('dailyBonusAwarded')) {
       updates['dailyBonusAwarded'] = false;
     }
-    if (!data.containsKey('settings')) {
-      updates['settings'] = {
-        'notificationsEnabled': true,
-        'dailyReminderEnabled': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-    }
     if (!data.containsKey('fcmTokens')) {
       updates['fcmTokens'] = <String>[];
     }
@@ -134,6 +136,9 @@ class FirestoreService {
     }
     if (!data.containsKey('leaderboardDisplayName')) {
       updates['leaderboardDisplayName'] = '';
+    }
+    if (!data.containsKey('isAdmin')) {
+      updates['isAdmin'] = false;
     }
 
     return updates;
@@ -175,6 +180,7 @@ class FirestoreService {
       'isAdmin': false,
       'appVerified': true,
       'fcmTokens': <String>[],
+      'updatedAt': FieldValue.serverTimestamp(),
       'settings': {
         'notificationsEnabled': true,
         'dailyReminderEnabled': true,
