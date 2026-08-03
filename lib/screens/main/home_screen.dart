@@ -389,6 +389,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  Future<void> _restorePlaybackAfterAdBreak() async {
+    if (!mounted || !widget.isActiveTab || _isShowingAdBreak || _playerSuspended) {
+      return;
+    }
+
+    _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
+
+    if (!_playerReady) {
+      await _loadCurrentVideoIntoWebView(force: true);
+      if (!mounted) return;
+      Future<void>.delayed(const Duration(milliseconds: 900), () {
+        if (!mounted) return;
+        unawaited(_resumePlaybackIfNeeded());
+      });
+      return;
+    }
+
+    await _resumePlaybackIfNeeded();
+    Future<void>.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted || _isShowingAdBreak || _playerSuspended) return;
+      if (_playerStateCode != 1) {
+        unawaited(_loadCurrentVideoIntoWebView(force: true));
+        Future<void>.delayed(const Duration(milliseconds: 900), () {
+          if (!mounted) return;
+          unawaited(_resumePlaybackIfNeeded());
+        });
+      }
+    });
+  }
+
   void _blockPlaybackResume([Duration duration = const Duration(seconds: 3)]) {
     final blockedUntil = DateTime.now().add(duration);
     if (blockedUntil.isAfter(_playbackResumeBlockedUntil)) {
@@ -798,14 +828,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } finally {
       _adBreakPauseEnforcer?.cancel();
       _adBreakPauseEnforcer = null;
-      _blockPlaybackResume();
       _isShowingAdBreak = false;
       if (_resumeAfterOverlay) {
         _resumeAfterOverlay = false;
-        Future<void>.delayed(const Duration(seconds: 3), () {
-          if (!mounted) return;
-          unawaited(_resumePlaybackIfNeeded());
-        });
+        if (!_disableAdsForTesting) {
+          unawaited(_restorePlaybackAfterAdBreak());
+        }
       }
     }
   }
