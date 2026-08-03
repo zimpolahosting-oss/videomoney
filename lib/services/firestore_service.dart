@@ -192,6 +192,17 @@ class FirestoreService {
     );
   }
 
+  Future<void> activateUserAccount({
+    required String uid,
+    required String email,
+  }) async {
+    await _users.doc(uid).set({
+      'uid': uid,
+      'email': email,
+      'appVerified': true,
+    }, SetOptions(merge: true));
+  }
+
   Stream<AppUser?> watchUser(String uid) {
     return _users.doc(uid).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;

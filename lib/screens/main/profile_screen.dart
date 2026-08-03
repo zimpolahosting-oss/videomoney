@@ -10,8 +10,42 @@ import '../../services/firestore_service.dart';
 import '../../services/remember_me_service.dart';
 import '../../theme/app_theme.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _activatingAccount = false;
+
+  Future<void> _activateAccount(
+    BuildContext context,
+    FirestoreService firestoreService,
+    User user,
+  ) async {
+    setState(() => _activatingAccount = true);
+    try {
+      await firestoreService.activateUserAccount(
+        uid: user.uid,
+        email: user.email ?? '',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Account activated successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _activatingAccount = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +170,19 @@ class ProfileScreen extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                                if (!emailVerified) ...[
+                                  const SizedBox(height: 10),
+                                  FilledButton.tonal(
+                                    onPressed: _activatingAccount
+                                        ? null
+                                        : () => _activateAccount(
+                                              context,
+                                              firestoreService,
+                                              user,
+                                            ),
+                                    child: const Text('Activate account'),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
