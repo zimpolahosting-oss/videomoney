@@ -228,7 +228,8 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerAdmob => providerMonetag,
+      providerAdmob => providerGravite,
+      providerGravite => providerMonetag,
       providerMonetag => providerAppodeal,
       providerAppodeal => providerAdmob,
       _ => providerAdmob,
@@ -240,11 +241,15 @@ class ShortsProgressService {
     if (value.isEmpty) {
       return allowEmpty ? '' : providerAdmob;
     }
-    if (value == providerAdmob ||
+    if (value == providerMonetag ||
         value == providerAppodeal ||
-        value == providerMonetag) {
+        value == providerGravite) {
       return value;
+    }
+    if (value == providerAdmob) {
+      return providerAdmob;
     }
     return providerAdmob;
   }
+
 }

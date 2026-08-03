@@ -693,11 +693,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
+      final isGraviteBreak =
+          pendingProvider == ShortsProgressService.providerGravite;
       final isRewardedTurn =
           isAdmobBreak ||
-          isAppodealBreak;
+          isAppodealBreak ||
+          isGraviteBreak;
       final shouldFallbackToMonetag =
-          isAdmobBreak || isAppodealBreak;
+          isAdmobBreak || isAppodealBreak || isGraviteBreak;
       final completed =
           await Navigator.of(context).push<bool>(
             MaterialPageRoute<bool>(
