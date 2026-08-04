@@ -1215,28 +1215,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                                   fontWeight: FontWeight.w700,
                                                 ),
                                               ),
-                                              if (_giftReady) ...[
-                                                const SizedBox(width: 6),
-                                                InkWell(
-                                                  onTap: _claimGiftBox,
-                                                  borderRadius: BorderRadius.circular(999),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(0xFFFFD54A).withOpacity(0.16),
-                                                      borderRadius: BorderRadius.circular(999),
-                                                      border: Border.all(
-                                                        color: const Color(0xFFFFD54A).withOpacity(0.60),
-                                                      ),
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.card_giftcard_rounded,
-                                                      size: 16,
-                                                      color: Color(0xFFFFD54A),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
                                             ],
                                           ),
                                         ],

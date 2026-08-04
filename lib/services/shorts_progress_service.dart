@@ -83,8 +83,8 @@ class ShortsProgressService {
   static final ShortsProgressService instance = ShortsProgressService._();
 
   static const int rewardThresholdShorts = 10;
-  static const int bonusViewsReward = 0;
-  static const int giftBoxViewsReward = 45;
+  static const int bonusViewsReward = 45;
+  static const int giftBoxViewsReward = 0;
   static const int adBreakViewsReward = 10;
   static const int adBreakThresholdShorts = 3;
   static const String providerStartio = 'startio';
@@ -133,8 +133,8 @@ class ShortsProgressService {
     final nextCompletedShorts = snapshot.completedShortsInCycle + 1;
     final nextBonusProgress =
         (snapshot.bonusProgressShorts + 1) % rewardThresholdShorts;
-    final giftReady = snapshot.giftReady || snapshot.bonusProgressShorts >= rewardThresholdShorts - 1;
-    final bonusAwarded = 0;
+    final giftReady = false;
+    final bonusAwarded = nextBonusProgress == 0 ? bonusViewsReward : 0;
     final rawAdBreakProgress = snapshot.adBreakProgressShorts + 1;
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
@@ -143,7 +143,7 @@ class ShortsProgressService {
         : snapshot.pendingAdBreakProvider;
     final next = snapshot.copyWith(
       completedShortsInCycle: nextCompletedShorts,
-      bonusProgressShorts: giftReady ? rewardThresholdShorts : nextBonusProgress,
+      bonusProgressShorts: nextBonusProgress,
       giftReady: giftReady,
       adBreakProgressShorts: shouldStartNewAdBreak ? 0 : rawAdBreakProgress,
     );
