@@ -16,7 +16,7 @@ class FirestoreService {
   static const int rewardCoinsPerVideo = 1;
   static const int dailyBonusTargetVideos = 20;
   static const int dailyBonusViews = 500;
-  static const int minimumPayoutCoins = 10000;
+  static const int minimumPayoutCoins = 5000;
   static const int payoutProcessingDays = 30;
   static const int estimatedViewsPerCent = 50;
   static const int presenceHeartbeatSeconds = 30;

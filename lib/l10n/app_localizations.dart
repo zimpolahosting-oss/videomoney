@@ -484,7 +484,7 @@ class AppLocalizations {
       'payoutCurrency': 'Payout currency',
       'payoutMethod': 'Payout method',
       'viewsToRequest': 'Views to request',
-      'minimumViewsHelper': 'Minimum 10,000 views',
+      'minimumViewsHelper': 'Minimum 5,000 views',
       'enterAmount': 'Enter an amount.',
       'enterValidPositiveNumber': 'Enter a valid positive number.',
       'accountHolderName': 'Account holder name',
@@ -571,7 +571,7 @@ class AppLocalizations {
           'Estimated earnings are informational only and can change based on platform performance, policy, fraud checks, and payout review.',
       'termsViewsBullet3':
           'Daily bonus rewards are limited to eligible activity and can be removed if abuse is detected.',
-      'termsPayoutsBullet1': 'Minimum payout remains 10,000 views.',
+      'termsPayoutsBullet1': 'Minimum payout remains 5,000 views.',
       'termsPayoutsBullet2':
           'All payout requests require manual admin approval and can be approved, rejected, or marked paid.',
       'termsPayoutsBullet3':
@@ -746,7 +746,7 @@ class AppLocalizations {
       'payoutCurrency': 'Uitbetalingsvaluta',
       'payoutMethod': 'Uitbetalingsmethode',
       'viewsToRequest': 'Aan te vragen views',
-      'minimumViewsHelper': 'Minimaal 10.000 views',
+      'minimumViewsHelper': 'Minimaal 5.000 views',
       'enterAmount': 'Voer een bedrag in.',
       'enterValidPositiveNumber': 'Voer een geldig positief getal in.',
       'accountHolderName': 'Naam rekeninghouder',
@@ -833,7 +833,7 @@ class AppLocalizations {
           'Geschatte inkomsten zijn alleen informatief en kunnen veranderen door platformprestaties, beleid, fraudebeperking en uitbetalingscontrole.',
       'termsViewsBullet3':
           'Dagelijkse bonusbeloningen zijn beperkt tot geldige activiteit en kunnen worden verwijderd bij misbruik.',
-      'termsPayoutsBullet1': 'De minimale uitbetaling blijft 10.000 views.',
+      'termsPayoutsBullet1': 'De minimale uitbetaling blijft 5.000 views.',
       'termsPayoutsBullet2':
           'Alle uitbetalingsaanvragen vereisen handmatige goedkeuring door de admin en kunnen worden goedgekeurd, afgewezen of als betaald worden gemarkeerd.',
       'termsPayoutsBullet3':
