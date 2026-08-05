@@ -683,6 +683,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
 
       if (result.adBreakReached) {
+        await _firestoreService.applyUserProgress(
+          uid: user.uid,
+          viewsDelta: ShortsProgressService.adBreakViewsReward,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.rewardConfirmedViewsAddedCount(
+                ShortsProgressService.adBreakViewsReward.toString(),
+              ),
+            ),
+          ),
+        );
         await _presentAdBreakSheet();
       }
 
@@ -791,7 +805,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           adId:
               'vm-video-ad-${currentShortId}-${DateTime.now().millisecondsSinceEpoch}',
           pagCoins: 2,
-          videomoneyViews: ShortsProgressService.adBreakViewsReward,
+          videomoneyViews: 0,
           autoCreateIfMissing: true,
         );
       }
@@ -818,13 +832,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '+10 views added.',
-            ),
-          ),
-        );
+        debugPrint('[VideomoneyAds][Home] ad break completed.');
       }
     } finally {
       _adBreakPauseEnforcer?.cancel();
