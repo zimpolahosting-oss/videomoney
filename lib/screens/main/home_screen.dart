@@ -691,7 +691,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
+<<<<<<< ours
               l10n.rewardConfirmedViewsAdded,
+=======
+              context.l10n.rewardConfirmedViewsAdded,
+>>>>>>> theirs
             ),
           ),
         );
