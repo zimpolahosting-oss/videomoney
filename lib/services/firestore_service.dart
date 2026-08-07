@@ -32,12 +32,15 @@ class FirestoreService {
   static const Set<String> allowedPayoutMethods = {
     'paypal',
     'revolut',
-    'bank',
+    'btc',
+    'usdc',
   };
   static const Set<String> allowedPayoutCurrencies = {
     'EUR',
     'GBP',
     'USD',
+    'BTC',
+    'USDC',
   };
   static const Set<String> allowedSupportTypes = {
     'support',
@@ -619,6 +622,9 @@ class FirestoreService {
   Future<void> updatePayoutStatus({
     required String payoutId,
     required String status,
+    double? manualPaidAmountValue,
+    String? manualPaidCurrency,
+    String? manualPaidNote,
   }) async {
     final normalized = status.trim().toLowerCase();
     if (normalized.isEmpty) return;
@@ -671,6 +677,11 @@ class FirestoreService {
             (payoutData['payoutCurrency'] as String? ?? 'EUR').toUpperCase();
         final coinsRequested =
             (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
+        final normalizedManualCurrency =
+            (manualPaidCurrency?.trim().isNotEmpty ?? false)
+                ? manualPaidCurrency!.trim().toUpperCase()
+                : payoutCurrency;
+        final normalizedManualNote = manualPaidNote?.trim() ?? '';
 
         String userCountry = '';
         if (userId.isNotEmpty) {
@@ -688,15 +699,29 @@ class FirestoreService {
           accountHolderName: accountHolderName,
           userEmail: userEmail,
         );
-        final amountLabel = _formatPayoutAmountLabel(
-          coinsRequested: coinsRequested,
-          currencyCode: payoutCurrency,
-        );
+        final amountLabel =
+            manualPaidAmountValue != null && manualPaidAmountValue > 0
+                ? _formatManualPaidAmountLabel(
+                    amount: manualPaidAmountValue,
+                    currencyCode: normalizedManualCurrency,
+                  )
+                : _formatPayoutAmountLabel(
+                    coinsRequested: coinsRequested,
+                    currencyCode: payoutCurrency,
+                  );
         final payoutMessage = _buildPayoutAnnouncementMessage(
           privacyName: privacyName,
           userCountry: userCountry,
           amountLabel: amountLabel,
         );
+        if (manualPaidAmountValue != null && manualPaidAmountValue > 0) {
+          updates['paidAmountValue'] = manualPaidAmountValue;
+          updates['paidAmountCurrency'] = normalizedManualCurrency;
+          updates['paidAmountLabel'] = amountLabel;
+        }
+        if (normalizedManualNote.isNotEmpty) {
+          updates['paidNote'] = normalizedManualNote;
+        }
 
         transaction.set(_payoutLiveNotifications.doc(), {
           'payoutId': payoutId,
@@ -724,6 +749,19 @@ class FirestoreService {
           'source': 'payout_paid',
           'sourcePayoutId': payoutId,
         });
+        if (userId.isNotEmpty) {
+          transaction.set(_inboxMessages.doc(), {
+            'userId': userId,
+            'title': 'Payout paid',
+            'message': normalizedManualNote.isEmpty
+                ? 'Your payout has been marked as paid. Amount: $amountLabel.'
+                : 'Your payout has been marked as paid. Amount: $amountLabel. Note: $normalizedManualNote',
+            'type': 'payment',
+            'read': false,
+            'payoutId': payoutId,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
       if (normalized == 'rejected') {
         updates['rejectedAt'] = FieldValue.serverTimestamp();
@@ -1216,6 +1254,26 @@ class FirestoreService {
     };
 
     final amount = estimateEarningsEuro(coinsRequested);
+    final normalizedAmount = amount.toStringAsFixed(2);
+    final compactAmount = normalizedAmount.endsWith('.00')
+        ? normalizedAmount.substring(0, normalizedAmount.length - 3)
+        : normalizedAmount.endsWith('0')
+            ? normalizedAmount.substring(0, normalizedAmount.length - 1)
+            : normalizedAmount;
+    return '$symbol$compactAmount';
+  }
+
+  String _formatManualPaidAmountLabel({
+    required double amount,
+    required String currencyCode,
+  }) {
+    final symbol = switch (currencyCode.toUpperCase()) {
+      'GBP' => '£',
+      'USD' => r'$',
+      'BTC' => '₿',
+      'USDC' => 'USDC ',
+      _ => '€',
+    };
     final normalizedAmount = amount.toStringAsFixed(2);
     final compactAmount = normalizedAmount.endsWith('.00')
         ? normalizedAmount.substring(0, normalizedAmount.length - 3)

@@ -153,7 +153,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'Moeda de pagamento',
     'payoutMethod': 'Método de pagamento',
     'viewsToRequest': 'Visualizações a solicitar',
-    'minimumViewsHelper': 'Mínimo de 10.000 visualizações',
+    'minimumViewsHelper': 'Mínimo de 5.000 visualizações',
     'enterAmount': 'Introduza um montante.',
     'enterValidPositiveNumber':
         'Introduza um número positivo válido.',
@@ -248,7 +248,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'As recompensas de bónus diário são limitadas à atividade elegível e podem ser removidas se for detetado abuso.',
     'termsPayoutsBullet1':
-        'O pagamento mínimo continua a ser 10.000 visualizações.',
+        'O pagamento mínimo continua a ser 5.000 visualizações.',
     'termsPayoutsBullet2':
         'Todos os pedidos de pagamento exigem aprovação manual do administrador e podem ser aprovados, rejeitados ou marcados como pagos.',
     'termsPayoutsBullet3':
@@ -426,7 +426,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'Valuta di pagamento',
     'payoutMethod': 'Metodo di pagamento',
     'viewsToRequest': 'Visualizzazioni da richiedere',
-    'minimumViewsHelper': 'Minimo 10.000 visualizzazioni',
+    'minimumViewsHelper': 'Minimo 5.000 visualizzazioni',
     'enterAmount': 'Inserisci un importo.',
     'enterValidPositiveNumber':
         'Inserisci un numero positivo valido.',
@@ -523,7 +523,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'Le ricompense bonus giornaliere sono limitate alle attività idonee e possono essere rimosse se viene rilevato abuso.',
     'termsPayoutsBullet1':
-        'Il pagamento minimo resta 10.000 visualizzazioni.',
+        'Il pagamento minimo resta 5.000 visualizzazioni.',
     'termsPayoutsBullet2':
         'Tutte le richieste di pagamento richiedono approvazione manuale admin e possono essere approvate, rifiutate o contrassegnate come pagate.',
     'termsPayoutsBullet3':
@@ -701,7 +701,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'Ödeme para birimi',
     'payoutMethod': 'Ödeme yöntemi',
     'viewsToRequest': 'İstenecek görüntülemeler',
-    'minimumViewsHelper': 'Minimum 10.000 görüntüleme',
+    'minimumViewsHelper': 'Minimum 5.000 görüntüleme',
     'enterAmount': 'Bir tutar girin.',
     'enterValidPositiveNumber':
         'Geçerli bir pozitif sayı girin.',
@@ -798,7 +798,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'Günlük bonus ödülleri uygun etkinlikle sınırlıdır ve kötüye kullanım tespit edilirse kaldırılabilir.',
     'termsPayoutsBullet1':
-        'Minimum ödeme 10.000 görüntüleme olarak kalır.',
+        'Minimum ödeme 5.000 görüntüleme olarak kalır.',
     'termsPayoutsBullet2':
         'Tüm ödeme istekleri manuel yönetici onayı gerektirir ve onaylanabilir, reddedilebilir veya ödendi olarak işaretlenebilir.',
     'termsPayoutsBullet3':
@@ -973,7 +973,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'عملة السحب',
     'payoutMethod': 'طريقة السحب',
     'viewsToRequest': 'المشاهدات المطلوب سحبها',
-    'minimumViewsHelper': 'الحد الأدنى 10,000 مشاهدة',
+    'minimumViewsHelper': 'الحد الأدنى 5,000 مشاهدة',
     'enterAmount': 'أدخل مبلغًا.',
     'enterValidPositiveNumber':
         'أدخل رقمًا موجبًا صالحًا.',
@@ -1068,7 +1068,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'مكافآت البونص اليومي تقتصر على النشاط المؤهل ويمكن إزالتها إذا تم اكتشاف إساءة استخدام.',
     'termsPayoutsBullet1':
-        'يبقى الحد الأدنى للسحب 10,000 مشاهدة.',
+        'يبقى الحد الأدنى للسحب 5,000 مشاهدة.',
     'termsPayoutsBullet2':
         'تتطلب جميع طلبات السحب موافقة يدوية من المشرف ويمكن الموافقة عليها أو رفضها أو وضع علامة مدفوعة عليها.',
     'termsPayoutsBullet3':
@@ -1245,7 +1245,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'পেআউটের মুদ্রা',
     'payoutMethod': 'পেআউট পদ্ধতি',
     'viewsToRequest': 'অনুরোধের জন্য ভিউ',
-    'minimumViewsHelper': 'সর্বনিম্ন ১০,০০০ ভিউ',
+    'minimumViewsHelper': 'সর্বনিম্ন ৫,০০০ ভিউ',
     'enterAmount': 'একটি পরিমাণ লিখুন।',
     'enterValidPositiveNumber':
         'একটি বৈধ ধনাত্মক সংখ্যা লিখুন।',
@@ -1341,7 +1341,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'দৈনিক বোনাস পুরস্কার শুধুমাত্র যোগ্য কার্যকলাপের জন্য সীমাবদ্ধ এবং অপব্যবহার শনাক্ত হলে তা সরিয়ে দেওয়া হতে পারে।',
     'termsPayoutsBullet1':
-        'সর্বনিম্ন পেআউট ১০,০০০ ভিউই থাকবে।',
+        'সর্বনিম্ন পেআউট ৫,০০০ ভিউই থাকবে।',
     'termsPayoutsBullet2':
         'সব পেআউট অনুরোধে ম্যানুয়াল অ্যাডমিন অনুমোদন প্রয়োজন এবং তা অনুমোদিত, প্রত্যাখ্যাত, অথবা পরিশোধিত হিসেবে চিহ্নিত হতে পারে।',
     'termsPayoutsBullet3':
@@ -1531,7 +1531,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'கட்டண நாணயம்',
     'payoutMethod': 'கட்டண முறை',
     'viewsToRequest': 'கோர வேண்டிய பார்வைகள்',
-    'minimumViewsHelper': 'குறைந்தபட்சம் 10,000 பார்வைகள்',
+    'minimumViewsHelper': 'குறைந்தபட்சம் 5,000 பார்வைகள்',
     'enterAmount': 'ஒரு தொகையை உள்ளிடுங்கள்.',
     'enterValidPositiveNumber':
         'சரியான நேர்ம தொகையை உள்ளிடுங்கள்.',
@@ -1632,7 +1632,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'தினசரி போனஸ் பரிசுகள் தகுதியான செயல்பாட்டிற்கு மட்டுமே வரம்புபடுத்தப்பட்டவை; தவறான பயன்பாடு கண்டறியப்பட்டால் அவை நீக்கப்படலாம்.',
     'termsPayoutsBullet1':
-        'குறைந்தபட்ச கட்டணம் 10,000 பார்வைகளாகவே இருக்கும்.',
+        'குறைந்தபட்ச கட்டணம் 5,000 பார்வைகளாகவே இருக்கும்.',
     'termsPayoutsBullet2':
         'அனைத்து கட்டண கோரிக்கைகளுக்கும் கைமுறை நிர்வாகி ஒப்புதல் அவசியம்; அவை ஒப்புதல், நிராகரம், அல்லது செலுத்தப்பட்டது என குறிக்கப்படலாம்.',
     'termsPayoutsBullet3':
@@ -1814,7 +1814,7 @@ const extraLocalizedValues = {
     'payoutCurrency': 'చెల్లింపు కరెన్సీ',
     'payoutMethod': 'చెల్లింపు పద్ధతి',
     'viewsToRequest': 'అభ్యర్థించాల్సిన వ్యూలు',
-    'minimumViewsHelper': 'కనీసం 10,000 వ్యూలు',
+    'minimumViewsHelper': 'కనీసం 5,000 వ్యూలు',
     'enterAmount': 'ఒక మొత్తాన్ని నమోదు చేయండి.',
     'enterValidPositiveNumber':
         'చెల్లుబాటు అయ్యే ధన సంఖ్యను నమోదు చేయండి.',
@@ -1910,7 +1910,7 @@ const extraLocalizedValues = {
         'అంచనా ఆదాయం కేవలం సమాచార కోసం మాత్రమే మరియు ప్లాట్‌ఫారమ్ పనితీరు, విధానం, మోసం తనిఖీలు మరియు చెల్లింపు సమీక్ష ఆధారంగా మారవచ్చు.',
     'termsViewsBullet3':
         'రోజువారీ బోనస్ బహుమతులు అర్హమైన కార్యకలాపాలకు మాత్రమే పరిమితం; దుర్వినియోగం గుర్తిస్తే తొలగించబడవచ్చు.',
-    'termsPayoutsBullet1': 'కనీస చెల్లింపు 10,000 వ్యూలుగానే ఉంటుంది.',
+    'termsPayoutsBullet1': 'కనీస చెల్లింపు 5,000 వ్యూలుగానే ఉంటుంది.',
     'termsPayoutsBullet2':
         'అన్ని చెల్లింపు అభ్యర్థనలకు మాన్యువల్ అడ్మిన్ ఆమోదం అవసరం మరియు అవి ఆమోదించబడవచ్చు, తిరస్కరించబడవచ్చు లేదా చెల్లించబడినట్లుగా గుర్తించబడవచ్చు.',
     'termsPayoutsBullet3':

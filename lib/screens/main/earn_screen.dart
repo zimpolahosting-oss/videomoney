@@ -234,7 +234,7 @@ class _EarnScreenState extends State<EarnScreen> {
                             child: _HowStep(
                               icon: Icons.account_balance_wallet_outlined,
                               title: l10n.cashOut,
-                              subtitle: '10,000 ${l10n.viewsUnit}',
+                              subtitle: '5,000 ${l10n.viewsUnit}',
                             ),
                           ),
                         ],

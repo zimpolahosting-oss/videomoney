@@ -228,11 +228,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isActiveTab == widget.isActiveTab) return;
     if (widget.isActiveTab) {
-      if (_playerSuspended) {
-        unawaited(_loadCurrentVideoIntoWebView(force: true));
-      } else {
-        unawaited(_resumePlaybackIfNeeded());
-      }
+      unawaited(_recoverVideoTabAfterExternalScreen());
     } else {
       unawaited(_suspendPlayback(unloadPlayer: true));
     }
@@ -719,6 +715,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _recoverVideoTabAfterExternalScreen() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      var snapshot = await ShortsProgressService.instance.load(user.uid);
+      if (snapshot.pendingAdBreakShorts > 0 && snapshot.pendingAdBreakAttempted) {
+        snapshot = await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
+      }
+      if (!mounted) return;
+      setState(() {
+        _syncProgressFromSnapshot(snapshot);
+        if (_feed.isNotEmpty) {
+          _currentIndex = _currentIndex.clamp(0, _feed.length - 1);
+        } else {
+          _currentIndex = 0;
+        }
+      });
+    }
+
+    if (_feed.isEmpty) return;
+    await _loadCurrentVideoIntoWebView(force: true);
+    if (!mounted) return;
+    unawaited(_earningsService.preloadRewardedVideo());
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+      unawaited(_resumePlaybackIfNeeded());
+    });
+  }
+
   Future<void> _presentAdBreakSheet() async {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
@@ -757,7 +781,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         await _earningsService.showRewardedBonusAd(
                           provider: isAdmobBreak
                                   ? RewardedAdProvider.admob
-                                  : RewardedAdProvider.appodeal,
+                                  : isGraviteBreak
+                                      ? RewardedAdProvider.gravite
+                                      : RewardedAdProvider.appodeal,
                           onAdStatus: (message) {
                             debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                           },
@@ -895,7 +921,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     if (!mounted || !widget.isActiveTab) return;
-    await _loadCurrentVideoIntoWebView(force: true);
+    await _recoverVideoTabAfterExternalScreen();
   }
 
   @override

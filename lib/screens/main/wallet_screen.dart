@@ -189,18 +189,6 @@ class WalletScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _MethodTile(
-              icon: Icons.account_balance_outlined,
-              title: l10n.bankTransferTitle,
-              subtitle: l10n.bankTransferSubtitle,
-              onTap: () {
-                Navigator.of(context).pushNamed(
-                  AppRoutes.payoutRequest,
-                  arguments: 'bank',
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            _MethodTile(
               icon: Icons.currency_bitcoin_rounded,
               title: 'Bitcoin',
               subtitle: 'Payout to your BTC wallet address',
@@ -282,6 +270,15 @@ class WalletScreen extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (payout.hasRecordedPaidAmount) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Paid amount: ${payout.paidAmountLabel}',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
                                   Text(
                                     formattedDate,
