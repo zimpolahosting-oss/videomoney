@@ -76,7 +76,9 @@ class VideomoneyAdSdk {
           callbacks.onClosed?.call(provider);
           return true;
         case VideomoneyAdScreenResult.closedBeforeShow:
-          _log('Ad popup was closed by the user before ${provider.name} opened.');
+          _log(
+            'Ad popup was closed before ${provider.name} qualified for reward.',
+          );
           callbacks.onClosed?.call(provider);
           return false;
         case VideomoneyAdScreenResult.failed:
@@ -230,7 +232,7 @@ class VideomoneyAdSettings {
   const VideomoneyAdSettings._();
 
   static const VideomoneyAdProvider primaryProvider =
-      VideomoneyAdProvider.monetag;
+      VideomoneyAdProvider.adcash;
   static const bool enableFallback = true;
   static const Duration openTimeout = Duration(seconds: 10);
   static const String monetagDirectLinkUrl = 'https://omg10.com/4/11320247';

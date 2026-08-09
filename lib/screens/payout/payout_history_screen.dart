@@ -96,6 +96,20 @@ class PayoutHistoryScreen extends StatelessWidget {
                             ),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
+                          if (payout.hasRecordedPaidAmount) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Paid amount: ${payout.paidAmountLabel}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                          if (payout.paidNote.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Note: ${payout.paidNote}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
                           const SizedBox(height: 4),
                           Text(
                             formattedDate,

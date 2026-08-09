@@ -53,18 +53,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return DateFormat.yMMMd().add_jm().format(dateTime);
   }
 
-  Future<void> _setStatus(PayoutRequest payout, String status) async {
+  Future<void> _setStatus(
+    PayoutRequest payout,
+    String status, {
+    double? manualPaidAmountValue,
+    String? manualPaidCurrency,
+    String? manualPaidNote,
+  }) async {
     try {
       await _firestoreService.updatePayoutStatus(
         payoutId: payout.id,
         status: status,
+        manualPaidAmountValue: manualPaidAmountValue,
+        manualPaidCurrency: manualPaidCurrency,
+        manualPaidNote: manualPaidNote,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             status == 'paid'
-                ? 'Marked payout as manually paid.'
+                ? manualPaidAmountValue != null && manualPaidAmountValue > 0
+                    ? 'Marked payout as manually paid: ${manualPaidCurrency ?? payout.normalizedCurrency} ${manualPaidAmountValue.toStringAsFixed(2)}'
+                    : 'Marked payout as manually paid.'
                 : 'Updated payout to ${status.toUpperCase()}',
           ),
         ),
@@ -75,6 +86,114 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
       );
     }
+  }
+
+  Future<void> _openManualPaymentDialog(PayoutRequest payout) async {
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    var selectedCurrency = payout.normalizedCurrency;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mark manual payment',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enter the exact paid amount so the user sees the final payment instead of only an estimate.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Paid amount',
+                      hintText: '0.75',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedCurrency,
+                    items: const ['EUR', 'GBP', 'USD', 'BTC', 'USDC']
+                        .map(
+                          (currency) => DropdownMenuItem<String>(
+                            value: currency,
+                            child: Text(currency),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setSheetState(() => selectedCurrency = value);
+                    },
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: noteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
+                      hintText: 'Paid via PayPal on request',
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        final parsedAmount = double.tryParse(
+                          amountController.text.trim().replaceAll(',', '.'),
+                        );
+                        if (parsedAmount == null || parsedAmount <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Enter the final paid amount before marking this payout as paid.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.of(sheetContext).pop();
+                        await _setStatus(
+                          payout,
+                          'paid',
+                          manualPaidAmountValue: parsedAmount,
+                          manualPaidCurrency: selectedCurrency,
+                          manualPaidNote: noteController.text.trim(),
+                        );
+                      },
+                      child: const Text('Mark Manual Paid'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _openTicketReplyDialog(
@@ -438,6 +557,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
+                      if (payout.hasRecordedPaidAmount) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Paid amount: ${payout.paidAmountLabel}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                      if (payout.paidNote.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Note: ${payout.paidNote}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
                         _formatDateTime(payout.createdAt),
@@ -467,7 +600,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ] else if (canMarkPaid)
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: () => _setStatus(payout, 'paid'),
+                                  onPressed: () => _openManualPaymentDialog(payout),
                                   child: const Text('Mark Manual Paid'),
                                 ),
                               ),

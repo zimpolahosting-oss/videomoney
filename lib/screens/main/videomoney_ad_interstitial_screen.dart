@@ -42,6 +42,8 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
 
 class _VideomoneyAdInterstitialScreenState
     extends State<VideomoneyAdInterstitialScreen> with WidgetsBindingObserver {
+  static const Duration _minimumRewardableViewDuration = Duration(seconds: 12);
+
   Timer? _timeoutTimer;
   WebViewController? _controller;
   bool _isClosing = false;
@@ -49,10 +51,13 @@ class _VideomoneyAdInterstitialScreenState
   bool _adLoaded = false;
   bool _adShown = false;
   bool _fallbackOpening = false;
+  late final DateTime _openedAt;
+  DateTime? _shownAt;
 
   @override
   void initState() {
     super.initState();
+    _openedAt = DateTime.now();
     WidgetsBinding.instance.addObserver(this);
     _timeoutTimer = Timer(widget.timeout, _handleTimeout);
     _controller = WebViewController()
@@ -76,6 +81,7 @@ class _VideomoneyAdInterstitialScreenState
             }
             if (_isDirectLinkMode && !_adShown) {
               _adShown = true;
+              _shownAt ??= DateTime.now();
               widget.onShown();
             }
           },
@@ -180,9 +186,10 @@ class _VideomoneyAdInterstitialScreenState
     }
     _adLoaded = true;
     _adShown = true;
+    _shownAt ??= DateTime.now();
     setState(() => _isOpening = false);
     widget.onShown();
-    _close(VideomoneyAdScreenResult.shownAndReturned);
+    _close(VideomoneyAdScreenResult.closedBeforeShow);
   }
 
   void _handleBridgeMessage(String rawMessage) {
@@ -204,12 +211,13 @@ class _VideomoneyAdInterstitialScreenState
         case 'shown':
           if (!_adShown) {
             _adShown = true;
+            _shownAt ??= DateTime.now();
             setState(() => _isOpening = false);
             widget.onShown();
           }
           break;
         case 'close':
-          _close(VideomoneyAdScreenResult.shownAndReturned);
+          _close(_normalizedCloseResult());
           break;
         case 'error':
           widget.onFailed(
@@ -241,7 +249,23 @@ class _VideomoneyAdInterstitialScreenState
     if (_isClosing || !mounted) return;
     _isClosing = true;
     _timeoutTimer?.cancel();
-    Navigator.of(context).pop(result);
+    Navigator.of(context).pop(
+      result == VideomoneyAdScreenResult.shownAndReturned
+          ? _normalizedCloseResult()
+          : result,
+    );
+  }
+
+  VideomoneyAdScreenResult _normalizedCloseResult() {
+    if (!_adShown) {
+      return VideomoneyAdScreenResult.closedBeforeShow;
+    }
+    final referenceTime = _shownAt ?? _openedAt;
+    final watchedLongEnough =
+        DateTime.now().difference(referenceTime) >= _minimumRewardableViewDuration;
+    return watchedLongEnough
+        ? VideomoneyAdScreenResult.shownAndReturned
+        : VideomoneyAdScreenResult.closedBeforeShow;
   }
 
   void _log(String message) {
@@ -291,11 +315,7 @@ class _VideomoneyAdInterstitialScreenState
                 borderRadius: BorderRadius.circular(999),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(999),
-                  onTap: () => _close(
-                    (_adLoaded || _adShown)
-                        ? VideomoneyAdScreenResult.shownAndReturned
-                        : VideomoneyAdScreenResult.closedBeforeShow,
-                  ),
+                  onTap: () => _close(_normalizedCloseResult()),
                   child: const Padding(
                     padding: EdgeInsets.all(10),
                     child: Icon(Icons.close, color: Colors.white),
@@ -375,9 +395,9 @@ class _VideomoneyAdInterstitialScreenState
                             Text(
                               _isDirectLinkMode
                                   ? 'Please wait while VideoMoney loads the ad page inside the app. '
-                                        'Use the X button above to close and continue.'
+                                        'Closing too early will not grant any rewarded views.'
                                   : 'Please wait while VideoMoney loads your ad. '
-                                        'If loading fails, a fallback can be tried automatically.',
+                                        'Only confirmed ad completion can grant rewarded views.',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white70,
