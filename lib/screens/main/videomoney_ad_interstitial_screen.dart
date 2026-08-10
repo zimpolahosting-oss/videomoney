@@ -24,6 +24,8 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
     required this.onLoaded,
     required this.onShown,
     required this.onFailed,
+    this.embeddedMode = false,
+    this.onCompleted,
   });
 
   final String providerName;
@@ -34,6 +36,8 @@ class VideomoneyAdInterstitialScreen extends StatefulWidget {
   final VoidCallback onLoaded;
   final VoidCallback onShown;
   final ValueChanged<String> onFailed;
+  final bool embeddedMode;
+  final ValueChanged<VideomoneyAdScreenResult>? onCompleted;
 
   @override
   State<VideomoneyAdInterstitialScreen> createState() =>
@@ -161,6 +165,11 @@ class _VideomoneyAdInterstitialScreenState
 
   Future<void> _fallbackToInAppBrowser(String reason) async {
     if (!_isDirectLinkMode || _isClosing || !mounted || _fallbackOpening) return;
+    if (widget.embeddedMode) {
+      widget.onFailed(reason);
+      _close(VideomoneyAdScreenResult.failed);
+      return;
+    }
     _fallbackOpening = true;
     _log('Falling back to in-app browser: $reason');
     widget.onFailed(reason);
@@ -249,11 +258,14 @@ class _VideomoneyAdInterstitialScreenState
     if (_isClosing || !mounted) return;
     _isClosing = true;
     _timeoutTimer?.cancel();
-    Navigator.of(context).pop(
-      result == VideomoneyAdScreenResult.shownAndReturned
-          ? _normalizedCloseResult()
-          : result,
-    );
+    final normalizedResult = result == VideomoneyAdScreenResult.shownAndReturned
+        ? _normalizedCloseResult()
+        : result;
+    if (widget.embeddedMode) {
+      widget.onCompleted?.call(normalizedResult);
+    } else {
+      Navigator.of(context).pop(normalizedResult);
+    }
   }
 
   VideomoneyAdScreenResult _normalizedCloseResult() {
@@ -274,10 +286,7 @@ class _VideomoneyAdInterstitialScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF05070D),
-      body: SafeArea(
-        child: Stack(
+    final content = Stack(
           children: [
             if (_controller != null)
               Positioned.fill(
@@ -439,7 +448,22 @@ class _VideomoneyAdInterstitialScreenState
                 ),
               ),
           ],
+        );
+
+    if (widget.embeddedMode) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: ColoredBox(
+          color: const Color(0xFF05070D),
+          child: content,
         ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF05070D),
+      body: SafeArea(
+        child: content,
       ),
     );
   }

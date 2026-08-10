@@ -36,6 +36,7 @@ class _GamesScreenState extends State<GamesScreen> {
   bool _loading = true;
   bool _splitScreenEnabled = false;
   double _splitScreenRatio = 0.52;
+  _PagGameDefinition? _splitScreenSelectedGame;
   String? _error;
 
   static const List<_PagGameDefinition> _multiplayerGames = [
@@ -134,6 +135,9 @@ class _GamesScreenState extends State<GamesScreen> {
   Future<void> _setSplitScreenEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_splitScreenPreferenceKey, value);
+    if (!value && _splitScreenSelectedGame != null) {
+      await _clearSplitScreenGame();
+    }
     if (!mounted) return;
     setState(() => _splitScreenEnabled = value);
   }
@@ -148,6 +152,17 @@ class _GamesScreenState extends State<GamesScreen> {
 
   void _toggleSplitScreen() {
     unawaited(_setSplitScreenEnabled(!_splitScreenEnabled));
+  }
+
+  Future<void> _clearSplitScreenGame() async {
+    final selectedGame = _splitScreenSelectedGame;
+    if (selectedGame != null && _multiplayerGames.contains(selectedGame)) {
+      await _matchmakingService.clearOwnSignal();
+    }
+    if (!mounted) return;
+    setState(() {
+      _splitScreenSelectedGame = null;
+    });
   }
 
   Future<void> _refresh() async {
@@ -204,6 +219,13 @@ class _GamesScreenState extends State<GamesScreen> {
           gameUrl: game.targetUrl ?? PlayersAreGamersService.dashboardUrl,
         );
       } catch (_) {}
+    }
+    if (_splitScreenEnabled) {
+      if (!mounted) return;
+      setState(() {
+        _splitScreenSelectedGame = game;
+      });
+      return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -439,6 +461,19 @@ class _GamesScreenState extends State<GamesScreen> {
                         return gamesContent;
                       }
 
+                      final splitGame = _splitScreenSelectedGame;
+                      final topPanelContent = splitGame == null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(28),
+                              child: gamesContent,
+                            )
+                          : PlayersAreGamersWebViewScreen(
+                              service: _service,
+                              initialUrl: splitGame.targetUrl,
+                              landscapeOnly: splitGame.landscapeOnly,
+                              embeddedMode: true,
+                            );
+
                       final topFlex = (_splitScreenRatio * 1000).round();
                       final bottomFlex = ((1 - _splitScreenRatio) * 1000).round();
                       return Padding(
@@ -451,16 +486,20 @@ class _GamesScreenState extends State<GamesScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   _SplitPanelHeader(
-                                    title: layoutCopy.gamesPanelTitle,
-                                    body: layoutCopy.gamesPanelBody,
-                                    onClose: _toggleSplitScreen,
+                                    title: splitGame?.name ?? layoutCopy.gamesPanelTitle,
+                                    body: splitGame == null
+                                        ? layoutCopy.gamesPanelBody
+                                        : layoutCopy.gamesPanelBody,
+                                    onClose: splitGame == null
+                                        ? _toggleSplitScreen
+                                        : _clearSplitScreenGame,
+                                    closeIcon: splitGame == null
+                                        ? Icons.close_rounded
+                                        : Icons.arrow_back_rounded,
                                   ),
                                   const SizedBox(height: 10),
                                   Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(28),
-                                      child: gamesContent,
-                                    ),
+                                    child: topPanelContent,
                                   ),
                                 ],
                               ),
@@ -1429,11 +1468,13 @@ class _SplitPanelHeader extends StatelessWidget {
     required this.title,
     required this.body,
     this.onClose,
+    this.closeIcon = Icons.close_rounded,
   });
 
   final String title;
   final String body;
   final VoidCallback? onClose;
+  final IconData closeIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -1462,7 +1503,7 @@ class _SplitPanelHeader extends StatelessWidget {
             IconButton(
               onPressed: onClose,
               tooltip: 'Close split screen',
-              icon: const Icon(Icons.close_rounded),
+              icon: Icon(closeIcon),
             ),
           ],
         ],
