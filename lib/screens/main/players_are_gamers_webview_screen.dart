@@ -17,11 +17,13 @@ class PlayersAreGamersWebViewScreen extends StatefulWidget {
     required this.service,
     this.initialUrl,
     this.landscapeOnly = false,
+    this.embeddedMode = false,
   });
 
   final PlayersAreGamersService service;
   final String? initialUrl;
   final bool landscapeOnly;
+  final bool embeddedMode;
 
   @override
   State<PlayersAreGamersWebViewScreen> createState() =>
@@ -43,7 +45,7 @@ class _PlayersAreGamersWebViewScreenState
   @override
   void initState() {
     super.initState();
-    if (widget.landscapeOnly) {
+    if (widget.landscapeOnly && !widget.embeddedMode) {
       unawaited(
         SystemChrome.setPreferredOrientations(const [
           DeviceOrientation.landscapeLeft,
@@ -102,7 +104,7 @@ class _PlayersAreGamersWebViewScreenState
 
   @override
   void dispose() {
-    if (widget.landscapeOnly) {
+    if (widget.landscapeOnly && !widget.embeddedMode) {
       unawaited(
         SystemChrome.setPreferredOrientations(const [
           DeviceOrientation.portraitUp,
@@ -440,16 +442,28 @@ class _PlayersAreGamersWebViewScreenState
 
   @override
   Widget build(BuildContext context) {
+    final content = Stack(
+      children: [
+        WebViewWidget(controller: _controller),
+        if (_loading) const LinearProgressIndicator(minHeight: 2),
+      ],
+    );
+
+    if (widget.embeddedMode) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: ColoredBox(
+          color: const Color(0xFF020706),
+          child: content,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('PlayersAreGamers'),
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
-        ],
-      ),
+      body: content,
     );
   }
 }

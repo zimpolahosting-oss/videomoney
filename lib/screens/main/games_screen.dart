@@ -23,6 +23,8 @@ class GamesScreen extends StatefulWidget {
 class _GamesScreenState extends State<GamesScreen> {
   static const String _splitScreenPreferenceKey =
       'games_split_screen_enabled_v1';
+  static const String _splitScreenRatioPreferenceKey =
+      'games_split_screen_ratio_v1';
 
   final PlayersAreGamersService _service = PlayersAreGamersService();
   final PagMatchmakingService _matchmakingService = PagMatchmakingService();
@@ -33,6 +35,7 @@ class _GamesScreenState extends State<GamesScreen> {
       PresenceService.instance.watchOnlineUsersCount();
   bool _loading = true;
   bool _splitScreenEnabled = false;
+  double _splitScreenRatio = 0.52;
   String? _error;
 
   static const List<_PagGameDefinition> _multiplayerGames = [
@@ -122,6 +125,9 @@ class _GamesScreenState extends State<GamesScreen> {
     if (!mounted) return;
     setState(() {
       _splitScreenEnabled = prefs.getBool(_splitScreenPreferenceKey) ?? false;
+      _splitScreenRatio =
+          (prefs.getDouble(_splitScreenRatioPreferenceKey) ?? 0.52)
+              .clamp(0.28, 0.72);
     });
   }
 
@@ -130,6 +136,18 @@ class _GamesScreenState extends State<GamesScreen> {
     await prefs.setBool(_splitScreenPreferenceKey, value);
     if (!mounted) return;
     setState(() => _splitScreenEnabled = value);
+  }
+
+  Future<void> _setSplitScreenRatio(double value) async {
+    final normalized = value.clamp(0.28, 0.72);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_splitScreenRatioPreferenceKey, normalized);
+    if (!mounted) return;
+    setState(() => _splitScreenRatio = normalized);
+  }
+
+  void _toggleSplitScreen() {
+    unawaited(_setSplitScreenEnabled(!_splitScreenEnabled));
   }
 
   Future<void> _refresh() async {
@@ -406,12 +424,7 @@ class _GamesScreenState extends State<GamesScreen> {
                 child: SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final mediaQuery = MediaQuery.of(context);
-                      final canUseSplitScreen =
-                          constraints.maxWidth >= 700 ||
-                          mediaQuery.size.shortestSide >= 600;
                       final showSplitScreen =
-                          canUseSplitScreen &&
                           _splitScreenEnabled &&
                           profile != null &&
                           profile.linked;
@@ -420,55 +433,86 @@ class _GamesScreenState extends State<GamesScreen> {
                         layoutCopy: layoutCopy,
                         profile: profile,
                         onlineCount: onlineCount,
-                        canUseSplitScreen: canUseSplitScreen,
                       );
 
                       if (!showSplitScreen) {
                         return gamesContent;
                       }
 
+                      final topFlex = (_splitScreenRatio * 1000).round();
+                      final bottomFlex = ((1 - _splitScreenRatio) * 1000).round();
                       return Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                        child: Row(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                        child: Column(
                           children: [
                             Expanded(
-                              flex: 7,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(28),
-                                child: gamesContent,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            SizedBox(
-                              width: constraints.maxWidth * 0.32,
+                              flex: topFlex,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(24),
-                                      color: Theme.of(context).colorScheme.surface,
-                                      border: Border.all(
-                                        color: const Color(0x331AE47A),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          layoutCopy.splitPanelTitle,
-                                          style: Theme.of(context).textTheme.titleMedium,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          layoutCopy.splitPanelBody,
-                                          style: Theme.of(context).textTheme.bodyMedium,
-                                        ),
-                                      ],
+                                  _SplitPanelHeader(
+                                    title: layoutCopy.gamesPanelTitle,
+                                    body: layoutCopy.gamesPanelBody,
+                                    onClose: _toggleSplitScreen,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: PlayersAreGamersWebViewScreen(
+                                      service: _service,
+                                      initialUrl: PlayersAreGamersService.dashboardUrl,
+                                      embeddedMode: true,
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onVerticalDragUpdate: (details) {
+                                final nextRatio =
+                                    _splitScreenRatio +
+                                    (details.delta.dy / constraints.maxHeight);
+                                setState(() {
+                                  _splitScreenRatio = nextRatio.clamp(0.28, 0.72);
+                                });
+                              },
+                              onVerticalDragEnd: (_) {
+                                unawaited(_setSplitScreenRatio(_splitScreenRatio));
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 72,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(999),
+                                        color: const Color(0x661AE47A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      layoutCopy.dragHint,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.white.withOpacity(0.72),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: bottomFlex,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _SplitPanelHeader(
+                                    title: layoutCopy.splitPanelTitle,
+                                    body: layoutCopy.splitPanelBody,
+                                  ),
+                                  const SizedBox(height: 10),
                                   Expanded(
                                     child: HomeScreen(
                                       isActiveTab: true,
@@ -497,7 +541,6 @@ class _GamesScreenState extends State<GamesScreen> {
     required _GamesLayoutCopy layoutCopy,
     required PlayersAreGamersProfile? profile,
     required int onlineCount,
-    required bool canUseSplitScreen,
   }) {
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -506,7 +549,7 @@ class _GamesScreenState extends State<GamesScreen> {
         children: [
           _buildHero(copy),
           const SizedBox(height: 18),
-          _buildSplitScreenCard(layoutCopy, canUseSplitScreen),
+          _buildSplitScreenCard(layoutCopy),
           const SizedBox(height: 16),
           if (_error != null) ...[
             _StatusCard(
@@ -538,45 +581,47 @@ class _GamesScreenState extends State<GamesScreen> {
     );
   }
 
-  Widget _buildSplitScreenCard(
-    _GamesLayoutCopy copy,
-    bool canUseSplitScreen,
-  ) {
+  Widget _buildSplitScreenCard(_GamesLayoutCopy copy) {
     return _NeonPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: InkWell(
+        onTap: _toggleSplitScreen,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.splitscreen_rounded, color: Color(0xFF29F08F)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  copy.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+              Row(
+                children: [
+                  const Icon(Icons.splitscreen_rounded, color: Color(0xFF29F08F)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      copy.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
+                  Switch.adaptive(
+                    value: _splitScreenEnabled,
+                    onChanged: (value) => _setSplitScreenEnabled(value),
+                  ),
+                ],
               ),
-              Switch.adaptive(
-                value: _splitScreenEnabled && canUseSplitScreen,
-                onChanged: canUseSplitScreen
-                    ? (value) => _setSplitScreenEnabled(value)
-                    : null,
+              const SizedBox(height: 10),
+              Text(
+                _splitScreenEnabled ? copy.enabledBody : copy.disabledBody,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.82),
+                  height: 1.35,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            canUseSplitScreen ? copy.enabledBody : copy.disabledBody,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              height: 1.35,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1380,11 +1425,61 @@ class _PagCoinLeaderboardEntry {
   final int coins;
 }
 
+class _SplitPanelHeader extends StatelessWidget {
+  const _SplitPanelHeader({
+    required this.title,
+    required this.body,
+    this.onClose,
+  });
+
+  final String title;
+  final String body;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: const Color(0x331AE47A)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(body, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+          if (onClose != null) ...[
+            const SizedBox(width: 12),
+            IconButton(
+              onPressed: onClose,
+              tooltip: 'Close split screen',
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _GamesLayoutCopy {
   const _GamesLayoutCopy({
     required this.title,
     required this.enabledBody,
     required this.disabledBody,
+    required this.dragHint,
+    required this.gamesPanelTitle,
+    required this.gamesPanelBody,
     required this.splitPanelTitle,
     required this.splitPanelBody,
   });
@@ -1392,6 +1487,9 @@ class _GamesLayoutCopy {
   final String title;
   final String enabledBody;
   final String disabledBody;
+  final String dragHint;
+  final String gamesPanelTitle;
+  final String gamesPanelBody;
   final String splitPanelTitle;
   final String splitPanelBody;
 
@@ -1399,154 +1497,214 @@ class _GamesLayoutCopy {
     const english = _GamesLayoutCopy(
       title: 'Split screen',
       enabledBody:
-          'Turn this on for larger screens if you want Games and Videos on one screen. Games stay larger, Videos stay smaller.',
+          'Split screen is on. You can see Games and Videos at the same time.',
       disabledBody:
-          'Split screen is only recommended on larger screens. On smaller phones the normal full Games page stays easier to use.',
+          'Turn this on if you want two live panels at once: Games and Videos in the same screen.',
+      dragHint: 'Drag the middle bar',
+      gamesPanelTitle: 'Games stay open',
+      gamesPanelBody:
+          'This panel keeps the game website open while the video panel stays visible below.',
       splitPanelTitle: 'Videos stay live',
       splitPanelBody:
-          'Watch shorts in the smaller panel while you play. Reward and ad rules stay the same.',
+          'Watch shorts in the second panel while you play. Reward and ad rules stay the same.',
     );
 
     const localized = <String, _GamesLayoutCopy>{
       'nl': _GamesLayoutCopy(
         title: 'Split screen',
         enabledBody:
-            'Zet dit aan op grotere schermen als je Games en Video’s tegelijk wilt zien. Games blijven groot en Video’s blijven kleiner.',
+            'Split screen staat aan. Je ziet Games en Video’s nu tegelijk.',
         disabledBody:
-            'Split screen is alleen handig op grotere schermen. Op kleinere telefoons blijft de normale Games-pagina fijner.',
+            'Zet dit aan als je twee live panelen tegelijk wilt: Games en Video’s op hetzelfde scherm.',
+        dragHint: 'Sleep de balk in het midden',
+        gamesPanelTitle: 'Games blijft open',
+        gamesPanelBody:
+            'Dit paneel houdt de gamesite open terwijl het videopaneel onderaan zichtbaar blijft.',
         splitPanelTitle: 'Video’s blijven live',
         splitPanelBody:
-            'Bekijk shorts in het kleine paneel terwijl je speelt. Belonings- en advertentieregels blijven hetzelfde.',
+            'Bekijk shorts in het tweede paneel terwijl je speelt. Belonings- en advertentieregels blijven hetzelfde.',
       ),
       'hi': _GamesLayoutCopy(
         title: 'स्प्लिट स्क्रीन',
         enabledBody:
-            'अगर आप बड़े स्क्रीन पर Games और Videos को एक ही स्क्रीन पर चाहते हैं तो इसे चालू करें। Games बड़ा रहेगा, Videos छोटा रहेगा।',
+            'स्प्लिट स्क्रीन चालू है। अब आप Games और Videos को एक साथ देख सकते हैं।',
         disabledBody:
-            'स्प्लिट स्क्रीन बड़े स्क्रीन पर ही बेहतर है। छोटे फोन पर सामान्य पूरा Games पेज ज़्यादा आसान रहता है।',
+            'अगर आप एक साथ दो live panel चाहते हैं, तो इसे चालू करें: Games और Videos एक ही स्क्रीन पर।',
+        dragHint: 'बीच की पट्टी खींचें',
+        gamesPanelTitle: 'Games खुला रहेगा',
+        gamesPanelBody:
+            'यह panel game website को खुला रखता है, जबकि नीचे video panel दिखाई देता रहता है।',
         splitPanelTitle: 'वीडियो चलते रहेंगे',
         splitPanelBody:
-            'खेलते समय छोटे पैनल में shorts देखें। रिवॉर्ड और ad नियम वही रहेंगे।',
+            'खेलते समय दूसरे panel में shorts देखें। रिवॉर्ड और ad नियम वही रहेंगे।',
       ),
       'de': _GamesLayoutCopy(
         title: 'Geteilter Bildschirm',
         enabledBody:
-            'Aktiviere das auf größeren Bildschirmen, wenn du Games und Videos auf einem Bildschirm willst. Games bleibt größer, Videos bleibt kleiner.',
+            'Der geteilte Bildschirm ist aktiv. Du kannst Games und Videos gleichzeitig sehen.',
         disabledBody:
-            'Geteilter Bildschirm wird nur auf größeren Bildschirmen empfohlen. Auf kleineren Handys bleibt die normale Games-Seite einfacher.',
+            'Aktiviere das, wenn du zwei Live-Bereiche gleichzeitig willst: Games und Videos auf einem Bildschirm.',
+        dragHint: 'Ziehe die mittlere Leiste',
+        gamesPanelTitle: 'Games bleibt geöffnet',
+        gamesPanelBody:
+            'Dieses Panel hält die Spiele-Website offen, während das Video-Panel darunter sichtbar bleibt.',
         splitPanelTitle: 'Videos laufen weiter',
         splitPanelBody:
-            'Sieh Shorts im kleineren Bereich, während du spielst. Belohnungs- und Werberegeln bleiben gleich.',
+            'Sieh Shorts im zweiten Bereich, während du spielst. Belohnungs- und Werberegeln bleiben gleich.',
       ),
       'es': _GamesLayoutCopy(
         title: 'Pantalla dividida',
         enabledBody:
-            'Activa esto en pantallas grandes si quieres Games y Videos en una sola pantalla. Games queda más grande y Videos más pequeño.',
+            'La pantalla dividida está activa. Ahora puedes ver Games y Videos al mismo tiempo.',
         disabledBody:
-            'La pantalla dividida solo se recomienda en pantallas grandes. En teléfonos pequeños, la página normal de Games sigue siendo más cómoda.',
+            'Activa esto si quieres dos paneles en vivo al mismo tiempo: Games y Videos en la misma pantalla.',
+        dragHint: 'Arrastra la barra central',
+        gamesPanelTitle: 'Games sigue abierto',
+        gamesPanelBody:
+            'Este panel mantiene abierto el sitio del juego mientras el panel de videos sigue visible abajo.',
         splitPanelTitle: 'Los videos siguen activos',
         splitPanelBody:
-            'Mira shorts en el panel pequeño mientras juegas. Las reglas de anuncios y recompensas siguen igual.',
+            'Mira shorts en el segundo panel mientras juegas. Las reglas de anuncios y recompensas siguen igual.',
       ),
       'fr': _GamesLayoutCopy(
         title: 'Écran partagé',
         enabledBody:
-            'Active cette option sur les grands écrans si tu veux Games et Videos sur un seul écran. Games reste plus grand, Videos reste plus petit.',
+            'L’écran partagé est activé. Tu peux maintenant voir Games et Videos en même temps.',
         disabledBody:
-            'L’écran partagé est surtout recommandé sur les grands écrans. Sur les petits téléphones, la page Games normale reste plus pratique.',
+            'Active cette option si tu veux deux panneaux en direct en même temps : Games et Videos sur le même écran.',
+        dragHint: 'Fais glisser la barre centrale',
+        gamesPanelTitle: 'Games reste ouvert',
+        gamesPanelBody:
+            'Ce panneau garde le site de jeu ouvert pendant que le panneau vidéo reste visible en dessous.',
         splitPanelTitle: 'Les vidéos restent actives',
         splitPanelBody:
-            'Regarde des shorts dans le petit panneau pendant que tu joues. Les règles de récompense et de pub restent les mêmes.',
+            'Regarde des shorts dans le second panneau pendant que tu joues. Les règles de récompense et de pub restent les mêmes.',
       ),
       'ru': _GamesLayoutCopy(
         title: 'Разделённый экран',
         enabledBody:
-            'Включите это на больших экранах, если хотите видеть Games и Videos на одном экране. Games будет больше, Videos будет меньше.',
+            'Разделённый экран включён. Теперь вы можете видеть Games и Videos одновременно.',
         disabledBody:
-            'Разделённый экран рекомендуется только для больших экранов. На маленьких телефонах обычная страница Games удобнее.',
+            'Включите это, если хотите видеть две живые панели одновременно: Games и Videos на одном экране.',
+        dragHint: 'Перетащите центральную полоску',
+        gamesPanelTitle: 'Games остаётся открытым',
+        gamesPanelBody:
+            'Эта панель держит сайт игры открытым, пока видеопанель остаётся видимой внизу.',
         splitPanelTitle: 'Видео продолжают идти',
         splitPanelBody:
-            'Смотрите shorts в маленькой панели во время игры. Правила рекламы и наград остаются теми же.',
+            'Смотрите shorts во второй панели во время игры. Правила рекламы и наград остаются теми же.',
       ),
       'el': _GamesLayoutCopy(
         title: 'Διαχωρισμένη οθόνη',
         enabledBody:
-            'Ενεργοποίησέ το σε μεγαλύτερες οθόνες αν θέλεις Games και Videos στην ίδια οθόνη. Το Games μένει μεγαλύτερο και το Videos μικρότερο.',
+            'Η διαχωρισμένη οθόνη είναι ενεργή. Τώρα μπορείς να βλέπεις Games και Videos ταυτόχρονα.',
         disabledBody:
-            'Η διαχωρισμένη οθόνη προτείνεται μόνο σε μεγαλύτερες οθόνες. Σε μικρότερα τηλέφωνα η κανονική σελίδα Games είναι πιο εύχρηστη.',
+            'Ενεργοποίησέ το αν θέλεις δύο ζωντανά πάνελ ταυτόχρονα: Games και Videos στην ίδια οθόνη.',
+        dragHint: 'Σύρε τη μεσαία μπάρα',
+        gamesPanelTitle: 'Το Games μένει ανοιχτό',
+        gamesPanelBody:
+            'Αυτό το πάνελ κρατά ανοιχτό το site του παιχνιδιού ενώ το panel βίντεο μένει ορατό πιο κάτω.',
         splitPanelTitle: 'Τα βίντεο μένουν ενεργά',
         splitPanelBody:
-            'Δες shorts στο μικρό πάνελ ενώ παίζεις. Οι κανόνες ανταμοιβής και διαφημίσεων μένουν ίδιοι.',
+            'Δες shorts στο δεύτερο πάνελ ενώ παίζεις. Οι κανόνες ανταμοιβής και διαφημίσεων μένουν ίδιοι.',
       ),
       'pt': _GamesLayoutCopy(
         title: 'Tela dividida',
         enabledBody:
-            'Ative isto em telas maiores se quiser Games e Videos na mesma tela. Games fica maior e Videos fica menor.',
+            'A tela dividida está ativa. Agora você pode ver Games e Videos ao mesmo tempo.',
         disabledBody:
-            'A tela dividida é recomendada apenas em telas maiores. Em telefones menores, a página normal de Games continua mais fácil de usar.',
+            'Ative isto se quiser dois painéis ao vivo ao mesmo tempo: Games e Videos na mesma tela.',
+        dragHint: 'Arraste a barra do meio',
+        gamesPanelTitle: 'Games fica aberto',
+        gamesPanelBody:
+            'Este painel mantém o site do jogo aberto enquanto o painel de vídeos continua visível embaixo.',
         splitPanelTitle: 'Os vídeos continuam ativos',
         splitPanelBody:
-            'Assista aos shorts no painel menor enquanto joga. As regras de anúncios e recompensas continuam iguais.',
+            'Assista aos shorts no segundo painel enquanto joga. As regras de anúncios e recompensas continuam iguais.',
       ),
       'it': _GamesLayoutCopy(
         title: 'Schermo diviso',
         enabledBody:
-            'Attiva questa opzione sugli schermi grandi se vuoi Games e Videos nella stessa schermata. Games resta più grande, Videos più piccolo.',
+            'Lo schermo diviso è attivo. Ora puoi vedere Games e Videos nello stesso momento.',
         disabledBody:
-            'Lo schermo diviso è consigliato solo sugli schermi grandi. Sui telefoni più piccoli la normale pagina Games resta più comoda.',
+            'Attiva questa opzione se vuoi due pannelli live insieme: Games e Videos nella stessa schermata.',
+        dragHint: 'Trascina la barra centrale',
+        gamesPanelTitle: 'Games resta aperto',
+        gamesPanelBody:
+            'Questo pannello mantiene aperto il sito del gioco mentre il pannello video resta visibile sotto.',
         splitPanelTitle: 'I video restano attivi',
         splitPanelBody:
-            'Guarda gli shorts nel pannello piccolo mentre giochi. Le regole di annunci e ricompense restano uguali.',
+            'Guarda gli shorts nel secondo pannello mentre giochi. Le regole di annunci e ricompense restano uguali.',
       ),
       'tr': _GamesLayoutCopy(
         title: 'Bölünmüş ekran',
         enabledBody:
-            'Bunu büyük ekranlarda Games ve Videos’u tek ekranda görmek istiyorsan aç. Games daha büyük kalır, Videos daha küçük kalır.',
+            'Bölünmüş ekran açık. Artık Games ve Videos’u aynı anda görebilirsin.',
         disabledBody:
-            'Bölünmüş ekran yalnızca büyük ekranlarda önerilir. Küçük telefonlarda normal Games sayfası daha kolay kullanılır.',
+            'Aynı anda iki canlı panel istiyorsan bunu aç: Games ve Videos aynı ekranda.',
+        dragHint: 'Ortadaki çubuğu sürükle',
+        gamesPanelTitle: 'Games açık kalır',
+        gamesPanelBody:
+            'Bu panel oyun sitesini açık tutar, alttaki video paneli de görünür kalır.',
         splitPanelTitle: 'Videolar canlı kalır',
         splitPanelBody:
-            'Oyun oynarken küçük panelde shorts izle. Ödül ve reklam kuralları aynı kalır.',
+            'Oyun oynarken ikinci panelde shorts izle. Ödül ve reklam kuralları aynı kalır.',
       ),
       'ar': _GamesLayoutCopy(
         title: 'شاشة مقسمة',
         enabledBody:
-            'فعّل هذا على الشاشات الكبيرة إذا أردت Games و Videos في شاشة واحدة. يبقى Games أكبر ويكون Videos أصغر.',
+            'الشاشة المقسمة مفعلة. يمكنك الآن رؤية Games وVideos في الوقت نفسه.',
         disabledBody:
-            'يوصى بالشاشة المقسمة فقط على الشاشات الكبيرة. على الهواتف الصغيرة تبقى صفحة Games العادية أسهل في الاستخدام.',
+            'فعّل هذا إذا أردت لوحتين مباشرتين معًا: Games وVideos في الشاشة نفسها.',
+        dragHint: 'اسحب الشريط الأوسط',
+        gamesPanelTitle: 'يبقى Games مفتوحًا',
+        gamesPanelBody:
+            'هذه اللوحة تُبقي موقع اللعبة مفتوحًا بينما تبقى لوحة الفيديو ظاهرة في الأسفل.',
         splitPanelTitle: 'الفيديوهات تبقى مستمرة',
         splitPanelBody:
-            'شاهد المقاطع القصيرة في اللوحة الصغيرة أثناء اللعب. تبقى قواعد الإعلانات والمكافآت كما هي.',
+            'شاهد المقاطع القصيرة في اللوحة الثانية أثناء اللعب. تبقى قواعد الإعلانات والمكافآت كما هي.',
       ),
       'bn': _GamesLayoutCopy(
         title: 'স্প্লিট স্ক্রিন',
         enabledBody:
-            'বড় স্ক্রিনে Games আর Videos একসাথে এক স্ক্রিনে চাইলে এটা চালু করুন। Games বড় থাকবে, Videos ছোট থাকবে।',
+            'স্প্লিট স্ক্রিন চালু আছে। এখন তুমি Games আর Videos একসাথে দেখতে পারবে।',
         disabledBody:
-            'স্প্লিট স্ক্রিন শুধু বড় স্ক্রিনে ভালো। ছোট ফোনে সাধারণ Games পেজই বেশি সহজ থাকে।',
+            'একসাথে দুইটা live panel চাইলে এটা চালু করুন: Games আর Videos একই স্ক্রিনে।',
+        dragHint: 'মাঝের বার টানুন',
+        gamesPanelTitle: 'Games খোলা থাকে',
+        gamesPanelBody:
+            'এই panel game website খোলা রাখে, আর নিচের video panel-ও দেখা যায়।',
         splitPanelTitle: 'ভিডিও চলতেই থাকবে',
         splitPanelBody:
-            'গেম খেলতে খেলতে ছোট প্যানেলে shorts দেখুন। রিওয়ার্ড আর বিজ্ঞাপনের নিয়ম একই থাকবে।',
+            'গেম খেলতে খেলতে দ্বিতীয় panel-এ shorts দেখুন। রিওয়ার্ড আর বিজ্ঞাপনের নিয়ম একই থাকবে।',
       ),
       'ta': _GamesLayoutCopy(
         title: 'பிரிக்கப்பட்ட திரை',
         enabledBody:
-            'பெரிய திரையில் Games மற்றும் Videos ஒரே திரையில் வேண்டும் என்றால் இதை இயக்குங்கள். Games பெரியதாகவும் Videos சிறியதாகவும் இருக்கும்.',
+            'பிரிக்கப்பட்ட திரை இயக்கப்பட்டுள்ளது. இப்போது Games மற்றும் Videos இரண்டையும் ஒரே நேரத்தில் பார்க்கலாம்.',
         disabledBody:
-            'பிரிக்கப்பட்ட திரை பெரிய திரைகளில் மட்டும் சிறப்பாக இருக்கும். சிறிய போன்களில் சாதாரண Games பக்கம் தான் எளிதாக இருக்கும்.',
+            'ஒரே நேரத்தில் இரண்டு live panel வேண்டும் என்றால் இதை இயக்குங்கள்: Games மற்றும் Videos ஒரே திரையில்.',
+        dragHint: 'நடுத்தர பட்டையை இழுக்கவும்',
+        gamesPanelTitle: 'Games திறந்தே இருக்கும்',
+        gamesPanelBody:
+            'இந்த panel game website-ஐ திறந்தே வைத்திருக்கும்; கீழே video panel-மும் தெரியும்.',
         splitPanelTitle: 'வீடியோக்கள் தொடர்ந்து இயங்கும்',
         splitPanelBody:
-            'நீங்கள் விளையாடும் போது சிறிய பலகையில் shorts பாருங்கள். பரிசு மற்றும் விளம்பர விதிகள் அதேபடி இருக்கும்.',
+            'நீங்கள் விளையாடும் போது இரண்டாவது panel-ல் shorts பாருங்கள். பரிசு மற்றும் விளம்பர விதிகள் அதேபடி இருக்கும்.',
       ),
       'te': _GamesLayoutCopy(
         title: 'స్ప్లిట్ స్క్రీన్',
         enabledBody:
-            'పెద్ద స్క్రీన్‌లో Games మరియు Videos ఒకే స్క్రీన్‌లో కావాలంటే దీన్ని ఆన్ చేయండి. Games పెద్దగా ఉంటుంది, Videos చిన్నగా ఉంటుంది.',
+            'స్ప్లిట్ స్క్రీన్ ఆన్‌లో ఉంది. ఇప్పుడు మీరు Games మరియు Videos రెండింటినీ ఒకేసారి చూడవచ్చు.',
         disabledBody:
-            'స్ప్లిట్ స్క్రీన్ పెద్ద స్క్రీన్‌లకు మాత్రమే బాగుంటుంది. చిన్న ఫోన్లలో సాధారణ Games పేజీనే సులభంగా ఉంటుంది.',
+            'ఒకేసారి రెండు live panel‌లు కావాలంటే దీన్ని ఆన్ చేయండి: Games మరియు Videos ఒకే స్క్రీన్‌లో.',
+        dragHint: 'మధ్య బార్‌ను లాగండి',
+        gamesPanelTitle: 'Games తెరిచి ఉంటుంది',
+        gamesPanelBody:
+            'ఈ panel game website ను తెరిచి ఉంచుతుంది, కింద video panel కూడా కనిపిస్తూనే ఉంటుంది.',
         splitPanelTitle: 'వీడియోలు కొనసాగుతాయి',
         splitPanelBody:
-            'ఆడుతూ చిన్న ప్యానెల్‌లో shorts చూడండి. రివార్డ్ మరియు ప్రకటన నియమాలు అలాగే ఉంటాయి.',
+            'ఆడుతూ రెండో panel‌లో shorts చూడండి. రివార్డ్ మరియు ప్రకటన నియమాలు అలాగే ఉంటాయి.',
       ),
     };
 
