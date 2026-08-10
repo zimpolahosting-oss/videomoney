@@ -406,7 +406,10 @@ class _GamesScreenState extends State<GamesScreen> {
                 child: SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final canUseSplitScreen = constraints.maxWidth >= 980;
+                      final mediaQuery = MediaQuery.of(context);
+                      final canUseSplitScreen =
+                          constraints.maxWidth >= 700 ||
+                          mediaQuery.size.shortestSide >= 600;
                       final showSplitScreen =
                           canUseSplitScreen &&
                           _splitScreenEnabled &&
@@ -1403,19 +1406,152 @@ class _GamesLayoutCopy {
       splitPanelBody:
           'Watch shorts in the smaller panel while you play. Reward and ad rules stay the same.',
     );
-    const dutch = _GamesLayoutCopy(
-      title: 'Split screen',
-      enabledBody:
-          'Zet dit aan op grotere schermen als je Games en Video’s tegelijk wilt zien. Games blijven groot en Video’s blijven kleiner.',
-      disabledBody:
-          'Split screen is alleen handig op grotere schermen. Op kleinere telefoons blijft de normale Games-pagina fijner.',
-      splitPanelTitle: 'Video’s blijven live',
-      splitPanelBody:
-          'Bekijk shorts in het kleine paneel terwijl je speelt. Belonings- en advertentieregels blijven hetzelfde.',
-    );
-    return Localizations.localeOf(context).languageCode.toLowerCase() == 'nl'
-        ? dutch
-        : english;
+
+    const localized = <String, _GamesLayoutCopy>{
+      'nl': _GamesLayoutCopy(
+        title: 'Split screen',
+        enabledBody:
+            'Zet dit aan op grotere schermen als je Games en Video’s tegelijk wilt zien. Games blijven groot en Video’s blijven kleiner.',
+        disabledBody:
+            'Split screen is alleen handig op grotere schermen. Op kleinere telefoons blijft de normale Games-pagina fijner.',
+        splitPanelTitle: 'Video’s blijven live',
+        splitPanelBody:
+            'Bekijk shorts in het kleine paneel terwijl je speelt. Belonings- en advertentieregels blijven hetzelfde.',
+      ),
+      'hi': _GamesLayoutCopy(
+        title: 'स्प्लिट स्क्रीन',
+        enabledBody:
+            'अगर आप बड़े स्क्रीन पर Games और Videos को एक ही स्क्रीन पर चाहते हैं तो इसे चालू करें। Games बड़ा रहेगा, Videos छोटा रहेगा।',
+        disabledBody:
+            'स्प्लिट स्क्रीन बड़े स्क्रीन पर ही बेहतर है। छोटे फोन पर सामान्य पूरा Games पेज ज़्यादा आसान रहता है।',
+        splitPanelTitle: 'वीडियो चलते रहेंगे',
+        splitPanelBody:
+            'खेलते समय छोटे पैनल में shorts देखें। रिवॉर्ड और ad नियम वही रहेंगे।',
+      ),
+      'de': _GamesLayoutCopy(
+        title: 'Geteilter Bildschirm',
+        enabledBody:
+            'Aktiviere das auf größeren Bildschirmen, wenn du Games und Videos auf einem Bildschirm willst. Games bleibt größer, Videos bleibt kleiner.',
+        disabledBody:
+            'Geteilter Bildschirm wird nur auf größeren Bildschirmen empfohlen. Auf kleineren Handys bleibt die normale Games-Seite einfacher.',
+        splitPanelTitle: 'Videos laufen weiter',
+        splitPanelBody:
+            'Sieh Shorts im kleineren Bereich, während du spielst. Belohnungs- und Werberegeln bleiben gleich.',
+      ),
+      'es': _GamesLayoutCopy(
+        title: 'Pantalla dividida',
+        enabledBody:
+            'Activa esto en pantallas grandes si quieres Games y Videos en una sola pantalla. Games queda más grande y Videos más pequeño.',
+        disabledBody:
+            'La pantalla dividida solo se recomienda en pantallas grandes. En teléfonos pequeños, la página normal de Games sigue siendo más cómoda.',
+        splitPanelTitle: 'Los videos siguen activos',
+        splitPanelBody:
+            'Mira shorts en el panel pequeño mientras juegas. Las reglas de anuncios y recompensas siguen igual.',
+      ),
+      'fr': _GamesLayoutCopy(
+        title: 'Écran partagé',
+        enabledBody:
+            'Active cette option sur les grands écrans si tu veux Games et Videos sur un seul écran. Games reste plus grand, Videos reste plus petit.',
+        disabledBody:
+            'L’écran partagé est surtout recommandé sur les grands écrans. Sur les petits téléphones, la page Games normale reste plus pratique.',
+        splitPanelTitle: 'Les vidéos restent actives',
+        splitPanelBody:
+            'Regarde des shorts dans le petit panneau pendant que tu joues. Les règles de récompense et de pub restent les mêmes.',
+      ),
+      'ru': _GamesLayoutCopy(
+        title: 'Разделённый экран',
+        enabledBody:
+            'Включите это на больших экранах, если хотите видеть Games и Videos на одном экране. Games будет больше, Videos будет меньше.',
+        disabledBody:
+            'Разделённый экран рекомендуется только для больших экранов. На маленьких телефонах обычная страница Games удобнее.',
+        splitPanelTitle: 'Видео продолжают идти',
+        splitPanelBody:
+            'Смотрите shorts в маленькой панели во время игры. Правила рекламы и наград остаются теми же.',
+      ),
+      'el': _GamesLayoutCopy(
+        title: 'Διαχωρισμένη οθόνη',
+        enabledBody:
+            'Ενεργοποίησέ το σε μεγαλύτερες οθόνες αν θέλεις Games και Videos στην ίδια οθόνη. Το Games μένει μεγαλύτερο και το Videos μικρότερο.',
+        disabledBody:
+            'Η διαχωρισμένη οθόνη προτείνεται μόνο σε μεγαλύτερες οθόνες. Σε μικρότερα τηλέφωνα η κανονική σελίδα Games είναι πιο εύχρηστη.',
+        splitPanelTitle: 'Τα βίντεο μένουν ενεργά',
+        splitPanelBody:
+            'Δες shorts στο μικρό πάνελ ενώ παίζεις. Οι κανόνες ανταμοιβής και διαφημίσεων μένουν ίδιοι.',
+      ),
+      'pt': _GamesLayoutCopy(
+        title: 'Tela dividida',
+        enabledBody:
+            'Ative isto em telas maiores se quiser Games e Videos na mesma tela. Games fica maior e Videos fica menor.',
+        disabledBody:
+            'A tela dividida é recomendada apenas em telas maiores. Em telefones menores, a página normal de Games continua mais fácil de usar.',
+        splitPanelTitle: 'Os vídeos continuam ativos',
+        splitPanelBody:
+            'Assista aos shorts no painel menor enquanto joga. As regras de anúncios e recompensas continuam iguais.',
+      ),
+      'it': _GamesLayoutCopy(
+        title: 'Schermo diviso',
+        enabledBody:
+            'Attiva questa opzione sugli schermi grandi se vuoi Games e Videos nella stessa schermata. Games resta più grande, Videos più piccolo.',
+        disabledBody:
+            'Lo schermo diviso è consigliato solo sugli schermi grandi. Sui telefoni più piccoli la normale pagina Games resta più comoda.',
+        splitPanelTitle: 'I video restano attivi',
+        splitPanelBody:
+            'Guarda gli shorts nel pannello piccolo mentre giochi. Le regole di annunci e ricompense restano uguali.',
+      ),
+      'tr': _GamesLayoutCopy(
+        title: 'Bölünmüş ekran',
+        enabledBody:
+            'Bunu büyük ekranlarda Games ve Videos’u tek ekranda görmek istiyorsan aç. Games daha büyük kalır, Videos daha küçük kalır.',
+        disabledBody:
+            'Bölünmüş ekran yalnızca büyük ekranlarda önerilir. Küçük telefonlarda normal Games sayfası daha kolay kullanılır.',
+        splitPanelTitle: 'Videolar canlı kalır',
+        splitPanelBody:
+            'Oyun oynarken küçük panelde shorts izle. Ödül ve reklam kuralları aynı kalır.',
+      ),
+      'ar': _GamesLayoutCopy(
+        title: 'شاشة مقسمة',
+        enabledBody:
+            'فعّل هذا على الشاشات الكبيرة إذا أردت Games و Videos في شاشة واحدة. يبقى Games أكبر ويكون Videos أصغر.',
+        disabledBody:
+            'يوصى بالشاشة المقسمة فقط على الشاشات الكبيرة. على الهواتف الصغيرة تبقى صفحة Games العادية أسهل في الاستخدام.',
+        splitPanelTitle: 'الفيديوهات تبقى مستمرة',
+        splitPanelBody:
+            'شاهد المقاطع القصيرة في اللوحة الصغيرة أثناء اللعب. تبقى قواعد الإعلانات والمكافآت كما هي.',
+      ),
+      'bn': _GamesLayoutCopy(
+        title: 'স্প্লিট স্ক্রিন',
+        enabledBody:
+            'বড় স্ক্রিনে Games আর Videos একসাথে এক স্ক্রিনে চাইলে এটা চালু করুন। Games বড় থাকবে, Videos ছোট থাকবে।',
+        disabledBody:
+            'স্প্লিট স্ক্রিন শুধু বড় স্ক্রিনে ভালো। ছোট ফোনে সাধারণ Games পেজই বেশি সহজ থাকে।',
+        splitPanelTitle: 'ভিডিও চলতেই থাকবে',
+        splitPanelBody:
+            'গেম খেলতে খেলতে ছোট প্যানেলে shorts দেখুন। রিওয়ার্ড আর বিজ্ঞাপনের নিয়ম একই থাকবে।',
+      ),
+      'ta': _GamesLayoutCopy(
+        title: 'பிரிக்கப்பட்ட திரை',
+        enabledBody:
+            'பெரிய திரையில் Games மற்றும் Videos ஒரே திரையில் வேண்டும் என்றால் இதை இயக்குங்கள். Games பெரியதாகவும் Videos சிறியதாகவும் இருக்கும்.',
+        disabledBody:
+            'பிரிக்கப்பட்ட திரை பெரிய திரைகளில் மட்டும் சிறப்பாக இருக்கும். சிறிய போன்களில் சாதாரண Games பக்கம் தான் எளிதாக இருக்கும்.',
+        splitPanelTitle: 'வீடியோக்கள் தொடர்ந்து இயங்கும்',
+        splitPanelBody:
+            'நீங்கள் விளையாடும் போது சிறிய பலகையில் shorts பாருங்கள். பரிசு மற்றும் விளம்பர விதிகள் அதேபடி இருக்கும்.',
+      ),
+      'te': _GamesLayoutCopy(
+        title: 'స్ప్లిట్ స్క్రీన్',
+        enabledBody:
+            'పెద్ద స్క్రీన్‌లో Games మరియు Videos ఒకే స్క్రీన్‌లో కావాలంటే దీన్ని ఆన్ చేయండి. Games పెద్దగా ఉంటుంది, Videos చిన్నగా ఉంటుంది.',
+        disabledBody:
+            'స్ప్లిట్ స్క్రీన్ పెద్ద స్క్రీన్‌లకు మాత్రమే బాగుంటుంది. చిన్న ఫోన్లలో సాధారణ Games పేజీనే సులభంగా ఉంటుంది.',
+        splitPanelTitle: 'వీడియోలు కొనసాగుతాయి',
+        splitPanelBody:
+            'ఆడుతూ చిన్న ప్యానెల్‌లో shorts చూడండి. రివార్డ్ మరియు ప్రకటన నియమాలు అలాగే ఉంటాయి.',
+      ),
+    };
+
+    return localized[Localizations.localeOf(context).languageCode.toLowerCase()] ??
+        english;
   }
 }
 

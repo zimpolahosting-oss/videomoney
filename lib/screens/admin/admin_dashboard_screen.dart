@@ -587,34 +587,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () =>
-                              _openTicketReplyDialog(context, ticket, adminUser),
-                          child: const Text('Reply'),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () =>
+                          _openTicketReplyDialog(context, ticket, adminUser),
+                      child: const Text('Reply'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _firestoreService.updateSupportTicketStatus(
+                        ticketId: ticket.id,
+                        status: 'closed',
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _firestoreService.updateSupportTicketStatus(
-                            ticketId: ticket.id,
-                            status: 'closed',
-                          ),
-                          child: const Text('Close'),
-                        ),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF7B7B),
                       ),
-                      const SizedBox(width: 10),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF7B7B),
-                        ),
-                        onPressed: () => _deleteTicket(ticket),
-                        child: const Text('Delete'),
-                      ),
-                    ],
+                      onPressed: () => _deleteTicket(ticket),
+                      child: const Text('Delete'),
+                    ),
                   ),
                 ],
               ),

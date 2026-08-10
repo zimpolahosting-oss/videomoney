@@ -292,76 +292,15 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     return Scaffold(
-      body: Stack(
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) => _openTab(index),
         children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) => _openTab(index),
-            children: [
-              _buildTab(index: 0),
-              _buildTab(index: 1),
-              _buildTab(index: 2),
-              _buildTab(index: 3),
-            ],
-          ),
-          Positioned(
-            top: 14,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: SafeArea(
-                bottom: false,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xB60A1110),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0x331AE47A)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(4, (index) {
-                        final active = index == _currentIndex;
-                        final label = switch (index) {
-                          0 => l10n.home,
-                          1 => 'Games',
-                          2 => l10n.wallet,
-                          _ => l10n.profile,
-                        };
-                        return Padding(
-                          padding: EdgeInsets.only(right: index == 3 ? 0 : 8),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 220),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? const Color(0xFF19E27A).withOpacity(0.18)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              label,
-                              style: TextStyle(
-                                color: active ? Colors.white : AppTheme.textMuted,
-                                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _buildTab(index: 0),
+          _buildTab(index: 1),
+          _buildTab(index: 2),
+          _buildTab(index: 3),
         ],
       ),
     );
