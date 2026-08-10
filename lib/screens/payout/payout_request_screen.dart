@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
@@ -58,6 +59,10 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     super.dispose();
   }
 
+  String _normalizedViewsInput([String? value]) {
+    return (value ?? _viewsController.text).replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
   Future<void> _submit() async {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
@@ -68,9 +73,10 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      final requestedViews = int.parse(_normalizedViewsInput());
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
-        coinsRequested: int.parse(_viewsController.text.trim()),
+        coinsRequested: requestedViews,
         payoutMethod: switch (_method) {
           _PayoutMethod.paypal => 'paypal',
           _PayoutMethod.revolut => 'revolut',
@@ -262,17 +268,35 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ],
               TextFormField(
                 controller: _viewsController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: false,
+                  signed: false,
+                ),
+                textInputAction: TextInputAction.next,
+                inputFormatters: const [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 decoration: InputDecoration(
                   labelText: l10n.viewsToRequest,
                   helperText: l10n.minimumViewsHelper,
                 ),
+                onChanged: (value) {
+                  final normalized = _normalizedViewsInput(value);
+                  if (normalized == value) return;
+                  _viewsController.value = TextEditingValue(
+                    text: normalized,
+                    selection: TextSelection.collapsed(
+                      offset: normalized.length,
+                    ),
+                  );
+                },
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  final normalized = _normalizedViewsInput(value);
+                  if (normalized.isEmpty) {
                     return l10n.enterAmount;
                   }
 
-                  final number = int.tryParse(value.trim());
+                  final number = int.tryParse(normalized);
                   if (number == null || number <= 0) {
                     return l10n.enterValidPositiveNumber;
                   }
