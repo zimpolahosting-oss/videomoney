@@ -593,6 +593,10 @@ class FirestoreService {
       final currentVideosWatched =
           (userData['videosWatched'] as num?)?.toInt() ?? 0;
       final remainingViews = currentCoins - coinsRequested;
+      final requestedAmountLabel = _formatPayoutAmountLabel(
+        coinsRequested: coinsRequested,
+        currencyCode: trimmedCurrency,
+      );
 
       transaction.update(userRef, {
         'coins': currentCoins - coinsRequested,
@@ -625,6 +629,7 @@ class FirestoreService {
         'bankName': trimmedBankName,
         'iban': trimmedIban,
         'bankAccountNumber': trimmedBankAccountNumber,
+        'requestedAmountLabel': requestedAmountLabel,
         'cryptoAddress': trimmedCryptoAddress,
         'minimumPayoutCoins': minimumPayoutCoins,
         'processingDays': payoutProcessingDays,
@@ -707,6 +712,8 @@ class FirestoreService {
             (payoutData['payoutCurrency'] as String? ?? 'EUR').toUpperCase();
         final coinsRequested =
             (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
+        final storedRequestedAmountLabel =
+            (payoutData['requestedAmountLabel'] as String? ?? '').trim();
 
         String userCountry = '';
         if (userId.isNotEmpty) {
@@ -724,10 +731,12 @@ class FirestoreService {
           accountHolderName: accountHolderName,
           userEmail: userEmail,
         );
-        final amountLabel = _formatPayoutAmountLabel(
-          coinsRequested: coinsRequested,
-          currencyCode: payoutCurrency,
-        );
+        final amountLabel = storedRequestedAmountLabel.isNotEmpty
+            ? storedRequestedAmountLabel
+            : _formatPayoutAmountLabel(
+                coinsRequested: coinsRequested,
+                currencyCode: payoutCurrency,
+              );
         final payoutMessage = _buildPayoutAnnouncementMessage(
           privacyName: privacyName,
           userCountry: userCountry,

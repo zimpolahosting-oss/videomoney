@@ -17,6 +17,7 @@ class PayoutRequest {
     required this.bankName,
     required this.iban,
     required this.bankAccountNumber,
+    required this.requestedAmountLabel,
     required this.paidAmountValue,
     required this.paidAmountCurrency,
     required this.paidAmountLabel,
@@ -41,6 +42,7 @@ class PayoutRequest {
   final String bankName;
   final String iban;
   final String bankAccountNumber;
+  final String requestedAmountLabel;
   final double paidAmountValue;
   final String paidAmountCurrency;
   final String paidAmountLabel;
@@ -127,6 +129,7 @@ class PayoutRequest {
       iban: iban.isNotEmpty ? iban : legacyRevolut,
       bankAccountNumber:
           bankAccountNumber.isNotEmpty ? bankAccountNumber : legacyRevolut,
+      requestedAmountLabel: data['requestedAmountLabel'] as String? ?? '',
       paidAmountValue: paidAmountValue,
       paidAmountCurrency: paidAmountCurrency,
       paidAmountLabel: storedPaidAmountLabel.isNotEmpty

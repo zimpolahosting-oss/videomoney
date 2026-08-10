@@ -442,9 +442,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
-                              style: Theme.of(context).textTheme.titleMedium,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (payout.requestedAmountLabel.trim().isNotEmpty)
+                                  Text(
+                                    payout.requestedAmountLabel,
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                Text(
+                                  '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
                             ),
                           ),
                           _StatusBadge(status: payout.status),
