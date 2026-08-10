@@ -273,7 +273,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                   signed: false,
                 ),
                 textInputAction: TextInputAction.next,
-                inputFormatters: const [
+                inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                 ],
                 decoration: InputDecoration(
