@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -10,6 +11,10 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final languageCode = Localizations.localeOf(context).languageCode.toLowerCase();
+    final processingLabel = languageCode == 'nl'
+        ? '${FirestoreService.payoutProcessingDays} dagen'
+        : '${FirestoreService.payoutProcessingDays} days';
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aboutVideoMoney)),
       body: ListView(

@@ -5,7 +5,6 @@ import '../screens/main/videomoney_ad_interstitial_screen.dart';
 
 enum VideomoneyAdProvider {
   monetag,
-  adcash,
 }
 
 class VideomoneyAdCallbacks {
@@ -100,16 +99,7 @@ class VideomoneyAdSdk {
   }
 
   List<VideomoneyAdProvider> _orderedProviders() {
-    final primary = VideomoneyAdSettings.primaryProvider;
-    final fallback = primary == VideomoneyAdProvider.monetag
-        ? VideomoneyAdProvider.adcash
-        : VideomoneyAdProvider.monetag;
-
-    if (!VideomoneyAdSettings.enableFallback) {
-      return [primary];
-    }
-
-    return [primary, fallback];
+    return [VideomoneyAdSettings.primaryProvider];
   }
 
   _VideomoneyProviderConfig _configFor(VideomoneyAdProvider provider) {
@@ -118,12 +108,6 @@ class VideomoneyAdSdk {
         return const _VideomoneyProviderConfig(
           displayName: 'Monetag',
           launchUrl: VideomoneyAdSettings.monetagDirectLinkUrl,
-        );
-      case VideomoneyAdProvider.adcash:
-        return _VideomoneyProviderConfig(
-          displayName: 'Adcash',
-          baseUrl: VideomoneyAdSettings.adcashBaseUrl,
-          html: _buildAdcashHtml(),
         );
     }
   }
@@ -141,102 +125,15 @@ class VideomoneyAdSdk {
     debugPrint('[VideomoneyAds] $message');
   }
 
-  String _buildAdcashHtml() {
-    return '''
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    >
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #05070D;
-        color: #ffffff;
-        font-family: Arial, sans-serif;
-      }
-      #status {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: rgba(0, 0, 0, 0.55);
-        font-size: 14px;
-        text-align: center;
-        z-index: 2;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="status">Loading Adcash interstitial...</div>
-    <script>
-      function postBridge(type, message) {
-        if (window.VideomoneyAdBridge && window.VideomoneyAdBridge.postMessage) {
-          window.VideomoneyAdBridge.postMessage(JSON.stringify({
-            type: type,
-            message: message || ''
-          }));
-        }
-      }
-
-      window.addEventListener('load', function() {
-        postBridge('loaded', 'Adcash wrapper loaded');
-      });
-
-      window.addEventListener('error', function(event) {
-        postBridge('error', event.message || 'Unknown Adcash page error');
-      });
-
-      (function() {
-        var script = document.createElement('script');
-        script.id = 'aclib';
-        script.type = 'text/javascript';
-        script.src = 'https://acscdn.com/script/aclib.js';
-        script.onload = function() {
-          postBridge('log', 'Adcash script loaded');
-          try {
-            if (!window.aclib || !window.aclib.runInterstitial) {
-              postBridge('error', 'aclib.runInterstitial is not available');
-              return;
-            }
-            window.aclib.runInterstitial({
-              zoneId: '11743374',
-            });
-            postBridge('shown', 'Adcash interstitial script executed');
-          } catch (error) {
-            postBridge('error', error && error.message ? error.message : 'Adcash interstitial execution failed');
-          }
-        };
-        script.onerror = function() {
-          postBridge('error', 'Failed to load Adcash script');
-        };
-        document.body.appendChild(script);
-      })();
-    </script>
-  </body>
-</html>
-''';
-  }
 }
 
 class VideomoneyAdSettings {
   const VideomoneyAdSettings._();
 
   static const VideomoneyAdProvider primaryProvider =
-      VideomoneyAdProvider.adcash;
-  static const bool enableFallback = true;
+      VideomoneyAdProvider.monetag;
   static const Duration openTimeout = Duration(seconds: 10);
   static const String monetagDirectLinkUrl = 'https://omg10.com/4/11320247';
-  static const String adcashBaseUrl = 'https://acscdn.com';
 }
 
 class _VideomoneyProviderConfig {

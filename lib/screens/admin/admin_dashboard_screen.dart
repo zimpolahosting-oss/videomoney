@@ -53,29 +53,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return DateFormat.yMMMd().add_jm().format(dateTime);
   }
 
-  Future<void> _setStatus(
-    PayoutRequest payout,
-    String status, {
-    double? manualPaidAmountValue,
-    String? manualPaidCurrency,
-    String? manualPaidNote,
-  }) async {
+  Future<void> _setStatus(PayoutRequest payout, String status) async {
     try {
       await _firestoreService.updatePayoutStatus(
         payoutId: payout.id,
         status: status,
-        manualPaidAmountValue: manualPaidAmountValue,
-        manualPaidCurrency: manualPaidCurrency,
-        manualPaidNote: manualPaidNote,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             status == 'paid'
-                ? manualPaidAmountValue != null && manualPaidAmountValue > 0
-                    ? 'Marked payout as manually paid: ${manualPaidCurrency ?? payout.normalizedCurrency} ${manualPaidAmountValue.toStringAsFixed(2)}'
-                    : 'Marked payout as manually paid.'
+                ? 'Marked payout as manually paid.'
                 : 'Updated payout to ${status.toUpperCase()}',
           ),
         ),
@@ -86,114 +75,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
       );
     }
-  }
-
-  Future<void> _openManualPaymentDialog(PayoutRequest payout) async {
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    var selectedCurrency = payout.normalizedCurrency;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            20,
-            20,
-            20 + MediaQuery.of(sheetContext).viewInsets.bottom,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setSheetState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mark manual payment',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter the exact paid amount so the user sees the final payment instead of only an estimate.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Paid amount',
-                      hintText: '0.75',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedCurrency,
-                    items: const ['EUR', 'GBP', 'USD', 'BTC', 'USDC']
-                        .map(
-                          (currency) => DropdownMenuItem<String>(
-                            value: currency,
-                            child: Text(currency),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setSheetState(() => selectedCurrency = value);
-                    },
-                    decoration: const InputDecoration(labelText: 'Currency'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      hintText: 'Paid via PayPal on request',
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        final parsedAmount = double.tryParse(
-                          amountController.text.trim().replaceAll(',', '.'),
-                        );
-                        if (parsedAmount == null || parsedAmount <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Enter the final paid amount before marking this payout as paid.',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.of(sheetContext).pop();
-                        await _setStatus(
-                          payout,
-                          'paid',
-                          manualPaidAmountValue: parsedAmount,
-                          manualPaidCurrency: selectedCurrency,
-                          manualPaidNote: noteController.text.trim(),
-                        );
-                      },
-                      child: const Text('Mark Manual Paid'),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _openTicketReplyDialog(
@@ -298,6 +179,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
 
     replyController.dispose();
+  }
+
+  Future<void> _deleteTicket(SupportTicket ticket) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete ticket'),
+          content: Text(
+            'Delete "${ticket.subject}" from the app now? This removes it from the support list.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _firestoreService.deleteSupportTicket(ticket.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Support ticket deleted.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   Future<void> _showUserHistorySheet(
@@ -434,6 +353,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildPayoutsTab() {
     final statusFilter = _filterToStatus(_filter);
     return ListView(
+      key: const PageStorageKey<String>('admin_payouts_tab'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         Container(
@@ -557,20 +477,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
-                      if (payout.hasRecordedPaidAmount) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Paid amount: ${payout.paidAmountLabel}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                      if (payout.paidNote.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Note: ${payout.paidNote}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
                       const SizedBox(height: 4),
                       Text(
                         _formatDateTime(payout.createdAt),
@@ -600,7 +506,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ] else if (canMarkPaid)
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: () => _openManualPaymentDialog(payout),
+                                  onPressed: () => _setStatus(payout, 'paid'),
                                   child: const Text('Mark Manual Paid'),
                                 ),
                               ),
@@ -631,6 +537,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
 
         return ListView.builder(
+          key: const PageStorageKey<String>('admin_tickets_tab'),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           itemCount: tickets.length,
           itemBuilder: (context, index) {
@@ -699,6 +606,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           child: const Text('Close'),
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF7B7B),
+                        ),
+                        onPressed: () => _deleteTicket(ticket),
+                        child: const Text('Delete'),
+                      ),
                     ],
                   ),
                 ],
@@ -710,8 +625,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildNotificationsTab(User adminUser, List<AppUser> users) {
+  Widget _buildNotificationsTab(User adminUser) {
     return ListView(
+      key: const PageStorageKey<String>('admin_notifications_tab'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         Container(
@@ -774,25 +690,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               if (_notificationAudience == _NotificationAudience.user) ...[
                 const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  value: users.any((user) => user.uid == _selectedNotificationUserId)
-                      ? _selectedNotificationUserId
-                      : null,
-                  items: users
-                      .map(
-                        (user) => DropdownMenuItem<String>(
-                          value: user.uid,
-                          child: Text(
-                            user.email.isEmpty ? user.uid : user.email,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedNotificationUserId = value);
+                StreamBuilder<List<AppUser>>(
+                  stream: _firestoreService.watchAllUsers(),
+                  builder: (context, snapshot) {
+                    final users = snapshot.data ?? const <AppUser>[];
+                    return DropdownButtonFormField<String>(
+                      value: users.any((user) => user.uid == _selectedNotificationUserId)
+                          ? _selectedNotificationUserId
+                          : null,
+                      items: users
+                          .map(
+                            (user) => DropdownMenuItem<String>(
+                              value: user.uid,
+                              child: Text(
+                                user.email.isEmpty ? user.uid : user.email,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedNotificationUserId = value);
+                      },
+                      decoration: const InputDecoration(labelText: 'User'),
+                    );
                   },
-                  decoration: const InputDecoration(labelText: 'User'),
                 ),
               ],
               const SizedBox(height: 14),
@@ -914,6 +836,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
 
         return ListView.builder(
+          key: const PageStorageKey<String>('admin_inbox_tab'),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           itemCount: messages.length,
           itemBuilder: (context, index) {
@@ -981,6 +904,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final average = ratings.isEmpty ? 0.0 : totalStars / ratings.length;
 
         return ListView(
+          key: const PageStorageKey<String>('admin_ratings_tab'),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             Row(
@@ -1060,17 +984,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildUsersTab(List<AppUser> users) {
-    if (users.isEmpty) {
-      return const Center(child: Text('No users found.'));
-    }
+  Widget _buildUsersTab() {
+    return StreamBuilder<List<AppUser>>(
+      stream: _firestoreService.watchAllUsers(),
+      builder: (context, snapshot) {
+        final users = snapshot.data ?? const <AppUser>[];
+        if (users.isEmpty) {
+          return const Center(child: Text('No users found.'));
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: users.length,
-      itemBuilder: (context, index) {
-        final user = users[index];
-        return Container(
+        return ListView.builder(
+          key: const PageStorageKey<String>('admin_users_tab'),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1121,6 +1050,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
+            );
+          },
         );
       },
     );
@@ -1148,42 +1079,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           );
         }
 
-        return StreamBuilder<List<AppUser>>(
-          stream: _firestoreService.watchAllUsers(),
-          builder: (context, usersSnapshot) {
-            final users = usersSnapshot.data ?? const <AppUser>[];
-            return DefaultTabController(
-              length: 6,
-              child: Scaffold(
-                appBar: AppBar(
-                  title: const Text('Admin Dashboard'),
-                  bottom: const TabBar(
-                    isScrollable: true,
-                    tabs: [
-                      Tab(text: 'Payouts'),
-                      Tab(text: 'Tickets'),
-                      Tab(text: 'Notifications'),
-                      Tab(text: 'Inbox'),
-                      Tab(text: 'Ratings'),
-                      Tab(text: 'Users'),
-                    ],
-                  ),
-                ),
-                body: SafeArea(
-                  child: TabBarView(
-                    children: [
-                      _buildPayoutsTab(),
-                      _buildTicketsTab(user),
-                      _buildNotificationsTab(user, users),
-                      _buildInboxTab(),
-                      _buildRatingsTab(),
-                      _buildUsersTab(users),
-                    ],
-                  ),
-                ),
+        return DefaultTabController(
+          length: 6,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Admin Dashboard'),
+              bottom: const TabBar(
+                isScrollable: true,
+                tabs: [
+                  Tab(text: 'Payouts'),
+                  Tab(text: 'Tickets'),
+                  Tab(text: 'Notifications'),
+                  Tab(text: 'Inbox'),
+                  Tab(text: 'Ratings'),
+                  Tab(text: 'Users'),
+                ],
               ),
-            );
-          },
+            ),
+            body: SafeArea(
+              child: TabBarView(
+                children: [
+                  _buildPayoutsTab(),
+                  _buildTicketsTab(user),
+                  _buildNotificationsTab(user),
+                  _buildInboxTab(),
+                  _buildRatingsTab(),
+                  _buildUsersTab(),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );

@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/players_are_gamers_profile.dart';
 import '../../services/pag_matchmaking_service.dart';
 import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
+import 'home_screen.dart';
 import 'players_are_gamers_webview_screen.dart';
 
 class GamesScreen extends StatefulWidget {
@@ -19,12 +21,18 @@ class GamesScreen extends StatefulWidget {
 }
 
 class _GamesScreenState extends State<GamesScreen> {
+  static const String _splitScreenPreferenceKey =
+      'games_split_screen_enabled_v1';
+
   final PlayersAreGamersService _service = PlayersAreGamersService();
   final PagMatchmakingService _matchmakingService = PagMatchmakingService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  late final Stream<Set<String>> _onlineUserIdsStream =
-      PresenceService.instance.watchOnlineUserIds();
+  // NOTE: Avoid loading the full online user-id set on startup (can be huge and
+  // cause crashes on some devices). We only show the online count here.
+  late final Stream<int> _onlineUsersCountStream =
+      PresenceService.instance.watchOnlineUsersCount();
   bool _loading = true;
+  bool _splitScreenEnabled = false;
   String? _error;
 
   static const List<_PagGameDefinition> _multiplayerGames = [
@@ -57,11 +65,6 @@ class _GamesScreenState extends State<GamesScreen> {
 
   static const List<_PagGameDefinition> _singlePlayerGames = [
     _PagGameDefinition(
-      'bio-race',
-      'Bio-Race',
-      'https://playersaregamers.nl/bio-race/',
-    ),
-    _PagGameDefinition(
       'crazy-nurse',
       'Crazy Nurse',
       'https://playersaregamers.nl/crazy-nurse/',
@@ -91,12 +94,42 @@ class _GamesScreenState extends State<GamesScreen> {
       'Lily in Danger',
       'https://playersaregamers.nl/lily-in-danger/',
     ),
+    _PagGameDefinition(
+      'subway-trainrun',
+      'Subway Train Station',
+      'https://playersaregamers.nl/Subway-TrainRun/',
+    ),
+    _PagGameDefinition(
+      'bio-race',
+      'Bio-Race',
+      'https://playersaregamers.nl/bio-race/',
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
-    unawaited(_refresh());
+    unawaited(_restoreSplitScreenPreference());
+    // Delay the first network-heavy sync a bit to avoid first-open crashes on
+    // fresh installs.
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 2), _refresh),
+    );
+  }
+
+  Future<void> _restoreSplitScreenPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _splitScreenEnabled = prefs.getBool(_splitScreenPreferenceKey) ?? false;
+    });
+  }
+
+  Future<void> _setSplitScreenEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_splitScreenPreferenceKey, value);
+    if (!mounted) return;
+    setState(() => _splitScreenEnabled = value);
   }
 
   Future<void> _refresh() async {
@@ -345,16 +378,16 @@ class _GamesScreenState extends State<GamesScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = _GamesCopy.of(context);
+    final layoutCopy = _GamesLayoutCopy.of(context);
 
     return StreamBuilder<PlayersAreGamersProfile?>(
       stream: _service.watchProfile(),
       builder: (context, profileSnapshot) {
         final profile = profileSnapshot.data;
-        return StreamBuilder<Set<String>>(
-          stream: _onlineUserIdsStream,
+        return StreamBuilder<int>(
+          stream: _onlineUsersCountStream,
           builder: (context, onlineSnapshot) {
-            final onlineUserIds = onlineSnapshot.data ?? <String>{};
-            final onlineCount = onlineUserIds.length;
+            final onlineCount = onlineSnapshot.data ?? 0;
 
             return Scaffold(
               backgroundColor: const Color(0xFF03110D),
@@ -371,40 +404,81 @@ class _GamesScreenState extends State<GamesScreen> {
                   ),
                 ),
                 child: SafeArea(
-                  child: RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                      children: [
-                        _buildHero(copy),
-                        const SizedBox(height: 18),
-                        if (_error != null) ...[
-                          _StatusCard(
-                            title: copy.syncIssue,
-                            message: _error!,
-                            icon: Icons.error_outline_rounded,
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        _buildCoinsCard(profile, copy),
-                        const SizedBox(height: 14),
-                        if (_loading && profile == null)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (profile == null || !profile.linked)
-                          _buildUnlinkedState(copy)
-                        else ...[
-                          _buildStatsGrid(profile, copy),
-                          const SizedBox(height: 18),
-                          _buildGamesCard(
-                            copy: copy,
-                            onlineCount: onlineCount,
-                          ),
-                        ],
-                      ],
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final canUseSplitScreen = constraints.maxWidth >= 980;
+                      final showSplitScreen =
+                          canUseSplitScreen &&
+                          _splitScreenEnabled &&
+                          profile != null &&
+                          profile.linked;
+                      final gamesContent = _buildGamesScrollBody(
+                        copy: copy,
+                        layoutCopy: layoutCopy,
+                        profile: profile,
+                        onlineCount: onlineCount,
+                        canUseSplitScreen: canUseSplitScreen,
+                      );
+
+                      if (!showSplitScreen) {
+                        return gamesContent;
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 7,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: gamesContent,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            SizedBox(
+                              width: constraints.maxWidth * 0.32,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(24),
+                                      color: Theme.of(context).colorScheme.surface,
+                                      border: Border.all(
+                                        color: const Color(0x331AE47A),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          layoutCopy.splitPanelTitle,
+                                          style: Theme.of(context).textTheme.titleMedium,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          layoutCopy.splitPanelBody,
+                                          style: Theme.of(context).textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: HomeScreen(
+                                      isActiveTab: true,
+                                      compactMode: true,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -412,6 +486,95 @@ class _GamesScreenState extends State<GamesScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildGamesScrollBody({
+    required _GamesCopy copy,
+    required _GamesLayoutCopy layoutCopy,
+    required PlayersAreGamersProfile? profile,
+    required int onlineCount,
+    required bool canUseSplitScreen,
+  }) {
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+        children: [
+          _buildHero(copy),
+          const SizedBox(height: 18),
+          _buildSplitScreenCard(layoutCopy, canUseSplitScreen),
+          const SizedBox(height: 16),
+          if (_error != null) ...[
+            _StatusCard(
+              title: copy.syncIssue,
+              message: _error!,
+              icon: Icons.error_outline_rounded,
+            ),
+            const SizedBox(height: 16),
+          ],
+          _buildCoinsCard(profile, copy),
+          const SizedBox(height: 14),
+          if (_loading && profile == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (profile == null || !profile.linked)
+            _buildUnlinkedState(copy)
+          else ...[
+            _buildStatsGrid(profile, copy),
+            const SizedBox(height: 18),
+            _buildGamesCard(
+              copy: copy,
+              onlineCount: onlineCount,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSplitScreenCard(
+    _GamesLayoutCopy copy,
+    bool canUseSplitScreen,
+  ) {
+    return _NeonPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.splitscreen_rounded, color: Color(0xFF29F08F)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  copy.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Switch.adaptive(
+                value: _splitScreenEnabled && canUseSplitScreen,
+                onChanged: canUseSplitScreen
+                    ? (value) => _setSplitScreenEnabled(value)
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            canUseSplitScreen ? copy.enabledBody : copy.disabledBody,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.82),
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -777,69 +940,7 @@ class _GamesScreenState extends State<GamesScreen> {
     );
   }
 
-  Widget _buildPagCoinLeaderboard({
-    required _GamesCopy copy,
-    required Set<String> onlineUserIds,
-  }) {
-    return _NeonPanel(
-      child: FutureBuilder<List<_PagCoinLeaderboardEntry>>(
-        future: _loadPagCoinLeaderboard(onlineUserIds),
-        builder: (context, snapshot) {
-          final entries = snapshot.data ?? const <_PagCoinLeaderboardEntry>[];
-          final currentUid = FirebaseAuth.instance.currentUser?.uid;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                copy.pagLeaderboardTitle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                copy.pagLeaderboardSubtitle,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.72),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (snapshot.connectionState == ConnectionState.waiting)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (entries.isEmpty)
-                Text(
-                  copy.pagLeaderboardEmpty,
-                  style: TextStyle(color: Colors.white.withOpacity(0.68)),
-                )
-              else
-                Column(
-                  children: [
-                    for (var i = 0; i < entries.length; i++) ...[
-                      _LeaderboardTile(
-                        rank: i + 1,
-                        entry: entries[i],
-                        isCurrentUser: entries[i].uid == currentUid,
-                        youLabel: copy.youLabel,
-                        coinsLabel: copy.coinsUnitLabel,
-                        onlineLabel: copy.onlineLabel,
-                      ),
-                      if (i != entries.length - 1) const SizedBox(height: 10),
-                    ],
-                  ],
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+  // Online leaderboard temporarily disabled for stability.
 }
 
 class _GamesStatCard extends StatelessWidget {
@@ -975,12 +1076,20 @@ class _GameTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              playLabel,
-              style: const TextStyle(
-                color: Color(0xFF18E477),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  playLabel,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Color(0xFF18E477),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 4),
@@ -1268,6 +1377,48 @@ class _PagCoinLeaderboardEntry {
   final int coins;
 }
 
+class _GamesLayoutCopy {
+  const _GamesLayoutCopy({
+    required this.title,
+    required this.enabledBody,
+    required this.disabledBody,
+    required this.splitPanelTitle,
+    required this.splitPanelBody,
+  });
+
+  final String title;
+  final String enabledBody;
+  final String disabledBody;
+  final String splitPanelTitle;
+  final String splitPanelBody;
+
+  static _GamesLayoutCopy of(BuildContext context) {
+    const english = _GamesLayoutCopy(
+      title: 'Split screen',
+      enabledBody:
+          'Turn this on for larger screens if you want Games and Videos on one screen. Games stay larger, Videos stay smaller.',
+      disabledBody:
+          'Split screen is only recommended on larger screens. On smaller phones the normal full Games page stays easier to use.',
+      splitPanelTitle: 'Videos stay live',
+      splitPanelBody:
+          'Watch shorts in the smaller panel while you play. Reward and ad rules stay the same.',
+    );
+    const dutch = _GamesLayoutCopy(
+      title: 'Split screen',
+      enabledBody:
+          'Zet dit aan op grotere schermen als je Games en Video’s tegelijk wilt zien. Games blijven groot en Video’s blijven kleiner.',
+      disabledBody:
+          'Split screen is alleen handig op grotere schermen. Op kleinere telefoons blijft de normale Games-pagina fijner.',
+      splitPanelTitle: 'Video’s blijven live',
+      splitPanelBody:
+          'Bekijk shorts in het kleine paneel terwijl je speelt. Belonings- en advertentieregels blijven hetzelfde.',
+    );
+    return Localizations.localeOf(context).languageCode.toLowerCase() == 'nl'
+        ? dutch
+        : english;
+  }
+}
+
 class _GamesCopy {
   const _GamesCopy._({
     required this.gamesTitle,
@@ -1364,6 +1515,507 @@ class _GamesCopy {
   String usersOnline(int count) => '$count $onlineLabel';
   String gameDescription(String id) => gameDescriptions[id] ?? id;
 
+  _GamesCopy copyWith({
+    String? gamesTitle,
+    String? gamesSubtitle,
+    String? supportedGamesTitle,
+    String? supportedGamesSubtitle,
+    String? realtimeMultiplayerTitle,
+    String? singlePlayerTitle,
+    String? play,
+    String? pagLeaderboardTitle,
+    String? pagLeaderboardSubtitle,
+    String? pagLeaderboardEmpty,
+    String? youLabel,
+    String? onlineLabel,
+    Map<String, String>? gameDescriptions,
+  }) {
+    return _GamesCopy._(
+      gamesTitle: gamesTitle ?? this.gamesTitle,
+      gamesSubtitle: gamesSubtitle ?? this.gamesSubtitle,
+      syncIssue: syncIssue,
+      syncUnavailable: syncUnavailable,
+      syncNotConfigured: syncNotConfigured,
+      linkExistingHint: linkExistingHint,
+      pagCoinsTitle: pagCoinsTitle,
+      coinsUnitLabel: coinsUnitLabel,
+      pagCoinsDescriptionLinked: pagCoinsDescriptionLinked,
+      pagCoinsDescriptionUnlinked: pagCoinsDescriptionUnlinked,
+      prepareAccountTitle: prepareAccountTitle,
+      prepareAccountBody: prepareAccountBody,
+      retryAutoStart: retryAutoStart,
+      linkExistingButton: linkExistingButton,
+      createWebsiteButton: createWebsiteButton,
+      usernameLabel: usernameLabel,
+      gamesPlayedLabel: gamesPlayedLabel,
+      coinsEarnedLabel: coinsEarnedLabel,
+      winRateLabel: winRateLabel,
+      accountStatus: accountStatus,
+      keepPlaying: keepPlaying,
+      totalCoinsSubtitle: totalCoinsSubtitle,
+      winRateSubtitle: winRateSubtitle,
+      supportedGamesTitle: supportedGamesTitle ?? this.supportedGamesTitle,
+      supportedGamesSubtitle:
+          supportedGamesSubtitle ?? this.supportedGamesSubtitle,
+      realtimeMultiplayerTitle:
+          realtimeMultiplayerTitle ?? this.realtimeMultiplayerTitle,
+      singlePlayerTitle: singlePlayerTitle ?? this.singlePlayerTitle,
+      play: play ?? this.play,
+      pagLeaderboardTitle: pagLeaderboardTitle ?? this.pagLeaderboardTitle,
+      pagLeaderboardSubtitle:
+          pagLeaderboardSubtitle ?? this.pagLeaderboardSubtitle,
+      pagLeaderboardEmpty: pagLeaderboardEmpty ?? this.pagLeaderboardEmpty,
+      youLabel: youLabel ?? this.youLabel,
+      onlineLabel: onlineLabel ?? this.onlineLabel,
+      createPagAccount: createPagAccount,
+      linkPagAccount: linkPagAccount,
+      passwordLabel: passwordLabel,
+      minUsernameError: minUsernameError,
+      minPasswordError: minPasswordError,
+      currentEmailHint: currentEmailHint,
+      cancel: cancel,
+      pleaseWait: pleaseWait,
+      create: create,
+      link: link,
+      gameDescriptions: gameDescriptions ?? this.gameDescriptions,
+    );
+  }
+
+  static const Map<String, Map<String, String>> _localizedSectionValues = {
+    'de': {
+      'gamesTitle': 'Spiele',
+      'gamesSubtitle':
+          'Spiele Spiele, verdiene Coins und klettere im Leaderboard höher.',
+      'supportedGamesTitle': 'Spiele',
+      'supportedGamesSubtitle':
+          'Nur die ausgewählten Spiele unten sind live in Videomoney und öffnen direkt in der App.',
+      'realtimeMultiplayerTitle': 'Echtzeit-Mehrspieler',
+      'singlePlayerTitle': 'Einzelspieler',
+      'play': 'Spielen',
+      'pagLeaderboardTitle': 'PAG-Coin-Leaderboard',
+      'pagLeaderboardSubtitle':
+          'Online-Videomoney-Nutzer mit verknüpftem PlayersAreGamers-Konto, sortiert nach Coins.',
+      'pagLeaderboardEmpty':
+          'Noch keine Online-Nutzer mit einem PAG-Konto gefunden.',
+      'youLabel': '(du)',
+      'onlineLabel': 'online',
+    },
+    'es': {
+      'gamesTitle': 'Juegos',
+      'gamesSubtitle':
+          'Juega, gana coins y sube más alto en la clasificación.',
+      'supportedGamesTitle': 'Juegos',
+      'supportedGamesSubtitle':
+          'Solo los juegos seleccionados a continuación están activos en Videomoney y se abren directamente en la app.',
+      'realtimeMultiplayerTitle': 'Multijugador en tiempo real',
+      'singlePlayerTitle': 'Un jugador',
+      'play': 'Jugar',
+      'pagLeaderboardTitle': 'Clasificación de coins PAG',
+      'pagLeaderboardSubtitle':
+          'Usuarios online de Videomoney con una cuenta de PlayersAreGamers vinculada, ordenados por coins.',
+      'pagLeaderboardEmpty':
+          'Todavía no se encontraron usuarios online con una cuenta PAG.',
+      'youLabel': '(tú)',
+      'onlineLabel': 'en línea',
+    },
+    'fr': {
+      'gamesTitle': 'Jeux',
+      'gamesSubtitle':
+          'Jouez, gagnez des coins et grimpez dans le classement.',
+      'supportedGamesTitle': 'Jeux',
+      'supportedGamesSubtitle':
+          'Seuls les jeux sélectionnés ci-dessous sont actifs dans Videomoney et s’ouvrent directement dans l’application.',
+      'realtimeMultiplayerTitle': 'Multijoueur en temps réel',
+      'singlePlayerTitle': 'Solo',
+      'play': 'Jouer',
+      'pagLeaderboardTitle': 'Classement des coins PAG',
+      'pagLeaderboardSubtitle':
+          'Utilisateurs VideoMoney en ligne avec un compte PlayersAreGamers lié, classés par coins.',
+      'pagLeaderboardEmpty':
+          'Aucun utilisateur en ligne avec un compte PAG pour le moment.',
+      'youLabel': '(vous)',
+      'onlineLabel': 'en ligne',
+    },
+    'ru': {
+      'gamesTitle': 'Игры',
+      'gamesSubtitle':
+          'Играйте, зарабатывайте coins и поднимайтесь выше в таблице лидеров.',
+      'supportedGamesTitle': 'Игры',
+      'supportedGamesSubtitle':
+          'Только выбранные ниже игры уже доступны в Videomoney и открываются прямо в приложении.',
+      'realtimeMultiplayerTitle': 'Мультиплеер в реальном времени',
+      'singlePlayerTitle': 'Одиночная игра',
+      'play': 'Играть',
+      'pagLeaderboardTitle': 'Таблица coins PAG',
+      'pagLeaderboardSubtitle':
+          'Пользователи Videomoney онлайн с привязанным аккаунтом PlayersAreGamers, отсортированные по coins.',
+      'pagLeaderboardEmpty':
+          'Пока не найдено пользователей онлайн с аккаунтом PAG.',
+      'youLabel': '(вы)',
+      'onlineLabel': 'онлайн',
+    },
+    'el': {
+      'gamesTitle': 'Παιχνίδια',
+      'gamesSubtitle':
+          'Παίξε παιχνίδια, κέρδισε coins και ανέβα πιο ψηλά στον πίνακα.',
+      'supportedGamesTitle': 'Παιχνίδια',
+      'supportedGamesSubtitle':
+          'Μόνο τα επιλεγμένα παιχνίδια παρακάτω είναι ήδη live στο Videomoney και ανοίγουν απευθείας στην εφαρμογή.',
+      'realtimeMultiplayerTitle': 'Multiplayer σε πραγματικό χρόνο',
+      'singlePlayerTitle': 'Μονοπαίκτης',
+      'play': 'Παίξε',
+      'pagLeaderboardTitle': 'Κατάταξη coins PAG',
+      'pagLeaderboardSubtitle':
+          'Χρήστες του Videomoney online με συνδεδεμένο λογαριασμό PlayersAreGamers, ταξινομημένοι ανά coins.',
+      'pagLeaderboardEmpty':
+          'Δεν βρέθηκαν ακόμη online χρήστες με λογαριασμό PAG.',
+      'youLabel': '(εσύ)',
+      'onlineLabel': 'online',
+    },
+    'hi': {
+      'gamesTitle': 'गेम्स',
+      'gamesSubtitle':
+          'गेम खेलें, coins कमाएँ और लीडरबोर्ड में ऊपर चढ़ें।',
+      'supportedGamesTitle': 'गेम्स',
+      'supportedGamesSubtitle':
+          'नीचे चुने गए गेम ही अभी Videomoney में लाइव हैं और सीधे ऐप में खुलते हैं।',
+      'realtimeMultiplayerTitle': 'रियल-टाइम मल्टीप्लेयर',
+      'singlePlayerTitle': 'सिंगल प्लेयर',
+      'play': 'खेलें',
+      'pagLeaderboardTitle': 'PAG coin लीडरबोर्ड',
+      'pagLeaderboardSubtitle':
+          'लिंक किए गए PlayersAreGamers खाते वाले ऑनलाइन Videomoney उपयोगकर्ता, coins के अनुसार क्रमबद्ध।',
+      'pagLeaderboardEmpty':
+          'अभी तक PAG खाते वाले कोई ऑनलाइन उपयोगकर्ता नहीं मिले।',
+      'youLabel': '(आप)',
+      'onlineLabel': 'ऑनलाइन',
+    },
+    'pt': {
+      'gamesTitle': 'Jogos',
+      'gamesSubtitle':
+          'Jogue, ganhe coins e suba mais alto no ranking.',
+      'supportedGamesTitle': 'Jogos',
+      'supportedGamesSubtitle':
+          'Apenas os jogos selecionados abaixo estão ativos no Videomoney e abrem diretamente na app.',
+      'realtimeMultiplayerTitle': 'Multijogador em tempo real',
+      'singlePlayerTitle': 'Um jogador',
+      'play': 'Jogar',
+      'pagLeaderboardTitle': 'Leaderboard de coins PAG',
+      'pagLeaderboardSubtitle':
+          'Utilizadores online do Videomoney com conta PlayersAreGamers ligada, ordenados por coins.',
+      'pagLeaderboardEmpty':
+          'Ainda não foram encontrados utilizadores online com conta PAG.',
+      'youLabel': '(você)',
+      'onlineLabel': 'online',
+    },
+    'it': {
+      'gamesTitle': 'Giochi',
+      'gamesSubtitle':
+          'Gioca, guadagna coins e sali più in alto nella classifica.',
+      'supportedGamesTitle': 'Giochi',
+      'supportedGamesSubtitle':
+          'Solo i giochi selezionati qui sotto sono live in Videomoney e si aprono direttamente nell’app.',
+      'realtimeMultiplayerTitle': 'Multigiocatore in tempo reale',
+      'singlePlayerTitle': 'Giocatore singolo',
+      'play': 'Gioca',
+      'pagLeaderboardTitle': 'Classifica coins PAG',
+      'pagLeaderboardSubtitle':
+          'Utenti Videomoney online con un account PlayersAreGamers collegato, ordinati per coins.',
+      'pagLeaderboardEmpty':
+          'Nessun utente online con un account PAG trovato finora.',
+      'youLabel': '(tu)',
+      'onlineLabel': 'online',
+    },
+    'tr': {
+      'gamesTitle': 'Oyunlar',
+      'gamesSubtitle':
+          'Oyun oyna, coins kazan ve sıralamada daha yukarı çık.',
+      'supportedGamesTitle': 'Oyunlar',
+      'supportedGamesSubtitle':
+          'Aşağıdaki seçili oyunlar şu anda Videomoney içinde canlıdır ve doğrudan uygulamada açılır.',
+      'realtimeMultiplayerTitle': 'Gerçek zamanlı çok oyunculu',
+      'singlePlayerTitle': 'Tek oyunculu',
+      'play': 'Oyna',
+      'pagLeaderboardTitle': 'PAG coin sıralaması',
+      'pagLeaderboardSubtitle':
+          'Bağlı PlayersAreGamers hesabı olan çevrimiçi Videomoney kullanıcıları, coins sayısına göre sıralanır.',
+      'pagLeaderboardEmpty':
+          'Henüz PAG hesabı olan çevrimiçi kullanıcı bulunamadı.',
+      'youLabel': '(sen)',
+      'onlineLabel': 'çevrimiçi',
+    },
+    'ar': {
+      'gamesTitle': 'الألعاب',
+      'gamesSubtitle':
+          'العب الألعاب، اربح coins واصعد أعلى في لوحة الصدارة.',
+      'supportedGamesTitle': 'الألعاب',
+      'supportedGamesSubtitle':
+          'فقط الألعاب المحددة أدناه تعمل الآن داخل Videomoney وتفتح مباشرة داخل التطبيق.',
+      'realtimeMultiplayerTitle': 'متعدد اللاعبين في الوقت الحقيقي',
+      'singlePlayerTitle': 'لاعب واحد',
+      'play': 'العب',
+      'pagLeaderboardTitle': 'لوحة صدارة PAG coins',
+      'pagLeaderboardSubtitle':
+          'مستخدمو Videomoney المتصلون مع حساب PlayersAreGamers مرتبط، مرتبين حسب coins.',
+      'pagLeaderboardEmpty':
+          'لم يتم العثور بعد على مستخدمين متصلين لديهم حساب PAG.',
+      'youLabel': '(أنت)',
+      'onlineLabel': 'متصل',
+    },
+    'bn': {
+      'gamesTitle': 'গেমস',
+      'gamesSubtitle':
+          'গেম খেলুন, coins আয় করুন এবং লিডারবোর্ডে আরও উপরে উঠুন।',
+      'supportedGamesTitle': 'গেমস',
+      'supportedGamesSubtitle':
+          'নিচের নির্বাচিত গেমগুলোই এখন Videomoney-তে লাইভ এবং সরাসরি অ্যাপে খোলে।',
+      'realtimeMultiplayerTitle': 'রিয়েল-টাইম মাল্টিপ্লেয়ার',
+      'singlePlayerTitle': 'সিঙ্গেল প্লেয়ার',
+      'play': 'খেলুন',
+      'pagLeaderboardTitle': 'PAG coin লিডারবোর্ড',
+      'pagLeaderboardSubtitle':
+          'লিংক করা PlayersAreGamers অ্যাকাউন্টসহ অনলাইন Videomoney ব্যবহারকারীরা, coins অনুযায়ী সাজানো।',
+      'pagLeaderboardEmpty':
+          'এখনও কোনো অনলাইন PAG অ্যাকাউন্ট ব্যবহারকারী পাওয়া যায়নি।',
+      'youLabel': '(আপনি)',
+      'onlineLabel': 'অনলাইন',
+    },
+    'ta': {
+      'gamesTitle': 'விளையாட்டுகள்',
+      'gamesSubtitle':
+          'விளையாடு, coins சம்பாதி, லீடர்போர்டில் மேலே ஏறு.',
+      'supportedGamesTitle': 'விளையாட்டுகள்',
+      'supportedGamesSubtitle':
+          'கீழே உள்ள தேர்ந்தெடுக்கப்பட்ட விளையாட்டுகளே இப்போது Videomoney-ல் live ஆக உள்ளன மற்றும் நேராக app-ல் திறக்கின்றன.',
+      'realtimeMultiplayerTitle': 'நேரடி மல்டிப்ளேயர்',
+      'singlePlayerTitle': 'ஒற்றை வீரர்',
+      'play': 'விளையாடு',
+      'pagLeaderboardTitle': 'PAG coin லீடர்போர்டு',
+      'pagLeaderboardSubtitle':
+          'PlayersAreGamers கணக்குடன் இணைக்கப்பட்ட ஆன்லைன் Videomoney பயனர்கள், coins அடிப்படையில் வரிசைப்படுத்தப்பட்டுள்ளனர்.',
+      'pagLeaderboardEmpty':
+          'இன்னும் PAG கணக்குடன் ஆன்லைன் பயனர்கள் எவரும் இல்லை.',
+      'youLabel': '(நீங்கள்)',
+      'onlineLabel': 'ஆன்லைன்',
+    },
+    'te': {
+      'gamesTitle': 'గేమ్స్',
+      'gamesSubtitle':
+          'గేమ్స్ ఆడి, coins సంపాదించి, లీడర్‌బోర్డ్‌లో పైకి ఎక్కండి.',
+      'supportedGamesTitle': 'గేమ్స్',
+      'supportedGamesSubtitle':
+          'కింద ఉన్న ఎంపిక చేసిన గేమ్స్ మాత్రమే ఇప్పుడు Videomoney లో live గా ఉన్నాయి మరియు నేరుగా app లో తెరుచుకుంటాయి.',
+      'realtimeMultiplayerTitle': 'రియల్-టైమ్ మల్టీప్లేయర్',
+      'singlePlayerTitle': 'సింగిల్ ప్లేయర్',
+      'play': 'ఆడు',
+      'pagLeaderboardTitle': 'PAG coin లీడర్‌బోర్డ్',
+      'pagLeaderboardSubtitle':
+          'లింక్ చేసిన PlayersAreGamers ఖాతాతో ఉన్న ఆన్‌లైన్ Videomoney వినియోగదారులు, coins ఆధారంగా ర్యాంక్ చేయబడ్డారు.',
+      'pagLeaderboardEmpty':
+          'ఇంకా PAG ఖాతాతో ఆన్‌లైన్ వినియోగదారులు లేరు.',
+      'youLabel': '(మీరు)',
+      'onlineLabel': 'ఆన్‌లైన్',
+    },
+  };
+
+  static const Map<String, Map<String, String>> _localizedGameDescriptions = {
+    'de': {
+      'ludo': '4-Spieler-Multiplayer mit Raum beitreten, Raum erstellen und Schnellspiel.',
+      'jewel-quest': 'Kombiniere Edelsteine und baue die höchste Combo auf.',
+      'fruit-matching': 'Kombiniere 3 oder mehr Früchte so schnell wie möglich.',
+      'memory-match': 'Trainiere dein Gedächtnis und deinen Fokus mit schnellen Paaren.',
+      'tap-the-rat': 'Tippe so schnell wie möglich und besiege alle.',
+      'crazy-nurse': 'Überlebe das Chaos und halte so lange wie möglich durch.',
+      'stick-boy': 'Renne, springe und weiche allem auf deinem Weg aus.',
+      'stone-pile': 'Stapele klug und halte den Turm stabil.',
+      'space-destroyer': 'Schieße dich durch einen schnellen Weltraumlauf.',
+      'falling-balled-man': 'Behalte die Kontrolle, während alles herunterfällt.',
+      'lily-in-danger': 'Beschütze Lily und überlebe gefährliche Level.',
+      'subway-trainrun': 'Renne durch die Station und weiche allem in vollem Tempo aus.',
+      'bio-race': 'Rase durch die Bio-Strecke und teste die eigene Game-over-Seite.',
+    },
+    'es': {
+      'ludo': 'Juego multijugador de 4 jugadores con unirse a sala, crear sala y partida rápida.',
+      'jewel-quest': 'Combina gemas y consigue la mejor racha.',
+      'fruit-matching': 'Combina 3 o más frutas lo más rápido posible.',
+      'memory-match': 'Entrena tu memoria y concentración con parejas rápidas.',
+      'tap-the-rat': 'Toca lo más rápido posible y vence a todos.',
+      'crazy-nurse': 'Sobrevive al caos y aguanta todo lo que puedas.',
+      'stick-boy': 'Corre, salta y esquiva todo en tu camino.',
+      'stone-pile': 'Apila con cabeza y mantén estable la torre.',
+      'space-destroyer': 'Dispara en una carrera espacial rápida.',
+      'falling-balled-man': 'Mantén el control mientras todo cae a tu alrededor.',
+      'lily-in-danger': 'Protege a Lily y sobrevive a niveles peligrosos.',
+      'subway-trainrun': 'Corre por la estación y esquiva todo a toda velocidad.',
+      'bio-race': 'Corre por la pista bio y prueba su propia pantalla de game over.',
+    },
+    'fr': {
+      'ludo': 'Jeu multijoueur à 4 joueurs avec rejoindre une salle, créer une salle et partie rapide.',
+      'jewel-quest': 'Associez les gemmes et créez le meilleur combo.',
+      'fruit-matching': 'Associez 3 fruits ou plus aussi vite que possible.',
+      'memory-match': 'Entraînez votre mémoire et votre concentration avec des paires rapides.',
+      'tap-the-rat': 'Touchez aussi vite que possible et battez tout le monde.',
+      'crazy-nurse': 'Survivez au chaos et tenez le plus longtemps possible.',
+      'stick-boy': 'Courez, sautez et évitez tout sur votre chemin.',
+      'stone-pile': 'Empilez intelligemment et gardez la pile stable.',
+      'space-destroyer': 'Traversez une course spatiale rapide à coups de tirs.',
+      'falling-balled-man': 'Gardez le contrôle pendant que tout tombe autour de vous.',
+      'lily-in-danger': 'Protégez Lily et survivez à des niveaux dangereux.',
+      'subway-trainrun': 'Courez dans la station et évitez tout à pleine vitesse.',
+      'bio-race': 'Foncez sur la piste bio et testez sa propre page de fin de partie.',
+    },
+    'ru': {
+      'ludo': 'Мультиплеер на 4 игроков с входом в комнату, созданием комнаты и быстрым матчем.',
+      'jewel-quest': 'Собирайте драгоценности и набирайте лучшую серию.',
+      'fruit-matching': 'Собирайте 3 и более фруктов как можно быстрее.',
+      'memory-match': 'Тренируйте память и внимание быстрыми парами.',
+      'tap-the-rat': 'Нажимайте как можно быстрее и побеждайте всех.',
+      'crazy-nurse': 'Переживите хаос и продержитесь как можно дольше.',
+      'stick-boy': 'Бегите, прыгайте и уклоняйтесь от всего на пути.',
+      'stone-pile': 'Складывайте умно и держите башню устойчивой.',
+      'space-destroyer': 'Пробейтесь через быстрый космический забег.',
+      'falling-balled-man': 'Сохраняйте контроль, пока вокруг всё падает.',
+      'lily-in-danger': 'Защитите Лили и выживите в опасных уровнях.',
+      'subway-trainrun': 'Бегите по станции и уворачивайтесь от всего на полной скорости.',
+      'bio-race': 'Мчитесь по био-трассе и проверьте собственную страницу game over.',
+    },
+    'el': {
+      'ludo': 'Multiplayer 4 παικτών με join room, create room και quick match.',
+      'jewel-quest': 'Ταίριαξε πετράδια και χτίσε το καλύτερο combo.',
+      'fruit-matching': 'Ταίριαξε 3 ή περισσότερα φρούτα όσο πιο γρήγορα μπορείς.',
+      'memory-match': 'Προπόνησε μνήμη και συγκέντρωση με γρήγορα ζευγάρια.',
+      'tap-the-rat': 'Πάτα όσο πιο γρήγορα μπορείς και νίκησε όλους.',
+      'crazy-nurse': 'Επιβίωσε στο χάος και κράτα όσο περισσότερο μπορείς.',
+      'stick-boy': 'Τρέξε, πήδα και απέφυγε τα πάντα στο δρόμο σου.',
+      'stone-pile': 'Στοίβαξε έξυπνα και κράτα τη στοίβα σταθερή.',
+      'space-destroyer': 'Πυροβόλα μέσα από μια γρήγορη διαστημική διαδρομή.',
+      'falling-balled-man': 'Κράτα τον έλεγχο ενώ όλα πέφτουν γύρω σου.',
+      'lily-in-danger': 'Προστάτεψε τη Lily και επιβίωσε σε επικίνδυνα επίπεδα.',
+      'subway-trainrun': 'Τρέξε μέσα στον σταθμό και απέφυγε τα πάντα με πλήρη ταχύτητα.',
+      'bio-race': 'Τρέξε στην bio πίστα και δοκίμασε τη δική της σελίδα game over.',
+    },
+    'hi': {
+      'ludo': '4 खिलाड़ी मल्टीप्लेयर गेम जिसमें join room, create room और quick match है।',
+      'jewel-quest': 'ज्वेल मिलाओ और सबसे बड़ा कॉम्बो बनाओ।',
+      'fruit-matching': '3 या उससे ज़्यादा फलों को जितनी जल्दी हो सके मिलाओ।',
+      'memory-match': 'तेज़ जोड़ों के साथ अपनी याददाश्त और फोकस को ट्रेन करो।',
+      'tap-the-rat': 'जितनी तेज़ हो सके टैप करो और सबको हराओ।',
+      'crazy-nurse': 'अराजकता से बचो और जितनी देर हो सके टिके रहो।',
+      'stick-boy': 'दौड़ो, कूदो और रास्ते की हर चीज़ से बचो।',
+      'stone-pile': 'समझदारी से जमाओ और ढेर को स्थिर रखो।',
+      'space-destroyer': 'तेज़ स्पेस रन में सब कुछ उड़ा दो।',
+      'falling-balled-man': 'जब सब कुछ गिर रहा हो तब भी नियंत्रण बनाए रखो।',
+      'lily-in-danger': 'Lily को बचाओ और खतरनाक लेवल पार करो।',
+      'subway-trainrun': 'स्टेशन में दौड़ो और पूरी रफ्तार से सब कुछ बचाते जाओ।',
+      'bio-race': 'बायो ट्रैक पर दौड़ो और उसकी अपनी game over page टेस्ट करो।',
+    },
+    'pt': {
+      'ludo': 'Jogo multijogador para 4 jogadores com entrar na sala, criar sala e partida rápida.',
+      'jewel-quest': 'Combine joias e construa o melhor combo.',
+      'fruit-matching': 'Combine 3 ou mais frutas o mais rápido possível.',
+      'memory-match': 'Treine a memória e o foco com pares rápidos.',
+      'tap-the-rat': 'Toque o mais rápido possível e vença todos.',
+      'crazy-nurse': 'Sobreviva ao caos e aguente o máximo possível.',
+      'stick-boy': 'Corra, salte e desvie de tudo no seu caminho.',
+      'stone-pile': 'Empilhe com inteligência e mantenha a pilha estável.',
+      'space-destroyer': 'Abra caminho num rápido percurso espacial.',
+      'falling-balled-man': 'Mantenha o controlo enquanto tudo cai à sua volta.',
+      'lily-in-danger': 'Proteja a Lily e sobreviva a níveis perigosos.',
+      'subway-trainrun': 'Corra pela estação e desvie de tudo em alta velocidade.',
+      'bio-race': 'Corra na pista bio e teste a sua própria página de fim de jogo.',
+    },
+    'it': {
+      'ludo': 'Gioco multiplayer per 4 giocatori con entra nella stanza, crea stanza e partita rapida.',
+      'jewel-quest': 'Abbina gioielli e crea la combo migliore.',
+      'fruit-matching': 'Abbina 3 o più frutti il più velocemente possibile.',
+      'memory-match': 'Allena memoria e concentrazione con coppie rapide.',
+      'tap-the-rat': 'Tocca il più velocemente possibile e batti tutti.',
+      'crazy-nurse': 'Sopravvivi al caos e resisti il più a lungo possibile.',
+      'stick-boy': 'Corri, salta e schiva tutto sul tuo cammino.',
+      'stone-pile': 'Impila con intelligenza e mantieni stabile la pila.',
+      'space-destroyer': 'Spara attraverso una rapida corsa spaziale.',
+      'falling-balled-man': 'Mantieni il controllo mentre tutto cade intorno a te.',
+      'lily-in-danger': 'Proteggi Lily e sopravvivi a livelli pericolosi.',
+      'subway-trainrun': 'Corri nella stazione e schiva tutto a tutta velocità.',
+      'bio-race': 'Corri sulla pista bio e prova la sua pagina di game over.',
+    },
+    'tr': {
+      'ludo': 'Oda katıl, oda oluştur ve hızlı maç içeren 4 oyunculu çok oyunculu oyun.',
+      'jewel-quest': 'Mücevherleri eşleştir ve en yüksek komboyu yap.',
+      'fruit-matching': '3 veya daha fazla meyveyi olabildiğince hızlı eşleştir.',
+      'memory-match': 'Hızlı eşlerle hafızanı ve odağını geliştir.',
+      'tap-the-rat': 'Olabildiğince hızlı dokun ve herkesi yen.',
+      'crazy-nurse': 'Kaostan sağ çık ve mümkün olduğunca uzun süre dayan.',
+      'stick-boy': 'Koş, zıpla ve yolundaki her şeyden kaç.',
+      'stone-pile': 'Akıllıca diz ve yığını dengede tut.',
+      'space-destroyer': 'Hızlı bir uzay koşusunda her şeyi patlat.',
+      'falling-balled-man': 'Her şey düşerken kontrolü elinde tut.',
+      'lily-in-danger': 'Lily’yi koru ve tehlikeli bölümlerde hayatta kal.',
+      'subway-trainrun': 'İstasyonda koş ve tam hızla her şeyden kaç.',
+      'bio-race': 'Bio pistinde yarış ve kendi game over sayfasını test et.',
+    },
+    'ar': {
+      'ludo': 'لعبة متعددة اللاعبين لـ4 لاعبين مع الانضمام إلى غرفة وإنشاء غرفة ومطابقة سريعة.',
+      'jewel-quest': 'طابق الجواهر واصنع أعلى كومبو.',
+      'fruit-matching': 'طابق 3 فواكه أو أكثر بأسرع ما يمكن.',
+      'memory-match': 'درّب ذاكرتك وتركيزك بأزواج سريعة.',
+      'tap-the-rat': 'اضغط بأسرع ما يمكن واهزم الجميع.',
+      'crazy-nurse': 'انجُ من الفوضى واصمد لأطول وقت ممكن.',
+      'stick-boy': 'اركض واقفز وتجنب كل شيء في طريقك.',
+      'stone-pile': 'رصّ بذكاء وحافظ على استقرار الكومة.',
+      'space-destroyer': 'أطلق النار خلال جولة فضائية سريعة.',
+      'falling-balled-man': 'حافظ على السيطرة بينما يسقط كل شيء من حولك.',
+      'lily-in-danger': 'احمِ Lily وابقَ على قيد الحياة في المراحل الخطيرة.',
+      'subway-trainrun': 'اركض عبر المحطة وتجنب كل شيء بأقصى سرعة.',
+      'bio-race': 'تسابق عبر مسار bio واختبر صفحة game over الخاصة به.',
+    },
+    'bn': {
+      'ludo': 'join room, create room আর quick match সহ ৪ খেলোয়াড়ের মাল্টিপ্লেয়ার গেম।',
+      'jewel-quest': 'রত্ন মিলিয়ে সবচেয়ে বড় কম্বো বানাও।',
+      'fruit-matching': '৩ বা তার বেশি ফল যত দ্রুত সম্ভব মিলাও।',
+      'memory-match': 'দ্রুত জোড়ার মাধ্যমে স্মৃতি আর ফোকাস ট্রেন করো।',
+      'tap-the-rat': 'যত দ্রুত পারো ট্যাপ করো আর সবাইকে হারাও।',
+      'crazy-nurse': 'বিশৃঙ্খলা থেকে বাঁচো আর যতক্ষণ পারো টিকে থাকো।',
+      'stick-boy': 'দৌড়াও, লাফাও আর পথে যা আসে তা এড়িয়ে যাও।',
+      'stone-pile': 'বুদ্ধি করে সাজাও আর স্তূপটাকে স্থির রাখো।',
+      'space-destroyer': 'দ্রুত স্পেস রানে সব উড়িয়ে দাও।',
+      'falling-balled-man': 'সব কিছু পড়লেও নিয়ন্ত্রণ ধরে রাখো।',
+      'lily-in-danger': 'Lily-কে রক্ষা করো আর বিপজ্জনক লেভেল পার করো।',
+      'subway-trainrun': 'স্টেশনের ভেতর দৌড়াও আর পুরো গতিতে সব এড়িয়ে চলো।',
+      'bio-race': 'bio ট্র্যাকে দৌড়াও আর এর নিজস্ব game over page টেস্ট করো।',
+    },
+    'ta': {
+      'ludo': 'join room, create room மற்றும் quick match உடன் 4 வீரர் மல்டிப்ளேயர் விளையாட்டு.',
+      'jewel-quest': 'ரத்தினங்களை பொருத்தி பெரிய combo உருவாக்கு.',
+      'fruit-matching': '3 அல்லது அதற்கு மேற்பட்ட பழங்களை மிக வேகமாக பொருத்து.',
+      'memory-match': 'வேகமான ஜோடிகளால் நினைவாற்றலும் கவனமும் வளர்த்து கொள்.',
+      'tap-the-rat': 'அதிக வேகத்தில் தட்டி எல்லோரையும் வெல்.',
+      'crazy-nurse': 'குழப்பத்தில் உயிர் தப்பி எவ்வளவு நேரம் முடிகிறதோ அவ்வளவு நீடித்து விளையாடு.',
+      'stick-boy': 'ஓடு, தாவு, வழியிலுள்ள அனைத்தையும் தவிர்த்து செல்.',
+      'stone-pile': 'புத்திசாலித்தனமாக அடுக்கி குவியலை நிலையாக வைத்திரு.',
+      'space-destroyer': 'வேகமான space run-ல் எல்லாவற்றையும் சுட்டு உடை.',
+      'falling-balled-man': 'அனைத்தும் கீழே விழுந்தாலும் கட்டுப்பாட்டை கையில் வை.',
+      'lily-in-danger': 'Lily-ஐ காப்பாற்றி ஆபத்தான நிலைகளை கடந்து செல்.',
+      'subway-trainrun': 'நிலையம் வழியாக ஓடி முழு வேகத்தில் அனைத்தையும் தவிர்த்து செல்.',
+      'bio-race': 'bio track-ல் பந்தயம் பண்ணி அதன் சொந்த game over page-ஐ சோதிக்கவும்.',
+    },
+    'te': {
+      'ludo': 'join room, create room మరియు quick match ఉన్న 4 ప్లేయర్ మల్టీప్లేయర్ గేమ్.',
+      'jewel-quest': 'రత్నాలను మ్యాచ్ చేసి పెద్ద కాంబో సాధించండి.',
+      'fruit-matching': '3 లేదా అంతకంటే ఎక్కువ పండ్లను ఎంత వేగంగా అయితే అంత వేగంగా మ్యాచ్ చేయండి.',
+      'memory-match': 'త్వరిత జంటలతో మీ జ్ఞాపకశక్తి, ఫోకస్‌ను ట్రైన్ చేయండి.',
+      'tap-the-rat': 'ఎంత వేగంగా అయితే అంత వేగంగా ట్యాప్ చేసి అందరినీ ఓడించండి.',
+      'crazy-nurse': 'అల్లకల్లోలాన్ని తట్టుకుని ఎంతకాలం అయితే అంతకాలం నిలబడండి.',
+      'stick-boy': 'పరుగెత్తు, ఎగురు, దారిలో ఉన్న ప్రతిదాన్ని తప్పించుకో.',
+      'stone-pile': 'తెలివిగా కట్టండి, గుట్టను స్థిరంగా ఉంచండి.',
+      'space-destroyer': 'వేగమైన space run లో అన్నింటినీ పేల్చేయండి.',
+      'falling-balled-man': 'అన్నీ పడుతున్నప్పటికీ నియంత్రణలో ఉండు.',
+      'lily-in-danger': 'Lily ను కాపాడి ప్రమాదకరమైన లెవెల్స్‌లో బతికి బయటపడు.',
+      'subway-trainrun': 'స్టేషన్‌లో పరుగెత్తి పూర్తి వేగంతో అన్నింటినీ తప్పించుకో.',
+      'bio-race': 'bio ట్రాక్‌లో రేస్ చేసి దాని స్వంత game over page ను పరీక్షించు.',
+    },
+  };
+
   static _GamesCopy of(BuildContext context) {
     final languageCode = Localizations.localeOf(context).languageCode.toLowerCase();
     if (languageCode == 'nl') {
@@ -1412,6 +2064,7 @@ class _GamesCopy {
         create: 'Maken',
         link: 'Linken',
         gameDescriptions: {
+          'ludo': '4 speler multiplayer game met join room, create room en quick match.',
           'jewel-quest': 'Match edelstenen en haal de hoogste combo.',
           'fruit-matching': 'Match 3 of meer vruchten zo snel mogelijk.',
           'memory-match': 'Train je geheugen en focus met snelle paren.',
@@ -1422,11 +2075,13 @@ class _GamesCopy {
           'space-destroyer': 'Schiet alles neer in een snelle ruimterun.',
           'falling-balled-man': 'Blijf in controle terwijl alles naar beneden stort.',
           'lily-in-danger': 'Bescherm Lily en overleef de gevaarlijke levels.',
+          'subway-trainrun': 'Ren door het station en ontwijk alles op volle snelheid.',
+          'bio-race': 'Race door de bio-track en check de eigen game over page.',
         },
       );
     }
 
-    return const _GamesCopy._(
+    final english = const _GamesCopy._(
       gamesTitle: 'Games',
       gamesSubtitle: 'Play games, earn coins and climb higher on the leaderboard.',
       syncIssue: 'Sync issue',
@@ -1471,6 +2126,7 @@ class _GamesCopy {
       create: 'Create',
       link: 'Link',
       gameDescriptions: {
+        'ludo': '4 player multiplayer game with join room, create room and quick match.',
         'jewel-quest': 'Match jewels and build the highest combo.',
         'fruit-matching': 'Match 3 or more fruits as fast as you can.',
         'memory-match': 'Train your memory and focus with fast pairs.',
@@ -1481,7 +2137,28 @@ class _GamesCopy {
         'space-destroyer': 'Blast through a fast space run.',
         'falling-balled-man': 'Stay in control while everything drops around you.',
         'lily-in-danger': 'Protect Lily and survive dangerous levels.',
+        'subway-trainrun': 'Run through the station and dodge everything at full speed.',
+        'bio-race': 'Race through the bio track and test its own game over page.',
       },
+    );
+
+    final localizedValues = _localizedSectionValues[languageCode];
+    if (localizedValues == null) return english;
+    return english.copyWith(
+      gamesTitle: localizedValues['gamesTitle'],
+      gamesSubtitle: localizedValues['gamesSubtitle'],
+      supportedGamesTitle: localizedValues['supportedGamesTitle'],
+      supportedGamesSubtitle: localizedValues['supportedGamesSubtitle'],
+      realtimeMultiplayerTitle: localizedValues['realtimeMultiplayerTitle'],
+      singlePlayerTitle: localizedValues['singlePlayerTitle'],
+      play: localizedValues['play'],
+      pagLeaderboardTitle: localizedValues['pagLeaderboardTitle'],
+      pagLeaderboardSubtitle: localizedValues['pagLeaderboardSubtitle'],
+      pagLeaderboardEmpty: localizedValues['pagLeaderboardEmpty'],
+      youLabel: localizedValues['youLabel'],
+      onlineLabel: localizedValues['onlineLabel'],
+      gameDescriptions:
+          _localizedGameDescriptions[languageCode] ?? english.gameDescriptions,
     );
   }
 }

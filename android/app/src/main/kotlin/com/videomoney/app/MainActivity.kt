@@ -22,6 +22,16 @@ import com.facebook.ads.InterstitialAd
 import com.facebook.ads.InterstitialAdListener
 import com.facebook.ads.RewardedInterstitialAd
 import com.facebook.ads.RewardedInterstitialAdListener
+import com.unity3d.mediation.LevelPlay
+import com.unity3d.mediation.LevelPlayAdError
+import com.unity3d.mediation.LevelPlayAdInfo
+import com.unity3d.mediation.LevelPlayConfiguration
+import com.unity3d.mediation.LevelPlayInitError
+import com.unity3d.mediation.LevelPlayInitListener
+import com.unity3d.mediation.LevelPlayInitRequest
+import com.unity3d.mediation.rewarded.LevelPlayReward
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAd
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -33,6 +43,11 @@ class MainActivity : FlutterActivity() {
     private var metaInterstitialAd: InterstitialAd? = null
     private var metaBannerAdView: AdView? = null
     private var mobFoxRewardedLoaded = false
+    private var levelPlayRewardedAd: LevelPlayRewardedAd? = null
+    private var levelPlayRewardedLoaded = false
+    private var levelPlayRewardedLoading = false
+    private var levelPlayInitializing = false
+    private var levelPlayInitialized = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +55,7 @@ class MainActivity : FlutterActivity() {
         configureRewardedVideoCallbacks()
         initializeAppnextIfNeeded()
         initializeAppodealIfNeeded()
+        initializeLevelPlayIfNeeded()
         preloadMobFoxRewardedVideo()
     }
 
@@ -92,12 +108,22 @@ class MainActivity : FlutterActivity() {
                         result.success(Appodeal.isInitialized(REWARDED_VIDEO_TYPE))
                     }
 
+                    "ensureLevelPlayInitialized" -> {
+                        initializeLevelPlayIfNeeded()
+                        result.success(levelPlayInitialized)
+                    }
+
                     "isRewardedVideoLoaded" -> {
                         result.success(Appodeal.isLoaded(REWARDED_VIDEO_TYPE))
                     }
 
                     "preloadRewardedVideo" -> {
                         cacheRewardedVideo()
+                        result.success(null)
+                    }
+
+                    "preloadLevelPlayRewardedVideo" -> {
+                        preloadLevelPlayRewardedVideo()
                         result.success(null)
                     }
 
@@ -164,6 +190,14 @@ class MainActivity : FlutterActivity() {
                         }
                     }
 
+                    "isLevelPlayRewardedVideoLoaded" -> {
+                        result.success(levelPlayRewardedLoaded || levelPlayRewardedAd?.isAdReady == true)
+                    }
+
+                    "showLevelPlayRewardedVideo" -> {
+                        result.success(showLevelPlayRewardedVideo())
+                    }
+
                     "showAppnextRewardedVideo" -> {
                         val rewardedVideo = appnextRewardedVideo
                         if (rewardedVideo?.isAdLoaded == true) {
@@ -192,6 +226,7 @@ class MainActivity : FlutterActivity() {
         metaInterstitialAd = null
         metaBannerAdView?.destroy()
         metaBannerAdView = null
+        levelPlayRewardedAd = null
         MobFoxRewardedManager.clear()
         super.onDestroy()
     }
@@ -262,6 +297,165 @@ class MainActivity : FlutterActivity() {
                 cacheRewardedVideo()
             }
         })
+    }
+
+    private fun initializeLevelPlayIfNeeded() {
+        if (levelPlayInitialized || levelPlayInitializing) {
+            if (levelPlayInitialized) {
+                createLevelPlayRewardedIfNeeded()
+            }
+            return
+        }
+
+        val appKey = BuildConfig.LEVELPLAY_APP_KEY
+        val adUnitId = BuildConfig.LEVELPLAY_REWARDED_AD_UNIT_ID
+        if (appKey.isBlank() || adUnitId.isBlank()) {
+            Log.w(LOG_TAG, "LevelPlay app key or rewarded ad unit ID is missing.")
+            return
+        }
+
+        levelPlayInitializing = true
+        val initRequest = LevelPlayInitRequest.Builder(appKey).build()
+        LevelPlay.init(
+            this,
+            initRequest,
+            object : LevelPlayInitListener {
+                override fun onInitSuccess(configuration: LevelPlayConfiguration) {
+                    levelPlayInitializing = false
+                    levelPlayInitialized = true
+                    Log.d(
+                        LOG_TAG,
+                        "[rewarded][levelplay] init success for ad unit ${BuildConfig.LEVELPLAY_REWARDED_AD_UNIT_ID}.",
+                    )
+                    createLevelPlayRewardedIfNeeded()
+                    preloadLevelPlayRewardedVideo()
+                }
+
+                override fun onInitFailed(error: LevelPlayInitError) {
+                    levelPlayInitializing = false
+                    levelPlayInitialized = false
+                    levelPlayRewardedLoaded = false
+                    levelPlayRewardedLoading = false
+                    emitEvent(
+                        "onLevelPlayRewardedVideoFailedToLoad",
+                        mapOf("error" to error.toString()),
+                    )
+                    Log.w(LOG_TAG, "[rewarded][levelplay] init failed: $error")
+                }
+            },
+        )
+    }
+
+    private fun createLevelPlayRewardedIfNeeded() {
+        if (!levelPlayInitialized || levelPlayRewardedAd != null) {
+            return
+        }
+
+        val adUnitId = BuildConfig.LEVELPLAY_REWARDED_AD_UNIT_ID
+        if (adUnitId.isBlank()) {
+            Log.w(LOG_TAG, "LevelPlay rewarded ad unit ID is missing.")
+            return
+        }
+
+        levelPlayRewardedAd = LevelPlayRewardedAd(adUnitId).apply {
+            setListener(
+                object : LevelPlayRewardedAdListener {
+                    override fun onAdLoaded(adInfo: LevelPlayAdInfo) {
+                        levelPlayRewardedLoaded = true
+                        levelPlayRewardedLoading = false
+                        emitEvent("onLevelPlayRewardedVideoLoaded")
+                        Log.d(LOG_TAG, "[rewarded][levelplay] loaded.")
+                    }
+
+                    override fun onAdLoadFailed(error: LevelPlayAdError) {
+                        levelPlayRewardedLoaded = false
+                        levelPlayRewardedLoading = false
+                        emitEvent(
+                            "onLevelPlayRewardedVideoFailedToLoad",
+                            mapOf("error" to error.toString()),
+                        )
+                        Log.w(LOG_TAG, "[rewarded][levelplay] failed to load: $error")
+                    }
+
+                    override fun onAdDisplayed(adInfo: LevelPlayAdInfo) {
+                        levelPlayRewardedLoaded = false
+                        levelPlayRewardedLoading = false
+                        emitEvent("onLevelPlayRewardedVideoShown")
+                        Log.d(LOG_TAG, "[rewarded][levelplay] shown.")
+                    }
+
+                    override fun onAdRewarded(reward: LevelPlayReward, adInfo: LevelPlayAdInfo) {
+                        emitEvent(
+                            "onLevelPlayRewardedVideoFinished",
+                            mapOf(
+                                "amount" to reward.amount,
+                                "currency" to reward.name,
+                            ),
+                        )
+                        Log.d(
+                            LOG_TAG,
+                            "[rewarded][levelplay] completed reward=${reward.amount} ${reward.name}",
+                        )
+                    }
+
+                    override fun onAdDisplayFailed(
+                        error: LevelPlayAdError,
+                        adInfo: LevelPlayAdInfo,
+                    ) {
+                        levelPlayRewardedLoaded = false
+                        levelPlayRewardedLoading = false
+                        emitEvent(
+                            "onLevelPlayRewardedVideoShowFailed",
+                            mapOf("error" to error.toString()),
+                        )
+                        Log.w(LOG_TAG, "[rewarded][levelplay] failed to show: $error")
+                        preloadLevelPlayRewardedVideo()
+                    }
+
+                    override fun onAdClicked(adInfo: LevelPlayAdInfo) = Unit
+
+                    override fun onAdClosed(adInfo: LevelPlayAdInfo) {
+                        emitEvent("onLevelPlayRewardedVideoClosed")
+                        Log.d(LOG_TAG, "[rewarded][levelplay] closed.")
+                        preloadLevelPlayRewardedVideo()
+                    }
+
+                    override fun onAdInfoChanged(adInfo: LevelPlayAdInfo) = Unit
+                },
+            )
+        }
+    }
+
+    private fun preloadLevelPlayRewardedVideo() {
+        initializeLevelPlayIfNeeded()
+        if (!levelPlayInitialized) {
+            return
+        }
+        createLevelPlayRewardedIfNeeded()
+        val rewardedAd = levelPlayRewardedAd ?: return
+        if (levelPlayRewardedLoaded || rewardedAd.isAdReady || levelPlayRewardedLoading) {
+            levelPlayRewardedLoaded = levelPlayRewardedLoaded || rewardedAd.isAdReady
+            return
+        }
+        levelPlayRewardedLoading = true
+        Log.d(LOG_TAG, "[rewarded][levelplay] requesting load.")
+        rewardedAd.loadAd()
+    }
+
+    private fun showLevelPlayRewardedVideo(): Boolean {
+        initializeLevelPlayIfNeeded()
+        val rewardedAd = levelPlayRewardedAd
+        val canShow = levelPlayInitialized && rewardedAd?.isAdReady == true
+        if (!canShow) {
+            levelPlayRewardedLoaded = false
+            preloadLevelPlayRewardedVideo()
+            return false
+        }
+        levelPlayRewardedLoaded = false
+        levelPlayRewardedLoading = false
+        rewardedAd?.showAd(this)
+        Log.d(LOG_TAG, "[rewarded][levelplay] showing rewarded video.")
+        return true
     }
 
     private fun initializeAppodealIfNeeded() {

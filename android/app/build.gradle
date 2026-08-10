@@ -52,6 +52,16 @@ def metaBannerPlacementId = (
                 ?: System.getenv('META_BANNER_PLACEMENT_ID')
                 ?: '1741013560433241_1741019897099274'
 ).trim()
+def levelPlayAppKey = (
+        localProperties.getProperty('levelplay.appKey')
+                ?: System.getenv('LEVELPLAY_APP_KEY')
+                ?: '26c217075'
+).trim()
+def levelPlayRewardedAdUnitId = (
+        localProperties.getProperty('levelplay.rewardedAdUnitId')
+                ?: System.getenv('LEVELPLAY_REWARDED_AD_UNIT_ID')
+                ?: 'gy6g2shjrzmhy0bm'
+).trim()
 def graviteRewardedPlacementName = (
         localProperties.getProperty('gravite.rewardedPlacementName')
                 ?: System.getenv('GRAVITE_REWARDED_PLACEMENT_NAME')
@@ -100,6 +110,8 @@ android {
         buildConfigField "String", "META_REWARDED_INTERSTITIAL_PLACEMENT_ID", "\"${metaRewardedInterstitialPlacementId}\""
         buildConfigField "String", "META_INTERSTITIAL_PLACEMENT_ID", "\"${metaInterstitialPlacementId}\""
         buildConfigField "String", "META_BANNER_PLACEMENT_ID", "\"${metaBannerPlacementId}\""
+        buildConfigField "String", "LEVELPLAY_APP_KEY", "\"${levelPlayAppKey}\""
+        buildConfigField "String", "LEVELPLAY_REWARDED_AD_UNIT_ID", "\"${levelPlayRewardedAdUnitId}\""
         buildConfigField "String", "GRAVITE_REWARDED_PLACEMENT_NAME", "\"${graviteRewardedPlacementName}\""
         buildConfigField "String", "GRAVITE_TEST_MODE_ACCOUNT_ID", "\"${graviteTestModeAccountId}\""
         buildConfigField "String", "MOBFOX_VAST_TAG_URL", "\"${mobfoxVastTagUrl}\""
@@ -133,9 +145,13 @@ flutter {
 dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.1.2")
     implementation "androidx.core:core-ktx:1.13.1"
+    implementation "com.unity3d.ads-mediation:mediation-sdk:9.5.0"
     implementation ("com.intentsoftware.addapptr:AATKit:3.17.3") {
         transitive = true
     }
+    implementation "com.google.android.gms:play-services-appset:16.0.0"
+    implementation "com.google.android.gms:play-services-ads-identifier:18.1.0"
+    implementation "com.google.android.gms:play-services-basement:18.1.0"
     implementation "com.google.android.ump:user-messaging-platform:3.1.0"
     implementation "androidx.media3:media3-exoplayer:1.4.1"
     implementation "androidx.media3:media3-ui:1.4.1"

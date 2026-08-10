@@ -4,9 +4,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-enum RewardedAdProvider { auto, mobfox, startio, liftoff, gravite, admob, appodeal, meta }
+enum RewardedAdProvider {
+  auto,
+  mobfox,
+  startio,
+  liftoff,
+  gravite,
+  admob,
+  appodeal,
+  unity,
+  meta,
+}
 
-enum _RewardedNetwork { mobfox, gravite, admob, appodeal, appnext, meta, startio }
+enum _RewardedNetwork {
+  mobfox,
+  gravite,
+  admob,
+  appodeal,
+  levelplay,
+  appnext,
+  meta,
+  startio,
+}
 
 class RewardedAdService {
   factory RewardedAdService() => _instance;
@@ -27,8 +46,9 @@ class RewardedAdService {
       'The ad finished, but we could not update your balance. Please try again.';
   static const List<_RewardedNetwork> _rotationOrder = [
     _RewardedNetwork.admob,
-    _RewardedNetwork.gravite,
     _RewardedNetwork.appodeal,
+    _RewardedNetwork.gravite,
+    _RewardedNetwork.levelplay,
   ];
 
   RewardedAd? _rewardedAd;
@@ -36,6 +56,7 @@ class RewardedAdService {
     _RewardedNetwork.mobfox: false,
     _RewardedNetwork.gravite: false,
     _RewardedNetwork.appodeal: false,
+    _RewardedNetwork.levelplay: false,
     _RewardedNetwork.appnext: false,
     _RewardedNetwork.meta: false,
     _RewardedNetwork.startio: false,
@@ -60,6 +81,7 @@ class RewardedAdService {
       _invokeVoidMethod('preloadMobFoxRewardedVideo'),
       _invokeVoidMethod('preloadGraviteRewardedVideo'),
       _invokeVoidMethod('preloadRewardedVideo'),
+      _invokeVoidMethod('preloadLevelPlayRewardedVideo'),
       _invokeVoidMethod('preloadMetaRewardedInterstitial'),
     ]);
     await _loadRewardedAd();
@@ -131,6 +153,7 @@ class RewardedAdService {
       case _RewardedNetwork.mobfox:
       case _RewardedNetwork.gravite:
       case _RewardedNetwork.appodeal:
+      case _RewardedNetwork.levelplay:
       case _RewardedNetwork.appnext:
       case _RewardedNetwork.meta:
       case _RewardedNetwork.startio:
@@ -237,6 +260,12 @@ class RewardedAdService {
           ? _RewardedNetwork.appodeal
           : null;
     }
+    if (preferredProvider == RewardedAdProvider.unity) {
+      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.levelplay);
+      return _isRewardedReady(_RewardedNetwork.levelplay)
+          ? _RewardedNetwork.levelplay
+          : null;
+    }
     if (preferredProvider == RewardedAdProvider.gravite) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
       return _isRewardedReady(_RewardedNetwork.gravite)
@@ -301,6 +330,10 @@ class RewardedAdService {
     _updateNativeAvailability(
       _RewardedNetwork.appodeal,
       await _channel.invokeMethod<bool>('isRewardedVideoLoaded') ?? false,
+    );
+    _updateNativeAvailability(
+      _RewardedNetwork.levelplay,
+      await _channel.invokeMethod<bool>('isLevelPlayRewardedVideoLoaded') ?? false,
     );
     _updateNativeAvailability(
       _RewardedNetwork.meta,
@@ -384,6 +417,26 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onRewardedVideoShowFailed':
+        _nativeStatusCallback?.call(adUnavailableMessage);
+        _completeNativeRewardedFlow(false, reloadNextAd: true);
+        break;
+      case 'onLevelPlayRewardedVideoLoaded':
+        _updateNativeAvailability(_RewardedNetwork.levelplay, true);
+        break;
+      case 'onLevelPlayRewardedVideoFailedToLoad':
+        _updateNativeAvailability(_RewardedNetwork.levelplay, false);
+        break;
+      case 'onLevelPlayRewardedVideoShown':
+        _markNativeAdShown(_RewardedNetwork.levelplay);
+        _updateNativeAvailability(_RewardedNetwork.levelplay, false);
+        break;
+      case 'onLevelPlayRewardedVideoFinished':
+        await _grantNativeReward();
+        break;
+      case 'onLevelPlayRewardedVideoClosed':
+        _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
+        break;
+      case 'onLevelPlayRewardedVideoShowFailed':
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -535,6 +588,9 @@ class RewardedAdService {
       case _RewardedNetwork.appodeal:
         await _invokeVoidMethod('preloadRewardedVideo');
         return;
+      case _RewardedNetwork.levelplay:
+        await _invokeVoidMethod('preloadLevelPlayRewardedVideo');
+        return;
       case _RewardedNetwork.appnext:
         await _invokeVoidMethod('preloadAppnextRewardedVideo');
         return;
@@ -572,6 +628,7 @@ class RewardedAdService {
       _RewardedNetwork.gravite => 'Gravite',
       _RewardedNetwork.admob => 'AdMob',
       _RewardedNetwork.appodeal => 'Appodeal',
+      _RewardedNetwork.levelplay => 'Unity',
       _RewardedNetwork.appnext => 'Appnext',
       _RewardedNetwork.meta => 'Meta',
       _RewardedNetwork.startio => 'Start.io',
@@ -583,6 +640,7 @@ class RewardedAdService {
       _RewardedNetwork.mobfox => 'showMobFoxRewardedVideo',
       _RewardedNetwork.gravite => 'showGraviteRewardedVideo',
       _RewardedNetwork.appodeal => 'showRewardedVideo',
+      _RewardedNetwork.levelplay => 'showLevelPlayRewardedVideo',
       _RewardedNetwork.appnext => 'showAppnextRewardedVideo',
       _RewardedNetwork.meta => 'showMetaRewardedInterstitial',
       _RewardedNetwork.startio => 'showStartioRewardedVideo',

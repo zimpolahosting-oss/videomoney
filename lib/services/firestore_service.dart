@@ -16,7 +16,7 @@ class FirestoreService {
   static const int rewardCoinsPerVideo = 1;
   static const int dailyBonusTargetVideos = 20;
   static const int dailyBonusViews = 500;
-  static const int minimumPayoutCoins = 5000;
+  static const int minimumPayoutCoins = 10000;
   static const int payoutProcessingDays = 30;
   static const int estimatedViewsPerCent = 50;
   static const int presenceHeartbeatSeconds = 30;
@@ -32,6 +32,7 @@ class FirestoreService {
   static const Set<String> allowedPayoutMethods = {
     'paypal',
     'revolut',
+    'bank',
     'btc',
     'usdc',
   };
@@ -103,19 +104,10 @@ class FirestoreService {
   }) {
     final rewardBalanceResetApplied =
         data[rewardBalanceResetAppliedField] as bool? ?? false;
-    final existingSettings = data['settings'] as Map<String, dynamic>? ?? const {};
     final updates = <String, dynamic>{
       'uid': uid,
       'email': email,
       'appVerified': true,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'settings': {
-        'notificationsEnabled':
-            existingSettings['notificationsEnabled'] as bool? ?? true,
-        'dailyReminderEnabled':
-            existingSettings['dailyReminderEnabled'] as bool? ?? true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
     };
 
     if (!rewardBalanceResetApplied) {
@@ -131,6 +123,13 @@ class FirestoreService {
     if (!data.containsKey('dailyBonusAwarded')) {
       updates['dailyBonusAwarded'] = false;
     }
+    if (!data.containsKey('settings')) {
+      updates['settings'] = {
+        'notificationsEnabled': true,
+        'dailyReminderEnabled': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+    }
     if (!data.containsKey('fcmTokens')) {
       updates['fcmTokens'] = <String>[];
     }
@@ -139,9 +138,6 @@ class FirestoreService {
     }
     if (!data.containsKey('leaderboardDisplayName')) {
       updates['leaderboardDisplayName'] = '';
-    }
-    if (!data.containsKey('isAdmin')) {
-      updates['isAdmin'] = false;
     }
 
     return updates;
@@ -183,7 +179,6 @@ class FirestoreService {
       'isAdmin': false,
       'appVerified': true,
       'fcmTokens': <String>[],
-      'updatedAt': FieldValue.serverTimestamp(),
       'settings': {
         'notificationsEnabled': true,
         'dailyReminderEnabled': true,
@@ -205,11 +200,45 @@ class FirestoreService {
     required String uid,
     required String email,
   }) async {
-    await _users.doc(uid).set({
-      'uid': uid,
-      'email': email,
-      'appVerified': true,
-    }, SetOptions(merge: true));
+    final normalizedUid = uid.trim();
+    if (normalizedUid.isEmpty) {
+      throw Exception('User not found.');
+    }
+
+    final docRef = _users.doc(normalizedUid);
+    final doc = await docRef.get();
+    final todayKey = formatLocalDateKey(DateTime.now());
+    final existingData = doc.data() ?? <String, dynamic>{};
+
+    final updates = doc.exists
+        ? buildExistingUserProfileUpdates(
+            data: existingData,
+            uid: normalizedUid,
+            email: email,
+            todayKey: todayKey,
+          )
+        : <String, dynamic>{
+            'uid': normalizedUid,
+            'email': email,
+            'leaderboardDisplayName': '',
+            'coins': 0,
+            'videosWatched': 0,
+            'dailyProgressDate': todayKey,
+            'dailyVideosWatched': 0,
+            'dailyBonusAwarded': false,
+            'isAdmin': false,
+            'appVerified': true,
+            'fcmTokens': <String>[],
+            'settings': {
+              'notificationsEnabled': true,
+              'dailyReminderEnabled': true,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            rewardBalanceResetAppliedField: true,
+            'createdAt': FieldValue.serverTimestamp(),
+          };
+
+    await docRef.set(updates, SetOptions(merge: true));
   }
 
   Stream<AppUser?> watchUser(String uid) {
@@ -604,10 +633,14 @@ class FirestoreService {
     });
   }
 
-  Stream<List<PayoutRequest>> watchAllPayoutRequests({String? status}) {
+  Stream<List<PayoutRequest>> watchAllPayoutRequests({
+    String? status,
+    int limit = 120,
+  }) {
     final trimmedStatus = status?.trim().toLowerCase() ?? '';
     return _payouts
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) {
       final payouts =
@@ -622,9 +655,6 @@ class FirestoreService {
   Future<void> updatePayoutStatus({
     required String payoutId,
     required String status,
-    double? manualPaidAmountValue,
-    String? manualPaidCurrency,
-    String? manualPaidNote,
   }) async {
     final normalized = status.trim().toLowerCase();
     if (normalized.isEmpty) return;
@@ -677,11 +707,6 @@ class FirestoreService {
             (payoutData['payoutCurrency'] as String? ?? 'EUR').toUpperCase();
         final coinsRequested =
             (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
-        final normalizedManualCurrency =
-            (manualPaidCurrency?.trim().isNotEmpty ?? false)
-                ? manualPaidCurrency!.trim().toUpperCase()
-                : payoutCurrency;
-        final normalizedManualNote = manualPaidNote?.trim() ?? '';
 
         String userCountry = '';
         if (userId.isNotEmpty) {
@@ -699,29 +724,15 @@ class FirestoreService {
           accountHolderName: accountHolderName,
           userEmail: userEmail,
         );
-        final amountLabel =
-            manualPaidAmountValue != null && manualPaidAmountValue > 0
-                ? _formatManualPaidAmountLabel(
-                    amount: manualPaidAmountValue,
-                    currencyCode: normalizedManualCurrency,
-                  )
-                : _formatPayoutAmountLabel(
-                    coinsRequested: coinsRequested,
-                    currencyCode: payoutCurrency,
-                  );
+        final amountLabel = _formatPayoutAmountLabel(
+          coinsRequested: coinsRequested,
+          currencyCode: payoutCurrency,
+        );
         final payoutMessage = _buildPayoutAnnouncementMessage(
           privacyName: privacyName,
           userCountry: userCountry,
           amountLabel: amountLabel,
         );
-        if (manualPaidAmountValue != null && manualPaidAmountValue > 0) {
-          updates['paidAmountValue'] = manualPaidAmountValue;
-          updates['paidAmountCurrency'] = normalizedManualCurrency;
-          updates['paidAmountLabel'] = amountLabel;
-        }
-        if (normalizedManualNote.isNotEmpty) {
-          updates['paidNote'] = normalizedManualNote;
-        }
 
         transaction.set(_payoutLiveNotifications.doc(), {
           'payoutId': payoutId,
@@ -749,19 +760,6 @@ class FirestoreService {
           'source': 'payout_paid',
           'sourcePayoutId': payoutId,
         });
-        if (userId.isNotEmpty) {
-          transaction.set(_inboxMessages.doc(), {
-            'userId': userId,
-            'title': 'Payout paid',
-            'message': normalizedManualNote.isEmpty
-                ? 'Your payout has been marked as paid. Amount: $amountLabel.'
-                : 'Your payout has been marked as paid. Amount: $amountLabel. Note: $normalizedManualNote',
-            'type': 'payment',
-            'read': false,
-            'payoutId': payoutId,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        }
       }
       if (normalized == 'rejected') {
         updates['rejectedAt'] = FieldValue.serverTimestamp();
@@ -869,9 +867,10 @@ class FirestoreService {
         );
   }
 
-  Stream<List<SupportTicket>> watchAllSupportTickets() {
+  Stream<List<SupportTicket>> watchAllSupportTickets({int limit = 120}) {
     return _supportTickets
         .orderBy('updatedAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
           (snapshot) =>
@@ -944,6 +943,14 @@ class FirestoreService {
       'status': normalizedStatus,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteSupportTicket(String ticketId) async {
+    final normalizedId = ticketId.trim();
+    if (normalizedId.isEmpty) {
+      throw Exception('Support ticket not found.');
+    }
+    await _supportTickets.doc(normalizedId).delete();
   }
 
   Future<void> updateUserSettings({
@@ -1025,6 +1032,50 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  Future<void> deleteUserAccountData(String uid) async {
+    final normalizedUid = uid.trim();
+    if (normalizedUid.isEmpty) {
+      throw Exception('Missing user id.');
+    }
+
+    final payoutDocs =
+        await _payouts.where('userId', isEqualTo: normalizedUid).get();
+    final supportDocs =
+        await _supportTickets.where('userId', isEqualTo: normalizedUid).get();
+    final inboxDocs =
+        await _inboxMessages.where('userId', isEqualTo: normalizedUid).get();
+    final payoutNotificationDocs = await _payoutLiveNotifications
+        .where('userId', isEqualTo: normalizedUid)
+        .get();
+    final targetedAdminNotificationDocs = await _adminNotifications
+        .where('targetUserId', isEqualTo: normalizedUid)
+        .get();
+
+    final batch = _firestore.batch();
+    batch.delete(_users.doc(normalizedUid));
+    batch.delete(_leaderboard.doc(normalizedUid));
+    batch.delete(_activeUsers.doc(normalizedUid));
+    batch.delete(_ratings.doc(normalizedUid));
+
+    for (final doc in payoutDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    for (final doc in supportDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    for (final doc in inboxDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    for (final doc in payoutNotificationDocs.docs) {
+      batch.delete(doc.reference);
+    }
+    for (final doc in targetedAdminNotificationDocs.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
+  }
+
   Future<void> submitRating({
     required String uid,
     required String email,
@@ -1053,15 +1104,23 @@ class FirestoreService {
     });
   }
 
-  Stream<List<AppRating>> watchAllRatings() {
-    return _ratings.orderBy('updatedAt', descending: true).snapshots().map(
+  Stream<List<AppRating>> watchAllRatings({int limit = 200}) {
+    return _ratings
+        .orderBy('updatedAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map(
           (snapshot) =>
               snapshot.docs.map(AppRating.fromDoc).toList(growable: false),
         );
   }
 
-  Stream<List<AppUser>> watchAllUsers() {
-    return _users.orderBy('createdAt', descending: true).snapshots().map(
+  Stream<List<AppUser>> watchAllUsers({int limit = 200}) {
+    return _users
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
               .map((doc) => AppUser.fromMap(doc.data()))
               .toList(growable: false),
@@ -1108,9 +1167,12 @@ class FirestoreService {
     });
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchAdminNotifications() {
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchAdminNotifications({
+    int limit = 120,
+  }) {
     return _adminNotifications
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots();
   }
 
@@ -1254,26 +1316,6 @@ class FirestoreService {
     };
 
     final amount = estimateEarningsEuro(coinsRequested);
-    final normalizedAmount = amount.toStringAsFixed(2);
-    final compactAmount = normalizedAmount.endsWith('.00')
-        ? normalizedAmount.substring(0, normalizedAmount.length - 3)
-        : normalizedAmount.endsWith('0')
-            ? normalizedAmount.substring(0, normalizedAmount.length - 1)
-            : normalizedAmount;
-    return '$symbol$compactAmount';
-  }
-
-  String _formatManualPaidAmountLabel({
-    required double amount,
-    required String currencyCode,
-  }) {
-    final symbol = switch (currencyCode.toUpperCase()) {
-      'GBP' => '£',
-      'USD' => r'$',
-      'BTC' => '₿',
-      'USDC' => 'USDC ',
-      _ => '€',
-    };
     final normalizedAmount = amount.toStringAsFixed(2);
     final compactAmount = normalizedAmount.endsWith('.00')
         ? normalizedAmount.substring(0, normalizedAmount.length - 3)

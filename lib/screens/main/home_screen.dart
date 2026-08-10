@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../models/players_are_gamers_profile.dart';
@@ -29,9 +28,16 @@ import 'players_are_gamers_webview_screen.dart';
 import 'shorts_ad_break_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.isActiveTab = true});
+  const HomeScreen({
+    super.key,
+    this.isActiveTab = true,
+    this.recoveryToken = 0,
+    this.compactMode = false,
+  });
 
   final bool isActiveTab;
+  final int recoveryToken;
+  final bool compactMode;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -226,9 +232,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActiveTab == widget.isActiveTab) return;
+    final becameActive = !oldWidget.isActiveTab && widget.isActiveTab;
+    final recoveryRequested =
+        widget.isActiveTab && oldWidget.recoveryToken != widget.recoveryToken;
+    if (!becameActive && !recoveryRequested) return;
     if (widget.isActiveTab) {
-      unawaited(_recoverVideoTabAfterExternalScreen());
+      unawaited(_earningsService.preloadRewardedVideo());
+      if (_playerSuspended) {
+        unawaited(_loadCurrentVideoIntoWebView(force: true));
+      } else {
+        unawaited(_restorePlaybackAfterAdBreak());
+      }
     } else {
       unawaited(_suspendPlayback(unloadPlayer: true));
     }
@@ -247,6 +261,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
+        if (widget.isActiveTab) {
+          unawaited(_earningsService.preloadRewardedVideo());
+        }
         if (_isShowingAdBreak) {
           unawaited(_pausePlayback());
         } else {
@@ -679,18 +696,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
 
       if (result.adBreakReached) {
-        await _firestoreService.applyUserProgress(
-          uid: user.uid,
-          viewsDelta: ShortsProgressService.adBreakViewsReward,
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.l10n.rewardConfirmedViewsAdded,
-            ),
-          ),
-        );
         await _presentAdBreakSheet();
       }
 
@@ -713,34 +718,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } finally {
       _isProcessingCompletedShort = false;
     }
-  }
-
-  Future<void> _recoverVideoTabAfterExternalScreen() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      var snapshot = await ShortsProgressService.instance.load(user.uid);
-      if (snapshot.pendingAdBreakShorts > 0 && snapshot.pendingAdBreakAttempted) {
-        snapshot = await ShortsProgressService.instance.consumePendingAdBreak(user.uid);
-      }
-      if (!mounted) return;
-      setState(() {
-        _syncProgressFromSnapshot(snapshot);
-        if (_feed.isNotEmpty) {
-          _currentIndex = _currentIndex.clamp(0, _feed.length - 1);
-        } else {
-          _currentIndex = 0;
-        }
-      });
-    }
-
-    if (_feed.isEmpty) return;
-    await _loadCurrentVideoIntoWebView(force: true);
-    if (!mounted) return;
-    unawaited(_earningsService.preloadRewardedVideo());
-    Future<void>.delayed(const Duration(milliseconds: 900), () {
-      if (!mounted) return;
-      unawaited(_resumePlaybackIfNeeded());
-    });
   }
 
   Future<void> _presentAdBreakSheet() async {
@@ -782,8 +759,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           provider: isAdmobBreak
                                   ? RewardedAdProvider.admob
                                   : isGraviteBreak
-                                      ? RewardedAdProvider.gravite
-                                      : RewardedAdProvider.appodeal,
+                                  ? RewardedAdProvider.gravite
+                                  : RewardedAdProvider.appodeal,
                           onAdStatus: (message) {
                             debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                           },
@@ -829,7 +806,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           adId:
               'vm-video-ad-${currentShortId}-${DateTime.now().millisecondsSinceEpoch}',
           pagCoins: 2,
-          videomoneyViews: 0,
+          videomoneyViews: ShortsProgressService.adBreakViewsReward,
           autoCreateIfMissing: true,
         );
       }
@@ -847,16 +824,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isRewardedTurn
-                  ? 'No rewarded views were added. Close the ad only after the reward is confirmed.'
-                  : 'No interstitial ad reward was confirmed for this turn.',
+              isAdmobBreak
+                  ? 'No AdMob or Monetag ad available for this turn.'
+                  : isAppodealBreak
+                  ? 'No Appodeal or Monetag ad available for this turn.'
+                  : isGraviteBreak
+                  ? 'No Gravite or Monetag ad available for this turn.'
+                  : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
         );
       } else {
-        debugPrint('[VideomoneyAds][Home] ad break completed.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ad reward confirmed.')),
+          SnackBar(
+            content: Text(
+              '+10 views added.',
+            ),
+          ),
         );
       }
     } finally {
@@ -893,23 +877,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _isRewardHandling = false;
   }
 
-  Future<void> _claimGiftBox() async {
-    if (_isRewardHandling || !_giftReady) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || !mounted) return;
-
-    _isRewardHandling = true;
-    final snapshot = await ShortsProgressService.instance.consumeRewardCycle(
-      user.uid,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _syncProgressFromSnapshot(snapshot);
-    });
-    _isRewardHandling = false;
-  }
-
   Future<void> _openFeaturedMatch(PagMatchmakingSignal signal) async {
     if (signal.gameUrl.trim().isEmpty) return;
     await _suspendPlayback(unloadPlayer: true);
@@ -922,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     if (!mounted || !widget.isActiveTab) return;
-    await _recoverVideoTabAfterExternalScreen();
+    await _loadCurrentVideoIntoWebView(force: true);
   }
 
   @override
@@ -969,9 +936,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .clamp(0, 1)
             .toDouble();
 
-        return Scaffold(
-          extendBody: true,
-          body: Stack(
+        final content = Stack(
             children: [
               Positioned.fill(
                 child: _ShortsPlayerBackdrop(
@@ -1057,107 +1022,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
+                  padding: EdgeInsets.fromLTRB(
+                    widget.compactMode ? 8 : 12,
+                    widget.compactMode ? 8 : 10,
+                    widget.compactMode ? 8 : 12,
+                    widget.compactMode ? 8 : 18,
+                  ),
                   child: Column(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: const Text(
-                              'VideoMoney',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 18,
+                      if (!widget.compactMode)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'VideoMoney',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              StreamBuilder<int>(
-                                stream: _onlineUsersCountStream,
-                                builder: (context, onlineSnapshot) {
-                                  return _OverlayChip(
-                                    child: Text(
-                                      l10n.usersOnline(
-                                        NumberFormat.decimalPattern().format(
-                                          onlineSnapshot.data ?? 0,
-                                        ),
+                            StreamBuilder<int>(
+                              stream: _onlineUsersCountStream,
+                              builder: (context, onlineSnapshot) {
+                                return _OverlayChip(
+                                  child: Text(
+                                    l10n.usersOnline(
+                                      NumberFormat.decimalPattern().format(
+                                        onlineSnapshot.data ?? 0,
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              StreamBuilder<int>(
-                                stream: _firestoreService.watchUnreadInboxCount(
-                                  user.uid,
-                                ),
-                                builder: (context, unreadSnapshot) {
-                                  final unread = unreadSnapshot.data ?? 0;
-                                  return Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          _CircleIconButton(
-                                            icon: Icons.mail_outline_rounded,
-                                            onPressed: () {
-                                              Navigator.of(context).pushNamed(AppRoutes.inbox);
-                                            },
-                                          ),
-                                          if (unread > 0)
-                                            Positioned(
-                                              top: -2,
-                                              right: -2,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 5,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.primary,
-                                                  borderRadius: BorderRadius.circular(999),
-                                                ),
-                                                child: Text(
-                                                  unread > 99 ? '99+' : '$unread',
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF04110A),
-                                                    fontWeight: FontWeight.w800,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _CircleIconButton(
-                                        icon: Icons.settings_outlined,
-                                        onPressed: () {
-                                          Navigator.of(context).pushNamed(AppRoutes.settings);
-                                        },
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       const Spacer(),
                       Align(
                         alignment: Alignment.bottomLeft,
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 62),
+                          padding: EdgeInsets.only(bottom: widget.compactMode ? 10 : 62),
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 270),
+                            constraints: BoxConstraints(
+                              maxWidth: widget.compactMode ? 220 : 270,
+                            ),
                             child: _OverlayCard(
-                              padding: const EdgeInsets.all(10),
+                              padding: EdgeInsets.all(widget.compactMode ? 8 : 10),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1179,39 +1092,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                             const SizedBox(height: 2),
                                             AnimatedIntText(
                                               value: currentViews,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color: Colors.white,
-                                                fontSize: 22,
+                                                fontSize: widget.compactMode ? 18 : 22,
                                                 fontWeight: FontWeight.w900,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      StreamBuilder<PagMatchmakingSignal?>(
-                                        stream: _pagMatchmakingService.watchFeaturedSignal(
-                                          excludeUid: user.uid,
+                                      if (!widget.compactMode)
+                                        StreamBuilder<PagMatchmakingSignal?>(
+                                          stream: _pagMatchmakingService.watchFeaturedSignal(
+                                            excludeUid: user.uid,
+                                          ),
+                                          builder: (context, matchmakingSnapshot) {
+                                            final signal = matchmakingSnapshot.data;
+                                            if (signal == null) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return Flexible(
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 2,
+                                                  left: 8,
+                                                  right: 8,
+                                                ),
+                                                child: _MatchmakingPromptCard(
+                                                  gameName: signal.gameName,
+                                                  onTap: () => _openFeaturedMatch(signal),
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         ),
-                                        builder: (context, matchmakingSnapshot) {
-                                          final signal = matchmakingSnapshot.data;
-                                          if (signal == null) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          return Flexible(
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 2,
-                                                left: 8,
-                                                right: 8,
-                                              ),
-                                              child: _MatchmakingPromptCard(
-                                                gameName: signal.gameName,
-                                                onTap: () => _openFeaturedMatch(signal),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
@@ -1228,7 +1142,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                               ),
                                             ),
                                             child: Text(
-                                              _feed[_currentIndex].category,
+                                              widget.compactMode
+                                                  ? 'Video'
+                                                  : _feed[_currentIndex].category,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.w700,
@@ -1262,10 +1178,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     value: payoutProgress,
                                     color: AppTheme.primary,
                                   ),
-                                  const SizedBox(height: 8),
-                                  _PlayersAreGamersProgressLine(
-                                    stream: _playersAreGamersService.watchProfile(),
-                                  ),
+                                  if (!widget.compactMode) ...[
+                                    const SizedBox(height: 8),
+                                    _PlayersAreGamersProgressLine(
+                                      stream: _playersAreGamersService.watchProfile(),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -1277,8 +1195,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ],
-          ),
-        );
+          );
+        return widget.compactMode
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppTheme.outline.withOpacity(0.45)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: content,
+                ),
+              )
+            : Scaffold(
+                extendBody: true,
+                body: content,
+              );
       },
     );
   }
