@@ -10,7 +10,6 @@ import '../../models/players_are_gamers_profile.dart';
 import '../../services/pag_matchmaking_service.dart';
 import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
-import 'home_screen.dart';
 import 'players_are_gamers_webview_screen.dart';
 
 class GamesScreen extends StatefulWidget {
@@ -418,7 +417,6 @@ class _GamesScreenState extends State<GamesScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = _GamesCopy.of(context);
-    final layoutCopy = _GamesLayoutCopy.of(context);
 
     return StreamBuilder<PlayersAreGamersProfile?>(
       stream: _service.watchProfile(),
@@ -444,126 +442,10 @@ class _GamesScreenState extends State<GamesScreen> {
                   ),
                 ),
                 child: SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final showSplitScreen =
-                          _splitScreenEnabled &&
-                          profile != null &&
-                          profile.linked;
-                      final gamesContent = _buildGamesScrollBody(
-                        copy: copy,
-                        layoutCopy: layoutCopy,
-                        profile: profile,
-                        onlineCount: onlineCount,
-                      );
-
-                      if (!showSplitScreen) {
-                        return gamesContent;
-                      }
-
-                      final splitGame = _splitScreenSelectedGame;
-                      final topPanelContent = splitGame == null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(28),
-                              child: gamesContent,
-                            )
-                          : PlayersAreGamersWebViewScreen(
-                              service: _service,
-                              initialUrl: splitGame.targetUrl,
-                              landscapeOnly: splitGame.landscapeOnly,
-                              embeddedMode: true,
-                            );
-
-                      final topFlex = (_splitScreenRatio * 1000).round();
-                      final bottomFlex = ((1 - _splitScreenRatio) * 1000).round();
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              flex: topFlex,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _SplitPanelHeader(
-                                    title: splitGame?.name ?? layoutCopy.gamesPanelTitle,
-                                    body: splitGame == null
-                                        ? layoutCopy.gamesPanelBody
-                                        : layoutCopy.gamesPanelBody,
-                                    onClose: splitGame == null
-                                        ? _toggleSplitScreen
-                                        : _clearSplitScreenGame,
-                                    closeIcon: splitGame == null
-                                        ? Icons.close_rounded
-                                        : Icons.arrow_back_rounded,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Expanded(
-                                    child: topPanelContent,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onVerticalDragUpdate: (details) {
-                                final nextRatio =
-                                    _splitScreenRatio +
-                                    (details.delta.dy / constraints.maxHeight);
-                                setState(() {
-                                  _splitScreenRatio = nextRatio.clamp(0.28, 0.72);
-                                });
-                              },
-                              onVerticalDragEnd: (_) {
-                                unawaited(_setSplitScreenRatio(_splitScreenRatio));
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 72,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(999),
-                                        color: const Color(0x661AE47A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      layoutCopy.dragHint,
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Colors.white.withOpacity(0.72),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: bottomFlex,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _SplitPanelHeader(
-                                    title: layoutCopy.splitPanelTitle,
-                                    body: layoutCopy.splitPanelBody,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Expanded(
-                                    child: HomeScreen(
-                                      isActiveTab: true,
-                                      compactMode: true,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  child: _buildGamesScrollBody(
+                    copy: copy,
+                    profile: profile,
+                    onlineCount: onlineCount,
                   ),
                 ),
               ),
@@ -576,7 +458,6 @@ class _GamesScreenState extends State<GamesScreen> {
 
   Widget _buildGamesScrollBody({
     required _GamesCopy copy,
-    required _GamesLayoutCopy layoutCopy,
     required PlayersAreGamersProfile? profile,
     required int onlineCount,
   }) {
@@ -587,8 +468,6 @@ class _GamesScreenState extends State<GamesScreen> {
         children: [
           _buildHero(copy),
           const SizedBox(height: 18),
-          _buildSplitScreenCard(layoutCopy),
-          const SizedBox(height: 16),
           if (_error != null) ...[
             _StatusCard(
               title: copy.syncIssue,

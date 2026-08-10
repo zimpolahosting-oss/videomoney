@@ -205,12 +205,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 12),
                 _IntroRow(
-                  icon: Icons.splitscreen_rounded,
-                  title: copy.splitTitle,
-                  message: copy.splitBody,
-                ),
-                const SizedBox(height: 12),
-                _IntroRow(
                   icon: Icons.visibility_outlined,
                   title: copy.rulesTitle,
                   message: copy.rulesBody,
