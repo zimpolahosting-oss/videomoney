@@ -83,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _playerReady = false;
   bool _isLoadingFeed = true;
   bool _isShowingAdBreak = false;
+  bool _showInlineAdBreak = false;
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   bool _resumeAfterOverlay = false;
@@ -91,6 +92,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? _feedError;
   int? _sessionStartIndex;
   final Random _random = Random();
+  String? _inlineAdProviderName;
+  Future<void> Function()? _inlineAdPrepare;
+  Future<bool> Function(BuildContext context)? _inlineAdStart;
+  Completer<bool>? _inlineAdBreakCompleter;
 
   @override
   void initState() {
@@ -669,6 +674,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   }
 
+  Future<bool> _showInlineAdBreakWidget({
+    required String providerName,
+    required Future<void> Function() onPrepare,
+    required Future<bool> Function(BuildContext context) onStartAd,
+  }) async {
+    final existing = _inlineAdBreakCompleter;
+    if (existing != null && !existing.isCompleted) {
+      return existing.future;
+    }
+    final completer = Completer<bool>();
+    if (mounted) {
+      setState(() {
+        _showInlineAdBreak = true;
+        _inlineAdProviderName = providerName;
+        _inlineAdPrepare = onPrepare;
+        _inlineAdStart = onStartAd;
+        _inlineAdBreakCompleter = completer;
+      });
+    }
+    final result = await completer.future;
+    if (mounted) {
+      setState(() {
+        _showInlineAdBreak = false;
+        _inlineAdProviderName = null;
+        _inlineAdPrepare = null;
+        _inlineAdStart = null;
+        _inlineAdBreakCompleter = null;
+      });
+    }
+    return result;
+  }
+
   Future<void> _handleCompletedShort() async {
     if (_isProcessingCompletedShort) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -745,57 +782,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isGraviteBreak;
       final shouldFallbackToMonetag =
           isAdmobBreak || isAppodealBreak || isGraviteBreak;
-      final completed =
-          await Navigator.of(context).push<bool>(
-            MaterialPageRoute<bool>(
-              fullscreenDialog: false,
-              builder: (pageContext) => ShortsAdBreakScreen(
-                providerName: _providerLabelForAdBreak(pendingProvider),
-                onPrepare: _pausePlayback,
-                onStartAd: (_) async {
-                  if (isRewardedTurn) {
-                    var rewardedCompleted =
-                        await _earningsService.showRewardedBonusAd(
-                          provider: isAdmobBreak
-                                  ? RewardedAdProvider.admob
-                                  : isGraviteBreak
-                                  ? RewardedAdProvider.gravite
-                                  : RewardedAdProvider.appodeal,
-                          onAdStatus: (message) {
-                            debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
-                          },
-                        );
-                    if (!rewardedCompleted && shouldFallbackToMonetag) {
-                      rewardedCompleted = await _videomoneyAdSdk.showInterstitial(
-                        context: pageContext,
-                        callbacks: VideomoneyAdCallbacks(
-                          onFailed: (provider, reason) {
-                            debugPrint(
-                              '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
-                              '$reason',
-                            );
-                          },
-                        ),
-                      );
-                    }
-                    return rewardedCompleted;
-                  }
-                  return _videomoneyAdSdk.showInterstitial(
-                    context: pageContext,
-                    callbacks: VideomoneyAdCallbacks(
-                      onFailed: (provider, reason) {
-                        debugPrint(
-                          '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
-                          '$reason',
-                        );
-                      },
-                    ),
+      final adProviderName = _providerLabelForAdBreak(pendingProvider);
+      final adStartHandler = (BuildContext pageContext) async {
+        if (isRewardedTurn) {
+          var rewardedCompleted =
+              await _earningsService.showRewardedBonusAd(
+                provider: isAdmobBreak
+                        ? RewardedAdProvider.admob
+                        : isGraviteBreak
+                        ? RewardedAdProvider.gravite
+                        : RewardedAdProvider.appodeal,
+                onAdStatus: (message) {
+                  debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+                },
+              );
+          if (!rewardedCompleted && shouldFallbackToMonetag) {
+            rewardedCompleted = await _videomoneyAdSdk.showInterstitial(
+              context: pageContext,
+              callbacks: VideomoneyAdCallbacks(
+                onFailed: (provider, reason) {
+                  debugPrint(
+                    '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
+                    '$reason',
                   );
                 },
               ),
-            ),
-          ) ??
-          false;
+            );
+          }
+          return rewardedCompleted;
+        }
+        return _videomoneyAdSdk.showInterstitial(
+          context: pageContext,
+          callbacks: VideomoneyAdCallbacks(
+            onFailed: (provider, reason) {
+              debugPrint(
+                '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
+                '$reason',
+              );
+            },
+          ),
+        );
+      };
+      final completed =
+          widget.compactMode
+              ? await _showInlineAdBreakWidget(
+                  providerName: adProviderName,
+                  onPrepare: _pausePlayback,
+                  onStartAd: adStartHandler,
+                )
+              : await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      fullscreenDialog: false,
+                      builder: (pageContext) => ShortsAdBreakScreen(
+                        providerName: adProviderName,
+                        onPrepare: _pausePlayback,
+                        onStartAd: adStartHandler,
+                      ),
+                    ),
+                  ) ??
+                  false;
       PlayersAreGamersAdRewardResult? rewardResult;
       if (completed) {
         final currentShortId =
@@ -1017,6 +1062,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
+                    ),
+                  ),
+                ),
+              if (widget.compactMode &&
+                  _showInlineAdBreak &&
+                  _inlineAdProviderName != null &&
+                  _inlineAdPrepare != null &&
+                  _inlineAdStart != null)
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ShortsAdBreakScreen(
+                      providerName: _inlineAdProviderName!,
+                      onPrepare: _inlineAdPrepare!,
+                      onStartAd: _inlineAdStart!,
+                      embeddedMode: true,
+                      onCompleted: (completed) {
+                        final completer = _inlineAdBreakCompleter;
+                        if (completer != null && !completer.isCompleted) {
+                          completer.complete(completed);
+                        }
+                      },
                     ),
                   ),
                 ),

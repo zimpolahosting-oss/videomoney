@@ -457,10 +457,9 @@ class _GamesScreenState extends State<GamesScreen> {
                                   ),
                                   const SizedBox(height: 10),
                                   Expanded(
-                                    child: PlayersAreGamersWebViewScreen(
-                                      service: _service,
-                                      initialUrl: PlayersAreGamersService.dashboardUrl,
-                                      embeddedMode: true,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(28),
+                                      child: gamesContent,
                                     ),
                                   ),
                                 ],

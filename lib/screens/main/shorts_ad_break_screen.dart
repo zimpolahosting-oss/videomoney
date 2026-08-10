@@ -10,6 +10,8 @@ class ShortsAdBreakScreen extends StatefulWidget {
     required this.onStartAd,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
+    this.embeddedMode = false,
+    this.onCompleted,
   });
 
   final String providerName;
@@ -17,6 +19,8 @@ class ShortsAdBreakScreen extends StatefulWidget {
   final Future<bool> Function(BuildContext context) onStartAd;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
+  final bool embeddedMode;
+  final ValueChanged<bool>? onCompleted;
 
   @override
   State<ShortsAdBreakScreen> createState() => _ShortsAdBreakScreenState();
@@ -77,12 +81,91 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     }
     if (!mounted) return;
     _allowClose = true;
-    Navigator.of(context).pop(completed);
+    if (widget.embeddedMode) {
+      widget.onCompleted?.call(completed);
+    } else {
+      Navigator.of(context).pop(completed);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final card = Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF11161B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.ondemand_video_rounded,
+            size: 46,
+            color: Colors.white,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Ad break',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _didAttemptAd
+                ? _statusText
+                : 'Ad starts in ${_secondsUntilAd.clamp(0, widget.adStartDelay.inSeconds)}s',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white70,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          LinearProgressIndicator(
+            value: _didAttemptAd
+                ? null
+                : (DateTime.now().difference(_openedAt).inMilliseconds /
+                        widget.adStartDelay.inMilliseconds)
+                    .clamp(0, 1),
+            minHeight: 8,
+            backgroundColor: Colors.white12,
+            color: const Color(0xFF5BD0A5),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Current playback is paused before the ad starts. When the ad is finished, this page closes automatically and the app continues.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white60,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (_isStartingAd) ...[
+            const SizedBox(height: 18),
+            const CircularProgressIndicator(color: Color(0xFF5BD0A5)),
+          ],
+        ],
+      ),
+    );
+
+    if (widget.embeddedMode) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xD9030806),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Center(child: card),
+        ),
+      );
+    }
+
     return WillPopScope(
       onWillPop: () async => _allowClose,
       child: Scaffold(
@@ -94,67 +177,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF11161B),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.ondemand_video_rounded,
-                        size: 46,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Ad break',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _didAttemptAd
-                            ? _statusText
-                            : 'Ad starts in ${_secondsUntilAd.clamp(0, widget.adStartDelay.inSeconds)}s',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white70,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      LinearProgressIndicator(
-                        value: _didAttemptAd
-                            ? null
-                            : (DateTime.now().difference(_openedAt).inMilliseconds /
-                                    widget.adStartDelay.inMilliseconds)
-                                .clamp(0, 1),
-                        minHeight: 8,
-                        backgroundColor: Colors.white12,
-                        color: const Color(0xFF5BD0A5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Current playback is paused before the ad starts. When the ad is finished, this page closes automatically and the app continues.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white60,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (_isStartingAd) ...[
-                        const SizedBox(height: 18),
-                        const CircularProgressIndicator(color: Color(0xFF5BD0A5)),
-                      ],
-                    ],
-                  ),
-                ),
+                card,
                 const Spacer(),
               ],
             ),
