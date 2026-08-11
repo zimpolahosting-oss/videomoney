@@ -26,16 +26,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _firestoreService = FirestoreService();
   final _notificationTitleController = TextEditingController();
   final _notificationMessageController = TextEditingController();
+  final _notificationUserSearchController = TextEditingController();
   _AdminFilter _filter = _AdminFilter.pending;
   _NotificationAudience _notificationAudience = _NotificationAudience.all;
   String _selectedNotificationType = 'announcement';
   String? _selectedNotificationUserId;
+  String _notificationUserSearchQuery = '';
   bool _isSendingNotification = false;
 
   @override
   void dispose() {
     _notificationTitleController.dispose();
     _notificationMessageController.dispose();
+    _notificationUserSearchController.dispose();
     super.dispose();
   }
 
@@ -412,7 +415,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _notificationAudience = _NotificationAudience.all;
         _selectedNotificationUserId = null;
         _selectedNotificationType = 'announcement';
+        _notificationUserSearchQuery = '';
       });
+      _notificationUserSearchController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Notification queued for push and inbox delivery.'),
@@ -749,7 +754,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
                 selected: {_notificationAudience},
                 onSelectionChanged: (value) {
-                  setState(() => _notificationAudience = value.first);
+                  setState(() {
+                    _notificationAudience = value.first;
+                    if (_notificationAudience == _NotificationAudience.all) {
+                      _selectedNotificationUserId = null;
+                      _notificationUserSearchQuery = '';
+                    }
+                  });
+                  if (value.first == _NotificationAudience.all) {
+                    _notificationUserSearchController.clear();
+                  }
                 },
               ),
               const SizedBox(height: 14),
@@ -781,15 +795,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               if (_notificationAudience == _NotificationAudience.user) ...[
                 const SizedBox(height: 14),
+                TextField(
+                  controller: _notificationUserSearchController,
+                  onChanged: (value) {
+                    setState(() => _notificationUserSearchQuery = value);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Search user by email',
+                    hintText: 'name@example.com',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 StreamBuilder<List<AppUser>>(
                   stream: _firestoreService.watchAllUsers(),
                   builder: (context, snapshot) {
                     final users = snapshot.data ?? const <AppUser>[];
+                    final query = _notificationUserSearchQuery.trim().toLowerCase();
+                    final filteredUsers = query.isEmpty
+                        ? users
+                        : users.where((user) {
+                            final email = user.email.toLowerCase();
+                            final uid = user.uid.toLowerCase();
+                            return email.contains(query) || uid.contains(query);
+                          }).toList(growable: false);
                     return DropdownButtonFormField<String>(
-                      value: users.any((user) => user.uid == _selectedNotificationUserId)
+                      value: filteredUsers.any(
+                              (user) => user.uid == _selectedNotificationUserId)
                           ? _selectedNotificationUserId
                           : null,
-                      items: users
+                      items: filteredUsers
                           .map(
                             (user) => DropdownMenuItem<String>(
                               value: user.uid,

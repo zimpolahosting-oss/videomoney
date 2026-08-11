@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/crypto_payout_text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
@@ -122,6 +123,8 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final bitcoinTitle = CryptoPayoutText.bitcoinTitle(context);
+    final usdcPolygonTitle = CryptoPayoutText.usdcPolygonTitle(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.requestPayoutTitle)),
       body: SingleChildScrollView(
@@ -184,26 +187,26 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SegmentedButton<_PayoutMethod>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: _PayoutMethod.paypal,
-                      icon: Icon(Icons.payments_outlined),
-                      label: Text('PayPal'),
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('PayPal'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.revolut,
-                      icon: Icon(Icons.account_balance_wallet_outlined),
-                      label: Text('Revolut'),
+                      icon: const Icon(Icons.account_balance_wallet_outlined),
+                      label: const Text('Revolut'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.btc,
-                      icon: Icon(Icons.currency_bitcoin_rounded),
-                      label: Text('BTC'),
+                      icon: const Icon(Icons.currency_bitcoin_rounded),
+                      label: Text(bitcoinTitle),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.usdc,
-                      icon: Icon(Icons.token_rounded),
-                      label: Text('USDC'),
+                      icon: const Icon(Icons.token_rounded),
+                      label: Text(usdcPolygonTitle),
                     ),
                   ],
                   selected: {_method},
@@ -360,18 +363,18 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                   controller: _cryptoAddressController,
                   decoration: InputDecoration(
                     labelText: _method == _PayoutMethod.btc
-                        ? 'BTC wallet address'
-                        : 'USDC wallet address',
+                        ? CryptoPayoutText.bitcoinAddressLabel(context)
+                        : CryptoPayoutText.usdcPolygonAddressLabel(context),
                     helperText: _method == _PayoutMethod.btc
-                        ? 'Paste your Bitcoin address'
-                        : 'Paste your USDC wallet address',
+                        ? CryptoPayoutText.pasteBitcoinAddress(context)
+                        : CryptoPayoutText.pasteUsdcPolygonAddress(context),
                   ),
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
                       return _method == _PayoutMethod.btc
-                          ? 'Enter your BTC address'
-                          : 'Enter your USDC address';
+                          ? CryptoPayoutText.enterBitcoinAddress(context)
+                          : CryptoPayoutText.enterUsdcPolygonAddress(context);
                     }
                     return null;
                   },

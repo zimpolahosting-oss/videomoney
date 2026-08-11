@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/crypto_payout_text.dart';
 import '../../models/app_user.dart';
 import '../../models/leaderboard_entry.dart';
 import '../../models/payout_request.dart';
@@ -190,8 +191,8 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.currency_bitcoin_rounded,
-              title: 'Bitcoin',
-              subtitle: 'Payout to your BTC wallet address',
+              title: CryptoPayoutText.bitcoinTitle(context),
+              subtitle: CryptoPayoutText.bitcoinSubtitle(context),
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -202,8 +203,8 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.token_rounded,
-              title: 'USDC',
-              subtitle: 'Payout to your USDC wallet address',
+              title: CryptoPayoutText.usdcPolygonTitle(context),
+              subtitle: CryptoPayoutText.usdcPolygonSubtitle(context),
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,

@@ -581,7 +581,11 @@ class FirestoreService {
       }
       if ((trimmedMethod == 'btc' || trimmedMethod == 'usdc') &&
           trimmedCryptoAddress.isEmpty) {
-        throw Exception('Enter your crypto wallet address.');
+        throw Exception(
+          trimmedMethod == 'btc'
+              ? 'Enter your BTC wallet address.'
+              : 'Enter your USDC Polygon wallet address.',
+        );
       }
       if (currentCoins < coinsRequested) {
         throw Exception('Not enough views available.');
@@ -679,6 +683,10 @@ class FirestoreService {
 
       final currentStatus =
           (payoutData['status'] as String? ?? 'pending').trim().toLowerCase();
+      final payoutMethod =
+          (payoutData['payoutMethod'] as String? ?? '').trim().toLowerCase();
+      final cryptoAddress =
+          (payoutData['cryptoAddress'] as String? ?? '').trim();
       if (currentStatus == normalized) {
         return;
       }
@@ -691,6 +699,16 @@ class FirestoreService {
       if (!isValidTransition) {
         throw Exception(
           'Invalid payout transition: ${currentStatus.toUpperCase()} → ${normalized.toUpperCase()}',
+        );
+      }
+
+      if ((normalized == 'approved' || normalized == 'paid') &&
+          (payoutMethod == 'btc' || payoutMethod == 'usdc') &&
+          cryptoAddress.isEmpty) {
+        throw Exception(
+          payoutMethod == 'btc'
+              ? 'BTC payout requests require a wallet address before approval.'
+              : 'USDC Polygon payout requests require a wallet address before approval.',
         );
       }
 
