@@ -57,10 +57,77 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return DateFormat.yMMMd().add_jm().format(dateTime);
   }
 
+<<<<<<< ours
   double? _parseManualAmount(String rawValue) {
     final normalized = rawValue.trim().replaceAll(',', '.');
     if (normalized.isEmpty) return null;
     return double.tryParse(normalized);
+=======
+  Future<void> _copyText(String label, String value) async {
+    final trimmedValue = value.trim();
+    if (trimmedValue.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No $label available to copy.')),
+      );
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: trimmedValue));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$label copied.')));
+  }
+
+  List<({String label, String value})> _buildPayoutCopyActions(
+    PayoutRequest payout,
+  ) {
+    final actions = <({String label, String value})>[];
+
+    if (payout.userEmail.trim().isNotEmpty) {
+      actions.add((label: 'Email', value: payout.userEmail));
+    }
+    if (payout.userId.trim().isNotEmpty) {
+      actions.add((label: 'UID', value: payout.userId));
+    }
+
+    switch (payout.payoutMethod) {
+      case 'paypal':
+        if (payout.payPalEmail.trim().isNotEmpty) {
+          actions.add((label: 'PayPal', value: payout.payPalEmail));
+        }
+        break;
+      case 'revolut':
+        final revolutValue = payout.revolutUsername.trim().isNotEmpty
+            ? payout.revolutUsername
+            : payout.ibanOrBankAccount;
+        if (revolutValue.trim().isNotEmpty) {
+          actions.add((label: 'Revolut', value: revolutValue));
+        }
+        break;
+      case 'btc':
+        if (payout.cryptoAddress.trim().isNotEmpty) {
+          actions.add((label: 'BTC', value: payout.cryptoAddress));
+        }
+        break;
+      case 'usdc':
+        if (payout.cryptoAddress.trim().isNotEmpty) {
+          actions.add((label: 'USDC', value: payout.cryptoAddress));
+        }
+        break;
+      case 'bank':
+        if (payout.iban.trim().isNotEmpty) {
+          actions.add((label: 'IBAN', value: payout.iban));
+        }
+        if (payout.bankAccountNumber.trim().isNotEmpty) {
+          actions.add((label: 'Account', value: payout.bankAccountNumber));
+        }
+        break;
+    }
+
+    return actions;
+>>>>>>> theirs
   }
 
   Future<void> _setStatus(PayoutRequest payout, String status) async {
@@ -411,6 +478,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) return;
       _notificationTitleController.clear();
       _notificationMessageController.clear();
+      _notificationUserSearchController.clear();
       setState(() {
         _notificationAudience = _NotificationAudience.all;
         _selectedNotificationUserId = null;
@@ -512,6 +580,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 final statusLower = payout.status.toLowerCase();
                 final canApprove = statusLower == 'pending';
                 final canMarkPaid = statusLower == 'approved';
+                final copyActions = _buildPayoutCopyActions(payout);
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -560,6 +629,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         payout.destinationSummary,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      if (copyActions.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: copyActions
+                              .map(
+                                (action) => OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _copyText(action.label, action.value),
+                                  icon: const Icon(Icons.copy_rounded, size: 16),
+                                  label: Text(action.label),
+                                ),
+                              )
+                              .toList(growable: false),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
                         'Account holder: ${payout.accountHolderName.isEmpty ? 'Not provided' : payout.accountHolderName}',
@@ -798,6 +884,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 TextField(
                   controller: _notificationUserSearchController,
                   onChanged: (value) {
+<<<<<<< ours
                     setState(() => _notificationUserSearchQuery = value);
                   },
                   decoration: const InputDecoration(
@@ -841,7 +928,64 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       decoration: const InputDecoration(labelText: 'User'),
                     );
                   },
+=======
+                    setState(() {
+                      _notificationUserSearchQuery = value;
+                      _selectedNotificationUserId = null;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Search user by email',
+                    hintText: 'name@example.com',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+>>>>>>> theirs
                 ),
+                const SizedBox(height: 10),
+                if (_notificationUserSearchQuery.trim().isEmpty)
+                  const Text('Type the user email above to search.')
+                else
+                  StreamBuilder<List<AppUser>>(
+                    stream: _firestoreService.searchUsersByEmailPrefix(
+                      _notificationUserSearchQuery,
+                    ),
+                    builder: (context, snapshot) {
+                      final foundUsers = snapshot.data ?? const <AppUser>[];
+                      return DropdownButtonFormField<String>(
+                        value: foundUsers.any(
+                                (user) => user.uid == _selectedNotificationUserId)
+                            ? _selectedNotificationUserId
+                            : null,
+                        items: foundUsers
+                            .map(
+                              (user) => DropdownMenuItem<String>(
+                                value: user.uid,
+                                child: Text(
+                                  user.email.isEmpty ? user.uid : user.email,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: foundUsers.isEmpty
+                            ? null
+                            : (value) {
+                                setState(
+                                  () => _selectedNotificationUserId = value,
+                                );
+                              },
+                        decoration: InputDecoration(
+                          labelText: 'User',
+                          helperText: snapshot.connectionState ==
+                                  ConnectionState.waiting
+                              ? 'Searching users...'
+                              : foundUsers.isEmpty
+                                  ? 'No users found for this email search.'
+                                  : '${foundUsers.length} user(s) found',
+                        ),
+                      );
+                    },
+                  ),
               ],
               const SizedBox(height: 14),
               TextField(

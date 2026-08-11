@@ -1175,6 +1175,29 @@ class FirestoreService {
         );
   }
 
+  Stream<List<AppUser>> searchUsersByEmailPrefix(
+    String query, {
+    int limit = 25,
+  }) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return Stream<List<AppUser>>.value(const <AppUser>[]);
+    }
+
+    return _users
+        .orderBy('email')
+        .startAt([normalizedQuery])
+        .endAt(['$normalizedQuery\uf8ff'])
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AppUser.fromMap(doc.data()))
+              .where((user) => user.email.trim().isNotEmpty)
+              .toList(growable: false),
+        );
+  }
+
   Future<void> createAdminNotification({
     required String createdByUid,
     required String createdByEmail,
