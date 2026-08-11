@@ -713,21 +713,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFFF7B7B),
                       ),
-<<<<<<< ours
-                      const SizedBox(width: 10),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF7B7B),
-                        ),
-                        onPressed: () => _deleteTicket(ticket),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-=======
                       onPressed: () => _deleteTicket(ticket),
                       child: const Text('Delete'),
                     ),
->>>>>>> theirs
                   ),
                 ],
               ),
