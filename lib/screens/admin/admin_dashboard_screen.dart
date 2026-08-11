@@ -123,6 +123,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return actions;
   }
 
+<<<<<<< ours
+=======
+  double? _parseManualAmount(String rawValue) {
+    final normalized = rawValue.trim().replaceAll(',', '.');
+    if (normalized.isEmpty) return null;
+    return double.tryParse(normalized);
+  }
+
+>>>>>>> theirs
   Future<void> _setStatus(PayoutRequest payout, String status) async {
     try {
       await _firestoreService.updatePayoutStatus(
@@ -136,6 +145,79 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             status == 'paid'
                 ? 'Marked payout as manually paid.'
                 : 'Updated payout to ${status.toUpperCase()}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Future<void> _openManualPaidDialog(PayoutRequest payout) async {
+    final amountController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Manual payment amount'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: amountController,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Amount (${payout.normalizedCurrency})',
+                helperText: 'Enter the real paid amount',
+              ),
+              validator: (value) {
+                final amount = _parseManualAmount(value ?? '');
+                if (amount == null) return 'Enter an amount';
+                if (amount <= 0) return 'Enter a valid positive amount';
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    final amount = _parseManualAmount(amountController.text);
+    if (amount == null || amount <= 0) return;
+
+    try {
+      await _firestoreService.updatePayoutStatus(
+        payoutId: payout.id,
+        status: 'paid',
+        manualPaidAmountValue: amount,
+        manualPaidAmountCurrency: payout.normalizedCurrency,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Marked payout as manually paid: ${payout.normalizedCurrency} ${amount.toStringAsFixed(2)}',
           ),
         ),
       );
