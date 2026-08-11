@@ -515,9 +515,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
-                              style: Theme.of(context).textTheme.titleMedium,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (payout.requestedAmountLabel.trim().isNotEmpty)
+                                  Text(
+                                    payout.requestedAmountLabel,
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                Text(
+                                  '${NumberFormat.decimalPattern().format(payout.viewsRequested)} views',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
                             ),
                           ),
                           _StatusBadge(status: payout.status),
@@ -596,7 +606,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ] else if (canMarkPaid)
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: () => _setStatus(payout, 'paid'),
+                                  onPressed: () => _openManualPaidDialog(payout),
                                   child: const Text('Mark Manual Paid'),
                                 ),
                               ),
@@ -677,25 +687,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () =>
-                              _openTicketReplyDialog(context, ticket, adminUser),
-                          child: const Text('Reply'),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () =>
+                          _openTicketReplyDialog(context, ticket, adminUser),
+                      child: const Text('Reply'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _firestoreService.updateSupportTicketStatus(
+                        ticketId: ticket.id,
+                        status: 'closed',
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _firestoreService.updateSupportTicketStatus(
-                            ticketId: ticket.id,
-                            status: 'closed',
-                          ),
-                          child: const Text('Close'),
-                        ),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF7B7B),
                       ),
+<<<<<<< ours
                       const SizedBox(width: 10),
                       OutlinedButton(
                         style: OutlinedButton.styleFrom(
@@ -705,6 +723,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         child: const Text('Delete'),
                       ),
                     ],
+=======
+                      onPressed: () => _deleteTicket(ticket),
+                      child: const Text('Delete'),
+                    ),
+>>>>>>> theirs
                   ),
                 ],
               ),
