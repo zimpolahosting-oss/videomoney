@@ -18,6 +18,12 @@ class PayoutRequest {
     required this.iban,
     required this.bankAccountNumber,
     required this.cryptoAddress,
+    required this.requestedAmountLabel,
+    required this.paidAmountValue,
+    required this.paidAmountCurrency,
+    required this.paidAmountLabel,
+    required this.paidNote,
+    required this.paidAt,
   });
 
   final String id;
@@ -38,10 +44,17 @@ class PayoutRequest {
   final String iban;
   final String bankAccountNumber;
   final String cryptoAddress;
+  final String requestedAmountLabel;
+  final double paidAmountValue;
+  final String paidAmountCurrency;
+  final String paidAmountLabel;
+  final String paidNote;
+  final DateTime? paidAt;
 
   int get viewsRequested => coinsRequested;
   bool get isBankTransfer => payoutMethod == 'bank';
   String get normalizedCurrency => payoutCurrency.isEmpty ? 'EUR' : payoutCurrency;
+  bool get hasRecordedPaidAmount => paidAmountLabel.trim().isNotEmpty;
 
   String get payoutMethodLabel {
     switch (payoutMethod) {
@@ -95,6 +108,10 @@ class PayoutRequest {
     final bankAccountNumber = data['bankAccountNumber'] as String? ?? '';
     final cryptoAddress = data['cryptoAddress'] as String? ?? '';
     final payPalEmail = data['payPalEmail'] as String? ?? '';
+    final paidAmountValue = (data['paidAmountValue'] as num?)?.toDouble() ?? 0;
+    final paidAmountCurrency =
+        (data['paidAmountCurrency'] as String? ?? '').toUpperCase();
+    final storedPaidAmountLabel = data['paidAmountLabel'] as String? ?? '';
     final payoutMethod = rawPayoutMethod.isNotEmpty
         ? rawPayoutMethod
         : cryptoAddress.isNotEmpty
@@ -127,6 +144,38 @@ class PayoutRequest {
       bankAccountNumber:
           bankAccountNumber.isNotEmpty ? bankAccountNumber : legacyRevolut,
       cryptoAddress: cryptoAddress,
+      requestedAmountLabel: data['requestedAmountLabel'] as String? ?? '',
+      paidAmountValue: paidAmountValue,
+      paidAmountCurrency: paidAmountCurrency,
+      paidAmountLabel: storedPaidAmountLabel.isNotEmpty
+          ? storedPaidAmountLabel
+          : _fallbackPaidAmountLabel(
+              paidAmountValue: paidAmountValue,
+              currencyCode: paidAmountCurrency,
+            ),
+      paidNote: data['paidNote'] as String? ?? '',
+      paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
     );
+  }
+
+  static String _fallbackPaidAmountLabel({
+    required double paidAmountValue,
+    required String currencyCode,
+  }) {
+    if (paidAmountValue <= 0) return '';
+    final symbol = switch (currencyCode.toUpperCase()) {
+      'GBP' => '£',
+      'USD' => r'$',
+      'BTC' => '₿',
+      'USDC' => 'USDC ',
+      _ => '€',
+    };
+    final normalizedAmount = paidAmountValue.toStringAsFixed(2);
+    final compactAmount = normalizedAmount.endsWith('.00')
+        ? normalizedAmount.substring(0, normalizedAmount.length - 3)
+        : normalizedAmount.endsWith('0')
+            ? normalizedAmount.substring(0, normalizedAmount.length - 1)
+            : normalizedAmount;
+    return '$symbol$compactAmount';
   }
 }
