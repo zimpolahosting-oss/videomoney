@@ -123,15 +123,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return actions;
   }
 
-<<<<<<< ours
-=======
   double? _parseManualAmount(String rawValue) {
     final normalized = rawValue.trim().replaceAll(',', '.');
     if (normalized.isEmpty) return null;
     return double.tryParse(normalized);
   }
 
->>>>>>> theirs
   Future<void> _setStatus(PayoutRequest payout, String status) async {
     try {
       await _firestoreService.updatePayoutStatus(
