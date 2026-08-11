@@ -581,11 +581,7 @@ class FirestoreService {
       }
       if ((trimmedMethod == 'btc' || trimmedMethod == 'usdc') &&
           trimmedCryptoAddress.isEmpty) {
-        throw Exception(
-          trimmedMethod == 'btc'
-              ? 'Enter your BTC wallet address.'
-              : 'Enter your USDC Polygon wallet address.',
-        );
+        throw Exception('Enter your crypto wallet address.');
       }
       if (currentCoins < coinsRequested) {
         throw Exception('Not enough views available.');
@@ -597,10 +593,6 @@ class FirestoreService {
       final currentVideosWatched =
           (userData['videosWatched'] as num?)?.toInt() ?? 0;
       final remainingViews = currentCoins - coinsRequested;
-      final requestedAmountLabel = _formatPayoutAmountLabel(
-        coinsRequested: coinsRequested,
-        currencyCode: trimmedCurrency,
-      );
 
       transaction.update(userRef, {
         'coins': currentCoins - coinsRequested,
@@ -633,7 +625,6 @@ class FirestoreService {
         'bankName': trimmedBankName,
         'iban': trimmedIban,
         'bankAccountNumber': trimmedBankAccountNumber,
-        'requestedAmountLabel': requestedAmountLabel,
         'cryptoAddress': trimmedCryptoAddress,
         'minimumPayoutCoins': minimumPayoutCoins,
         'processingDays': payoutProcessingDays,
@@ -664,8 +655,6 @@ class FirestoreService {
   Future<void> updatePayoutStatus({
     required String payoutId,
     required String status,
-    double? manualPaidAmountValue,
-    String? manualPaidAmountCurrency,
   }) async {
     final normalized = status.trim().toLowerCase();
     if (normalized.isEmpty) return;
@@ -683,10 +672,6 @@ class FirestoreService {
 
       final currentStatus =
           (payoutData['status'] as String? ?? 'pending').trim().toLowerCase();
-      final payoutMethod =
-          (payoutData['payoutMethod'] as String? ?? '').trim().toLowerCase();
-      final cryptoAddress =
-          (payoutData['cryptoAddress'] as String? ?? '').trim();
       if (currentStatus == normalized) {
         return;
       }
@@ -699,16 +684,6 @@ class FirestoreService {
       if (!isValidTransition) {
         throw Exception(
           'Invalid payout transition: ${currentStatus.toUpperCase()} → ${normalized.toUpperCase()}',
-        );
-      }
-
-      if ((normalized == 'approved' || normalized == 'paid') &&
-          (payoutMethod == 'btc' || payoutMethod == 'usdc') &&
-          cryptoAddress.isEmpty) {
-        throw Exception(
-          payoutMethod == 'btc'
-              ? 'BTC payout requests require a wallet address before approval.'
-              : 'USDC Polygon payout requests require a wallet address before approval.',
         );
       }
 
@@ -732,22 +707,6 @@ class FirestoreService {
             (payoutData['payoutCurrency'] as String? ?? 'EUR').toUpperCase();
         final coinsRequested =
             (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
-        final storedRequestedAmountLabel =
-            (payoutData['requestedAmountLabel'] as String? ?? '').trim();
-        final typedAmount = manualPaidAmountValue ?? 0;
-        final typedCurrency =
-            (manualPaidAmountCurrency?.trim().isNotEmpty ?? false)
-                ? manualPaidAmountCurrency!.trim().toUpperCase()
-                : payoutCurrency;
-
-        if (typedAmount > 0) {
-          updates['paidAmountValue'] = typedAmount;
-          updates['paidAmountCurrency'] = typedCurrency;
-          updates['paidAmountLabel'] = _formatCurrencyAmountLabel(
-            amount: typedAmount,
-            currencyCode: typedCurrency,
-          );
-        }
 
         String userCountry = '';
         if (userId.isNotEmpty) {
@@ -765,17 +724,10 @@ class FirestoreService {
           accountHolderName: accountHolderName,
           userEmail: userEmail,
         );
-        final amountLabel = typedAmount > 0
-            ? _formatCurrencyAmountLabel(
-                amount: typedAmount,
-                currencyCode: typedCurrency,
-              )
-            : storedRequestedAmountLabel.isNotEmpty
-                ? storedRequestedAmountLabel
-                : _formatPayoutAmountLabel(
-                    coinsRequested: coinsRequested,
-                    currencyCode: payoutCurrency,
-                  );
+        final amountLabel = _formatPayoutAmountLabel(
+          coinsRequested: coinsRequested,
+          currencyCode: payoutCurrency,
+        );
         final payoutMessage = _buildPayoutAnnouncementMessage(
           privacyName: privacyName,
           userCountry: userCountry,
@@ -1380,24 +1332,13 @@ class FirestoreService {
     required int coinsRequested,
     required String currencyCode,
   }) {
-    final amount = estimateEarningsEuro(coinsRequested);
-    return _formatCurrencyAmountLabel(
-      amount: amount,
-      currencyCode: currencyCode,
-    );
-  }
-
-  String _formatCurrencyAmountLabel({
-    required double amount,
-    required String currencyCode,
-  }) {
     final symbol = switch (currencyCode.toUpperCase()) {
       'GBP' => '£',
       'USD' => r'$',
-      'BTC' => '₿',
-      'USDC' => 'USDC ',
       _ => '€',
     };
+
+    final amount = estimateEarningsEuro(coinsRequested);
     final normalizedAmount = amount.toStringAsFixed(2);
     final compactAmount = normalizedAmount.endsWith('.00')
         ? normalizedAmount.substring(0, normalizedAmount.length - 3)
