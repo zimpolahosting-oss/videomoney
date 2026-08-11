@@ -58,11 +58,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
 <<<<<<< ours
+<<<<<<< ours
   double? _parseManualAmount(String rawValue) {
     final normalized = rawValue.trim().replaceAll(',', '.');
     if (normalized.isEmpty) return null;
     return double.tryParse(normalized);
 =======
+=======
+>>>>>>> theirs
   Future<void> _copyText(String label, String value) async {
     final trimmedValue = value.trim();
     if (trimmedValue.isEmpty) {
@@ -127,6 +130,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     return actions;
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
   }
 
@@ -794,9 +800,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFFF7B7B),
                       ),
+<<<<<<< ours
                       onPressed: () => _deleteTicket(ticket),
                       child: const Text('Delete'),
                     ),
+=======
+                      const SizedBox(width: 10),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF7B7B),
+                        ),
+                        onPressed: () => _deleteTicket(ticket),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+>>>>>>> theirs
                   ),
                 ],
               ),
@@ -885,6 +903,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   controller: _notificationUserSearchController,
                   onChanged: (value) {
 <<<<<<< ours
+<<<<<<< ours
                     setState(() => _notificationUserSearchQuery = value);
                   },
                   decoration: const InputDecoration(
@@ -934,11 +953,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _selectedNotificationUserId = null;
                     });
                   },
+=======
+                    setState(() {
+                      _notificationUserSearchQuery = value;
+                      _selectedNotificationUserId = null;
+                    });
+                  },
+>>>>>>> theirs
                   decoration: const InputDecoration(
                     labelText: 'Search user by email',
                     hintText: 'name@example.com',
                     prefixIcon: Icon(Icons.search_rounded),
                   ),
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                 ),
                 const SizedBox(height: 10),
