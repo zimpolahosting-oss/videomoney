@@ -17,13 +17,11 @@ class PlayersAreGamersWebViewScreen extends StatefulWidget {
     required this.service,
     this.initialUrl,
     this.landscapeOnly = false,
-    this.embeddedMode = false,
   });
 
   final PlayersAreGamersService service;
   final String? initialUrl;
   final bool landscapeOnly;
-  final bool embeddedMode;
 
   @override
   State<PlayersAreGamersWebViewScreen> createState() =>
@@ -38,6 +36,59 @@ class _PlayersAreGamersWebViewScreenState
   final Set<String> _processedResultRunIds = <String>{};
   bool _loading = true;
   bool _replayRewardInProgress = false;
+
+  String _localizedRewardMessage({required bool startingGame}) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    final values = {
+      'en': startingGame
+          ? 'Reward granted: +1 ad. Starting a new game...'
+          : 'Reward granted: +1 ad.'
+      ,
+      'nl': startingGame
+          ? 'Beloning gegeven: +1 ad. Nieuw spel wordt gestart...'
+          : 'Beloning gegeven: +1 ad.',
+      'hi': startingGame
+          ? 'रिवॉर्ड दिया गया: +1 ad. नया गेम शुरू हो रहा है...'
+          : 'रिवॉर्ड दिया गया: +1 ad.',
+      'de': startingGame
+          ? 'Belohnung erhalten: +1 Ad. Neues Spiel wird gestartet...'
+          : 'Belohnung erhalten: +1 Ad.',
+      'es': startingGame
+          ? 'Recompensa otorgada: +1 ad. Iniciando un nuevo juego...'
+          : 'Recompensa otorgada: +1 ad.',
+      'fr': startingGame
+          ? 'Récompense accordée : +1 ad. Lancement d’un nouveau jeu...'
+          : 'Récompense accordée : +1 ad.',
+      'ru': startingGame
+          ? 'Награда получена: +1 ad. Запуск новой игры...'
+          : 'Награда получена: +1 ad.',
+      'el': startingGame
+          ? 'Η ανταμοιβή δόθηκε: +1 ad. Ξεκινά νέο παιχνίδι...'
+          : 'Η ανταμοιβή δόθηκε: +1 ad.',
+      'pt': startingGame
+          ? 'Recompensa atribuída: +1 ad. A iniciar um novo jogo...'
+          : 'Recompensa atribuída: +1 ad.',
+      'it': startingGame
+          ? 'Ricompensa assegnata: +1 ad. Avvio di un nuovo gioco...'
+          : 'Ricompensa assegnata: +1 ad.',
+      'tr': startingGame
+          ? 'Ödül verildi: +1 ad. Yeni oyun başlıyor...'
+          : 'Ödül verildi: +1 ad.',
+      'ar': startingGame
+          ? 'تم منح المكافأة: +1 ad. جارٍ بدء لعبة جديدة...'
+          : 'تم منح المكافأة: +1 ad.',
+      'bn': startingGame
+          ? 'রিওয়ার্ড দেওয়া হয়েছে: +1 ad। নতুন গেম শুরু হচ্ছে...'
+          : 'রিওয়ার্ড দেওয়া হয়েছে: +1 ad।',
+      'ta': startingGame
+          ? 'வெகுமதி வழங்கப்பட்டது: +1 ad. புதிய விளையாட்டு தொடங்குகிறது...'
+          : 'வெகுமதி வழங்கப்பட்டது: +1 ad.',
+      'te': startingGame
+          ? 'రివార్డ్ ఇచ్చబడింది: +1 ad. కొత్త గేమ్ ప్రారంభమవుతోంది...'
+          : 'రివార్డ్ ఇచ్చబడింది: +1 ad.',
+    };
+    return values[code] ?? values['en']!;
+  }
   bool _resultRewardInProgress = false;
   bool _sessionRecoveryAttempted = false;
   bool _initialTargetOpened = false;
@@ -45,7 +96,8 @@ class _PlayersAreGamersWebViewScreenState
   @override
   void initState() {
     super.initState();
-    if (widget.landscapeOnly && !widget.embeddedMode) {
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    if (widget.landscapeOnly) {
       unawaited(
         SystemChrome.setPreferredOrientations(const [
           DeviceOrientation.landscapeLeft,
@@ -70,6 +122,7 @@ class _PlayersAreGamersWebViewScreenState
                   return;
                 }
                 await _injectSessionAndReplayBridge();
+                await _injectGameSpecificFixes(url);
                 if (_shouldOpenInitialTarget(url)) {
                   _initialTargetOpened = true;
                   await _controller.loadRequest(
@@ -104,7 +157,8 @@ class _PlayersAreGamersWebViewScreenState
 
   @override
   void dispose() {
-    if (widget.landscapeOnly && !widget.embeddedMode) {
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    if (widget.landscapeOnly) {
       unawaited(
         SystemChrome.setPreferredOrientations(const [
           DeviceOrientation.portraitUp,
@@ -262,6 +316,57 @@ class _PlayersAreGamersWebViewScreenState
     ''');
   }
 
+  Future<void> _injectGameSpecificFixes(String? url) async {
+    final current = (url ?? '').toLowerCase();
+    if (!current.contains('/stone-pile/')) {
+      return;
+    }
+    await _controller.runJavaScript('''
+      (function() {
+        try {
+          if (window.__vmStonePileFrameCapInstalled) {
+            return;
+          }
+          window.__vmStonePileFrameCapInstalled = true;
+          const nativeRAF = window.requestAnimationFrame.bind(window);
+          const nativeCAF = window.cancelAnimationFrame.bind(window);
+          const activeHandles = new Map();
+          let nextHandle = 1;
+          let lastFrameTs = 0;
+          const minFrameMs = 1000 / 60;
+
+          window.requestAnimationFrame = function(callback) {
+            const handle = nextHandle++;
+            function run(ts) {
+              if (!activeHandles.has(handle)) {
+                return;
+              }
+              if (lastFrameTs === 0 || (ts - lastFrameTs) >= minFrameMs) {
+                lastFrameTs = ts;
+                activeHandles.delete(handle);
+                callback(ts);
+                return;
+              }
+              const rafId = nativeRAF(run);
+              activeHandles.set(handle, rafId);
+            }
+            const rafId = nativeRAF(run);
+            activeHandles.set(handle, rafId);
+            return handle;
+          };
+
+          window.cancelAnimationFrame = function(handle) {
+            const rafId = activeHandles.get(handle);
+            if (rafId != null) {
+              nativeCAF(rafId);
+              activeHandles.delete(handle);
+            }
+          };
+        } catch (_) {}
+      })();
+    ''');
+  }
+
   bool _looksLikeLoginPage(String? url) {
     final value = (url ?? '').toLowerCase();
     return value.contains('/login.php') || value.contains('/index.html');
@@ -349,14 +454,14 @@ class _PlayersAreGamersWebViewScreenState
         await widget.service.grantReplayReward(
           adId: replayId,
           gameCoins: 2,
-          videomoneyViews: 3,
+          videomoneyViews: 1,
         );
         await _controller.runJavaScript('window.__vmResumePlayAgain && window.__vmResumePlayAgain();');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Reward granted: +3 views. Starting a new game...',
+              _localizedRewardMessage(startingGame: true),
             ),
           ),
         );
@@ -416,7 +521,7 @@ class _PlayersAreGamersWebViewScreenState
       await widget.service.grantAdReward(
         adId: 'pag-result-$gameId-$runId',
         pagCoins: 2,
-        videomoneyViews: 3,
+        videomoneyViews: 1,
         videomoneyVideosWatched: 1,
         autoCreateIfMissing: true,
       );
@@ -426,7 +531,7 @@ class _PlayersAreGamersWebViewScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Reward granted: +3 views.',
+            _localizedRewardMessage(startingGame: false),
           ),
         ),
       );
@@ -442,28 +547,40 @@ class _PlayersAreGamersWebViewScreenState
 
   @override
   Widget build(BuildContext context) {
-    final content = Stack(
-      children: [
-        WebViewWidget(controller: _controller),
-        if (_loading) const LinearProgressIndicator(minHeight: 2),
-      ],
-    );
-
-    if (widget.embeddedMode) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: ColoredBox(
-          color: const Color(0xFF020706),
-          child: content,
-        ),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PlayersAreGamers'),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: WebViewWidget(controller: _controller),
+          ),
+          if (_loading)
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.42),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    tooltip: 'Back',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: content,
     );
   }
 }

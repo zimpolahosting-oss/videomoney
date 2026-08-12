@@ -25,6 +25,176 @@ class _EarnScreenState extends State<EarnScreen> {
   final _playersAreGamersService = PlayersAreGamersService();
   bool _isLoading = false;
 
+  String _localizedEarnText(String key) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    const values = {
+      'en': {
+        'earn_ads': 'Earn ads',
+        'watch_rewarded':
+            'Watch a rewarded ad to count 1 ad toward your payout.',
+        'earn_step': '1 ad counted',
+        'ads_only': 'Ads only',
+        'completed_ads': 'Only fully completed ads count toward your balance.',
+        'balance': 'Balance',
+        'reward_confirmed': 'Reward confirmed. +1 ad counted.',
+      },
+      'nl': {
+        'earn_ads': 'Verdien ads',
+        'watch_rewarded':
+            'Kijk een rewarded advertentie om 1 ad te tellen voor je uitbetaling.',
+        'earn_step': '1 ad telt mee',
+        'ads_only': 'Alleen ads',
+        'completed_ads':
+            'Alleen volledig bekeken advertenties tellen mee voor je saldo.',
+        'balance': 'Saldo',
+        'reward_confirmed': 'Beloning bevestigd. +1 ad geteld.',
+      },
+      'hi': {
+        'earn_ads': 'Ads कमाएँ',
+        'watch_rewarded':
+            'अपनी payout के लिए 1 ad गिनने हेतु rewarded ad देखें।',
+        'earn_step': '1 ad गिना गया',
+        'ads_only': 'सिर्फ ads',
+        'completed_ads': 'केवल पूरी तरह देखे गए ads ही आपके बैलेंस में गिने जाते हैं।',
+        'balance': 'बैलेंस',
+        'reward_confirmed': 'रिवॉर्ड पुष्टि हुई। +1 ad गिना गया।',
+      },
+      'de': {
+        'earn_ads': 'Ads verdienen',
+        'watch_rewarded':
+            'Sieh dir ein Rewarded Ad an, damit 1 Ad für deine Auszahlung zählt.',
+        'earn_step': '1 Ad gezählt',
+        'ads_only': 'Nur Ads',
+        'completed_ads':
+            'Nur vollständig angesehene Ads zählen für dein Guthaben.',
+        'balance': 'Guthaben',
+        'reward_confirmed': 'Belohnung bestätigt. +1 Ad gezählt.',
+      },
+      'es': {
+        'earn_ads': 'Gana ads',
+        'watch_rewarded':
+            'Mira un ad recompensado para contar 1 ad hacia tu pago.',
+        'earn_step': '1 ad contado',
+        'ads_only': 'Solo ads',
+        'completed_ads':
+            'Solo los ads completados por completo cuentan para tu saldo.',
+        'balance': 'Saldo',
+        'reward_confirmed': 'Recompensa confirmada. +1 ad contado.',
+      },
+      'fr': {
+        'earn_ads': 'Gagner des ads',
+        'watch_rewarded':
+            'Regardez un ad récompensé pour compter 1 ad vers votre paiement.',
+        'earn_step': '1 ad compté',
+        'ads_only': 'Ads uniquement',
+        'completed_ads':
+            'Seuls les ads entièrement terminés comptent pour votre solde.',
+        'balance': 'Solde',
+        'reward_confirmed': 'Récompense confirmée. +1 ad compté.',
+      },
+      'ru': {
+        'earn_ads': 'Зарабатывайте ads',
+        'watch_rewarded':
+            'Смотрите rewarded ad, чтобы 1 ad засчитался к выплате.',
+        'earn_step': '1 ad засчитан',
+        'ads_only': 'Только ads',
+        'completed_ads':
+            'Только полностью завершённые ads засчитываются в ваш баланс.',
+        'balance': 'Баланс',
+        'reward_confirmed': 'Награда подтверждена. +1 ad засчитан.',
+      },
+      'el': {
+        'earn_ads': 'Κέρδισε ads',
+        'watch_rewarded':
+            'Δες ένα rewarded ad ώστε να μετρήσει 1 ad για την πληρωμή σου.',
+        'earn_step': '1 ad μετρήθηκε',
+        'ads_only': 'Μόνο ads',
+        'completed_ads':
+            'Μόνο τα ads που ολοκληρώνονται πλήρως μετρούν στο υπόλοιπό σου.',
+        'balance': 'Υπόλοιπο',
+        'reward_confirmed': 'Η ανταμοιβή επιβεβαιώθηκε. +1 ad μετρήθηκε.',
+      },
+      'pt': {
+        'earn_ads': 'Ganhar ads',
+        'watch_rewarded':
+            'Veja um ad recompensado para contar 1 ad para o seu pagamento.',
+        'earn_step': '1 ad contado',
+        'ads_only': 'Só ads',
+        'completed_ads':
+            'Apenas os ads totalmente concluídos contam para o seu saldo.',
+        'balance': 'Saldo',
+        'reward_confirmed': 'Recompensa confirmada. +1 ad contado.',
+      },
+      'it': {
+        'earn_ads': 'Guadagna ads',
+        'watch_rewarded':
+            'Guarda un ad rewarded per contare 1 ad verso il tuo pagamento.',
+        'earn_step': '1 ad conteggiato',
+        'ads_only': 'Solo ads',
+        'completed_ads':
+            'Solo gli ads completati interamente contano per il tuo saldo.',
+        'balance': 'Saldo',
+        'reward_confirmed': 'Ricompensa confermata. +1 ad conteggiato.',
+      },
+      'tr': {
+        'earn_ads': 'Ads kazan',
+        'watch_rewarded':
+            'Ödemeniz için 1 ad sayılması adına rewarded ad izleyin.',
+        'earn_step': '1 ad sayıldı',
+        'ads_only': 'Sadece ads',
+        'completed_ads':
+            'Yalnızca tamamen tamamlanan ads bakiyenize sayılır.',
+        'balance': 'Bakiye',
+        'reward_confirmed': 'Ödül onaylandı. +1 ad sayıldı.',
+      },
+      'ar': {
+        'earn_ads': 'اكسب ads',
+        'watch_rewarded':
+            'شاهد ad بمكافأة ليتم احتساب 1 ad نحو دفعتك.',
+        'earn_step': 'تم احتساب 1 ad',
+        'ads_only': 'ads فقط',
+        'completed_ads':
+            'فقط ads المكتملة بالكامل تُحتسب في رصيدك.',
+        'balance': 'الرصيد',
+        'reward_confirmed': 'تم تأكيد المكافأة. تم احتساب +1 ad.',
+      },
+      'bn': {
+        'earn_ads': 'Ads আয় করুন',
+        'watch_rewarded':
+            'আপনার payout-এর জন্য 1 ad গণনা করতে একটি rewarded ad দেখুন।',
+        'earn_step': '1 ad গণনা হয়েছে',
+        'ads_only': 'শুধু ads',
+        'completed_ads':
+            'শুধু পুরোপুরি দেখা ads-ই আপনার ব্যালেন্সে গণনা হবে।',
+        'balance': 'ব্যালেন্স',
+        'reward_confirmed': 'রিওয়ার্ড নিশ্চিত। +1 ad গণনা হয়েছে।',
+      },
+      'ta': {
+        'earn_ads': 'Ads சம்பாதிக்கவும்',
+        'watch_rewarded':
+            'உங்கள் payout-க்கு 1 ad சேர்க்க rewarded ad பாருங்கள்.',
+        'earn_step': '1 ad எண்ணப்பட்டது',
+        'ads_only': 'Ads மட்டும்',
+        'completed_ads':
+            'முழுமையாக முடிக்கப்பட்ட ads மட்டுமே உங்கள் இருப்பில் சேரும்.',
+        'balance': 'இருப்பு',
+        'reward_confirmed': 'வெகுமதி உறுதிசெய்யப்பட்டது. +1 ad எண்ணப்பட்டது.',
+      },
+      'te': {
+        'earn_ads': 'Ads సంపాదించండి',
+        'watch_rewarded':
+            'మీ payout కోసం 1 ad లెక్కించబడేందుకు rewarded ad చూడండి.',
+        'earn_step': '1 ad లెక్కించబడింది',
+        'ads_only': 'Ads మాత్రమే',
+        'completed_ads':
+            'పూర్తిగా ముగిసిన ads మాత్రమే మీ బ్యాలెన్స్‌లో లెక్కించబడతాయి.',
+        'balance': 'బ్యాలెన్స్',
+        'reward_confirmed': 'రివార్డ్ నిర్ధారించబడింది. +1 ad లెక్కించబడింది.',
+      },
+    };
+    return values[code]?[key] ?? values['en']![key]!;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +245,7 @@ class _EarnScreenState extends State<EarnScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            l10n.rewardConfirmedViewsAdded,
+            _localizedEarnText('reward_confirmed'),
           ),
         ),
       );
@@ -102,7 +272,6 @@ class _EarnScreenState extends State<EarnScreen> {
     return StreamBuilder<AppUser?>(
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
-        final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
         final appUser = snapshot.data;
         final totalVideos = appUser?.videosWatched ?? 0;
         final todayKey = FirestoreService.formatLocalDateKey(DateTime.now());
@@ -155,7 +324,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            isDutch ? 'Verdien ads' : 'Earn ads',
+                            _localizedEarnText('earn_ads'),
                             style: Theme.of(context).textTheme.headlineMedium,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -165,9 +334,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 235),
                           child: Text(
-                            isDutch
-                                ? 'Kijk een rewarded advertentie om 1 ad te tellen voor je uitbetaling.'
-                                : 'Watch a rewarded ad to count 1 ad toward your payout.',
+                            _localizedEarnText('watch_rewarded'),
                             style: Theme.of(context).textTheme.bodyMedium,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -229,7 +396,7 @@ class _EarnScreenState extends State<EarnScreen> {
                             child: _HowStep(
                               icon: Icons.visibility_outlined,
                               title: l10n.earnStep,
-                              subtitle: isDutch ? '1 ad telt mee' : '1 ad counted',
+                              subtitle: _localizedEarnText('earn_step'),
                             ),
                           ),
                           SizedBox(
@@ -278,7 +445,7 @@ class _EarnScreenState extends State<EarnScreen> {
                               ),
                             ),
                             child: Text(
-                              isDutch ? 'Ads-only' : 'Ads only',
+                              _localizedEarnText('ads_only'),
                               style: const TextStyle(
                                 color: AppTheme.primarySoft,
                                 fontWeight: FontWeight.w800,
@@ -290,9 +457,7 @@ class _EarnScreenState extends State<EarnScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isDutch
-                            ? 'Alleen volledig bekeken advertenties tellen mee voor je saldo.'
-                            : 'Only fully completed ads count toward your balance.',
+                        _localizedEarnText('completed_ads'),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 14),
@@ -305,7 +470,7 @@ class _EarnScreenState extends State<EarnScreen> {
                             ),
                           ),
                           Text(
-                            isDutch ? 'Saldo' : 'Balance',
+                            _localizedEarnText('balance'),
                             style: const TextStyle(color: AppTheme.textMuted),
                           ),
                         ],

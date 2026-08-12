@@ -723,7 +723,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _presentAdBreakSheet() async {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
-    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
 
     _isShowingAdBreak = true;
     _blockPlaybackResume(const Duration(minutes: 2));
@@ -831,24 +830,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(
               isAdmobBreak
-                  ? (isDutch
-                        ? 'Geen AdMob- of Monetag-ad beschikbaar voor deze beurt.'
-                        : 'No AdMob or Monetag ad available for this turn.')
+                  ? _localizedHomeText('no_provider', provider: 'AdMob')
                   : isAppodealBreak
-                  ? (isDutch
-                        ? 'Geen Appodeal- of Monetag-ad beschikbaar voor deze beurt.'
-                        : 'No Appodeal or Monetag ad available for this turn.')
+                  ? _localizedHomeText('no_provider', provider: 'Appodeal')
                   : isGraviteBreak
-                  ? (isDutch
-                        ? 'Geen Gravite- of Monetag-ad beschikbaar voor deze beurt.'
-                        : 'No Gravite or Monetag ad available for this turn.')
+                  ? _localizedHomeText('no_provider', provider: 'Gravite')
                   : isUnityBreak
-                  ? (isDutch
-                        ? 'Geen Unity- of Monetag-ad beschikbaar voor deze beurt.'
-                        : 'No Unity or Monetag ad available for this turn.')
-                  : (isDutch
-                        ? 'Geen advertentie beschikbaar. De volgende short gaat verder.'
-                        : 'No interstitial ad available. Continuing to the next short.'),
+                  ? _localizedHomeText('no_provider', provider: 'Unity')
+                  : _localizedHomeText('no_generic'),
             ),
           ),
         );
@@ -856,7 +845,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isDutch ? '+1 ad geteld.' : '+1 ad counted.',
+              _localizedHomeText('ad_counted'),
             ),
           ),
         );
@@ -881,6 +870,106 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (provider == ShortsProgressService.providerUnity) return 'Unity';
     if (provider == ShortsProgressService.providerMonetag) return 'Monetag';
     return 'Ad';
+  }
+
+  String _localizedHomeText(String key, {String provider = 'Ad'}) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    final values = {
+      'en': {
+        'ad_counted': '+1 ad counted.',
+        'tap_after_three': 'After 3 shorts, tap the ad button',
+        'no_provider': 'No $provider or Monetag ad available for this turn.',
+        'no_generic':
+            'No ad available right now. Continuing to the next short.',
+      },
+      'nl': {
+        'ad_counted': '+1 ad geteld.',
+        'tap_after_three': 'Na 3 shorts druk je op de ad-knop',
+        'no_provider':
+            'Geen $provider- of Monetag-ad beschikbaar voor deze beurt.',
+        'no_generic':
+            'Geen advertentie beschikbaar. De volgende short gaat verder.',
+      },
+      'hi': {
+        'ad_counted': '+1 ad गिना गया।',
+        'tap_after_three': '3 shorts के na ad button दबाएँ',
+        'no_provider': 'इस beurt के लिए $provider या Monetag ad उपलब्ध नहीं है।',
+        'no_generic': 'अभी कोई ad उपलब्ध नहीं है। अगला short जारी रहेगा।',
+      },
+      'de': {
+        'ad_counted': '+1 Ad gezählt.',
+        'tap_after_three': 'Nach 3 Shorts auf die Ad-Schaltfläche tippen',
+        'no_provider': 'Kein $provider- oder Monetag-Ad für diese Runde verfügbar.',
+        'no_generic': 'Zurzeit kein Ad verfügbar. Nächstes Short läuft weiter.',
+      },
+      'es': {
+        'ad_counted': '+1 ad contado.',
+        'tap_after_three': 'Después de 3 shorts, pulsa el botón del ad',
+        'no_provider': 'No hay ad de $provider o Monetag disponible en este turno.',
+        'no_generic': 'No hay ad disponible ahora. Continuando con el siguiente short.',
+      },
+      'fr': {
+        'ad_counted': '+1 ad compté.',
+        'tap_after_three': 'Après 3 shorts, appuyez sur le bouton ad',
+        'no_provider': 'Aucun ad $provider ou Monetag disponible pour ce tour.',
+        'no_generic': 'Aucun ad disponible pour le moment. Passage au short suivant.',
+      },
+      'ru': {
+        'ad_counted': '+1 ad засчитан.',
+        'tap_after_three': 'После 3 shorts нажмите кнопку ad',
+        'no_provider': 'Нет доступного ad $provider или Monetag для этого раунда.',
+        'no_generic': 'Сейчас нет доступного ad. Переход к следующему short.',
+      },
+      'el': {
+        'ad_counted': '+1 ad μετρήθηκε.',
+        'tap_after_three': 'Μετά από 3 shorts πάτησε το κουμπί ad',
+        'no_provider': 'Δεν υπάρχει διαθέσιμο ad $provider ή Monetag για αυτή τη σειρά.',
+        'no_generic': 'Δεν υπάρχει διαθέσιμο ad τώρα. Συνεχίζει το επόμενο short.',
+      },
+      'pt': {
+        'ad_counted': '+1 ad contado.',
+        'tap_after_three': 'Após 3 shorts, toque no botão do ad',
+        'no_provider': 'Nenhum ad $provider ou Monetag disponível para esta ronda.',
+        'no_generic': 'Nenhum ad disponível agora. A continuar para o próximo short.',
+      },
+      'it': {
+        'ad_counted': '+1 ad conteggiato.',
+        'tap_after_three': 'Dopo 3 shorts, tocca il pulsante ad',
+        'no_provider': 'Nessun ad $provider o Monetag disponibile per questo turno.',
+        'no_generic': 'Nessun ad disponibile ora. Si continua con il prossimo short.',
+      },
+      'tr': {
+        'ad_counted': '+1 ad sayıldı.',
+        'tap_after_three': '3 shortstan sonra ad düğmesine bas',
+        'no_provider': 'Bu tur için $provider veya Monetag ad mevcut değil.',
+        'no_generic': 'Şu anda ad yok. Sonraki short ile devam ediliyor.',
+      },
+      'ar': {
+        'ad_counted': 'تم احتساب +1 ad.',
+        'tap_after_three': 'بعد 3 shorts اضغط زر ad',
+        'no_provider': 'لا يوجد ad من $provider أو Monetag لهذه الجولة.',
+        'no_generic': 'لا يوجد ad متاح الآن. سيتم المتابعة إلى short التالي.',
+      },
+      'bn': {
+        'ad_counted': '+1 ad গণনা হয়েছে।',
+        'tap_after_three': '3 shorts-এর পরে ad বাটন চাপুন',
+        'no_provider': 'এই রাউন্ডে $provider বা Monetag ad নেই।',
+        'no_generic': 'এখন কোনো ad নেই। পরের short চলবে।',
+      },
+      'ta': {
+        'ad_counted': '+1 ad எண்ணப்பட்டது.',
+        'tap_after_three': '3 shorts பிறகு ad பட்டனை அழுத்தவும்',
+        'no_provider': 'இந்த முறைக்கு $provider அல்லது Monetag ad இல்லை.',
+        'no_generic': 'இப்போது ad இல்லை. அடுத்த short தொடரும்.',
+      },
+      'te': {
+        'ad_counted': '+1 ad లెక్కించబడింది.',
+        'tap_after_three': '3 shorts తర్వాత ad బటన్ నొక్కండి',
+        'no_provider': 'ఈ టర్న్‌కు $provider లేదా Monetag ad అందుబాటులో లేదు.',
+        'no_generic': 'ఇప్పుడు ad లేదు. తదుపరి short కొనసాగుతుంది.',
+      },
+    };
+    return values[code]?[key] ?? values['en']![key]!;
   }
 
   Future<void> _resetShortCycle() async {
@@ -1181,9 +1270,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
-                                                isDutch
-                                                    ? 'Na 3 shorts druk je op de ad-knop'
-                                                    : 'After 3 shorts, tap the ad button',
+                                                _localizedHomeText('tap_after_three'),
                                                 style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 11,

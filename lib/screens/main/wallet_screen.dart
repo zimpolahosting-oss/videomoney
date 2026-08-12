@@ -19,7 +19,6 @@ class WalletScreen extends StatelessWidget {
     final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
-    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
     const adsUnit = 'ads';
 
     if (user == null) {
@@ -28,7 +27,9 @@ class WalletScreen extends StatelessWidget {
       );
     }
 
-    final processingUnit = isDutch ? 'uur' : 'hours';
+    final processingUnit = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl'
+        ? 'uur'
+        : 'hours';
 
     return Scaffold(
       body: SafeArea(
@@ -78,7 +79,7 @@ class WalletScreen extends StatelessWidget {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            isDutch ? 'Beschikbare ads' : 'Available ads',
+                            l10n.availableViews,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
@@ -111,9 +112,7 @@ class WalletScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          isDutch
-                              ? 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.'
-                              : 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+                          l10n.estimateOnly,
                           style: Theme.of(context).textTheme.bodyMedium,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

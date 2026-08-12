@@ -119,7 +119,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
     return Scaffold(
       appBar: AppBar(title: Text(l10n.requestPayoutTitle)),
       body: SingleChildScrollView(
@@ -146,15 +145,15 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     const SizedBox(height: 12),
                     _RuleLine(
                       icon: Icons.flag_circle_outlined,
-                      text: isDutch
-                          ? 'Minimale uitbetaling: ${FirestoreService.minimumPayoutCoins} ads.'
-                          : 'Minimum payout: ${FirestoreService.minimumPayoutCoins} ads.',
+                      text: l10n.minimumPayoutIs(
+                        '${FirestoreService.minimumPayoutCoins}',
+                      ),
                     ),
                     _RuleLine(
                       icon: Icons.schedule_outlined,
-                      text: isDutch
-                          ? 'Verwerking kan tot ${FirestoreService.payoutProcessingDays} uur duren na admin-goedkeuring.'
-                          : 'Processing can take up to ${FirestoreService.payoutProcessingDays} hours after admin approval.',
+                      text: l10n.processingCanTake(
+                        '${FirestoreService.payoutProcessingDays}',
+                      ),
                     ),
                     _RuleLine(
                       icon: Icons.verified_user_outlined,
@@ -169,16 +168,12 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                isDutch
-                    ? 'Dien een uitbetalingsaanvraag in met je adsaldo.'
-                    : 'Submit a payout request using your ad balance.',
+                l10n.submitUsingBalance,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                isDutch
-                    ? 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.'
-                    : 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+                l10n.estimatedEarningsNotGuaranteed,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
@@ -281,8 +276,8 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                 controller: _viewsController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: isDutch ? 'Ads aanvragen' : 'Ads to request',
-                  helperText: isDutch ? 'Minimaal 1.000 ads' : 'Minimum 1,000 ads',
+                  labelText: l10n.viewsToRequest,
+                  helperText: l10n.minimumViewsHelper,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -294,9 +289,9 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     return l10n.enterValidPositiveNumber;
                   }
                   if (number < FirestoreService.minimumPayoutCoins) {
-                    return isDutch
-                        ? 'Minimale uitbetaling is ${FirestoreService.minimumPayoutCoins} ads.'
-                        : 'Minimum payout is ${FirestoreService.minimumPayoutCoins} ads.';
+                    return l10n.minimumPayoutIs(
+                      '${FirestoreService.minimumPayoutCoins}',
+                    );
                   }
                   return null;
                 },

@@ -47,8 +47,11 @@ const extraLocalizedValues = {
     'profile': 'Perfil',
     'rewardConfirmedViewsAdded':
         'Recompensa confirmada. Visualizações adicionadas.',
+    'rewardConfirmedViewsAddedCount': '+{count} visualizações adicionadas.',
+    'bonusViewsAdded': '🎁 +{count} visualizações bónus',
     'rewardedAdNotCompleted':
         'O anúncio recompensado não foi concluído.',
+    'processingReward': 'A processar a sua recompensa...',
     'watchVideo': 'Ver vídeo',
     'loading': 'A carregar...',
     'welcomeBackShort': 'Bem-vindo de volta,',
@@ -104,12 +107,12 @@ const extraLocalizedValues = {
     'reviewPayoutRequests': 'Rever pedidos de pagamento',
     'logout': 'Terminar sessão',
     'yourWallet': 'A sua carteira',
-    'availableViews': 'Visualizações disponíveis',
+    'availableViews': 'Ads disponíveis',
     'estimatedPayout': 'Pagamento estimado',
     'remainingToPayout': 'Restante até ao pagamento',
-    'viewsUnit': 'visualizações',
+    'viewsUnit': 'ads',
     'estimateOnly':
-        'Apenas uma estimativa. 50 visualizações ≈ €0,01 e os ganhos reais podem variar.',
+        'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
     'requestPayout': 'Solicitar pagamento',
     'minPayout': 'Pagamento mín.',
     'processingTime': 'Tempo de processamento',
@@ -125,6 +128,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'Transferência bancária',
     'bankTransferSubtitle':
         'Adicione IBAN ou número de conta bancária para pagamento manual',
+    'walletAddress': 'endereço da carteira',
+    'pasteWalletAddress': 'Cole o endereço da sua carteira',
+    'enterWalletAddress': 'Introduza o endereço da sua carteira.',
+    'bitcoinTitle': 'Bitcoin',
+    'bitcoinSubtitle': 'Pagamento para o seu endereço BTC',
+    'usdcSubtitle': 'Pagamento para o seu endereço USDC',
     'viewFullHistory': 'Ver histórico completo',
     'inbox': 'Caixa de entrada',
     'markAllRead': 'Marcar tudo como lido',
@@ -139,7 +148,7 @@ const extraLocalizedValues = {
     'requestPayoutTitle': 'Solicitar pagamento',
     'payoutRules': 'Regras de pagamento',
     'minimumPayoutIs':
-        'O pagamento mínimo é de {views} visualizações.',
+        'O pagamento mínimo é de {views} ads.',
     'processingCanTake':
         'O processamento pode demorar até {days} dias após a aprovação do administrador.',
     'everyRequestReviewed':
@@ -147,13 +156,13 @@ const extraLocalizedValues = {
     'useBankAddIban':
         'Utilize Banco para transferência manual e adicione o seu IBAN ou número de conta bancária.',
     'submitUsingBalance':
-        'Envie um pedido de pagamento utilizando o seu saldo de visualizações.',
+        'Envie um pedido de pagamento utilizando o seu saldo de ads.',
     'estimatedEarningsNotGuaranteed':
-        'Apenas ganhos estimados. 50 visualizações concluídas ≈ €0,01 e isto não é uma promessa de pagamento garantida.',
+        'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
     'payoutCurrency': 'Moeda de pagamento',
     'payoutMethod': 'Método de pagamento',
-    'viewsToRequest': 'Visualizações a solicitar',
-    'minimumViewsHelper': 'Mínimo de 5.000 visualizações',
+    'viewsToRequest': 'Ads a solicitar',
+    'minimumViewsHelper': 'Mínimo de 1.000 ads',
     'enterAmount': 'Introduza um montante.',
     'enterValidPositiveNumber':
         'Introduza um número positivo válido.',
@@ -229,6 +238,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'Definições guardadas.',
     'privacy': 'Privacidade',
     'appVersion': 'Versão da app',
+    'deleteAccount': 'Eliminar conta',
+    'deleteAccountSubtitle':
+        'Elimine a sua conta VideoMoney e remova os dados guardados desta app.',
+    'deleteAccountButton': 'Eliminar conta',
+    'deleteAccountDeleting': 'A eliminar conta...',
+    'deleteAccountConfirmTitle': 'Eliminar conta?',
+    'deleteAccountConfirmMessage':
+        'Isto irá eliminar a sua conta VideoMoney e os dados guardados da app. Esta ação não pode ser anulada.',
+    'deleteAccountConfirmAction': 'Eliminar',
+    'deleteAccountDeleted': 'A sua conta foi eliminada.',
+    'deleteAccountRecentLoginRequired':
+        'Por segurança, inicie sessão novamente antes de eliminar a sua conta.',
     'save': 'Guardar',
     'saving': 'A guardar...',
     'termsUsingTitle': 'Utilizar o VideoMoney',
@@ -248,7 +269,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'As recompensas de bónus diário são limitadas à atividade elegível e podem ser removidas se for detetado abuso.',
     'termsPayoutsBullet1':
-        'O pagamento mínimo continua a ser 5.000 visualizações.',
+        'O pagamento mínimo continua a ser 1.000 ads.',
     'termsPayoutsBullet2':
         'Todos os pedidos de pagamento exigem aprovação manual do administrador e podem ser aprovados, rejeitados ou marcados como pagos.',
     'termsPayoutsBullet3':
@@ -319,8 +340,11 @@ const extraLocalizedValues = {
     'profile': 'Profilo',
     'rewardConfirmedViewsAdded':
         'Ricompensa confermata. Visualizzazioni aggiunte.',
+    'rewardConfirmedViewsAddedCount': '+{count} visualizzazioni aggiunte.',
+    'bonusViewsAdded': '🎁 +{count} visualizzazioni bonus',
     'rewardedAdNotCompleted':
         'Il video pubblicitario con premio non è stato completato.',
+    'processingReward': 'Elaborazione della tua ricompensa...',
     'watchVideo': 'Guarda video',
     'loading': 'Caricamento...',
     'welcomeBackShort': 'Bentornato,',
@@ -376,12 +400,12 @@ const extraLocalizedValues = {
     'reviewPayoutRequests': 'Rivedi le richieste di pagamento',
     'logout': 'Esci',
     'yourWallet': 'Il tuo portafoglio',
-    'availableViews': 'Visualizzazioni disponibili',
+    'availableViews': 'Ads disponibili',
     'estimatedPayout': 'Pagamento stimato',
     'remainingToPayout': 'Mancante al pagamento',
-    'viewsUnit': 'visualizzazioni',
+    'viewsUnit': 'ads',
     'estimateOnly':
-        'Solo una stima. 50 visualizzazioni ≈ €0,01 e i guadagni effettivi possono variare.',
+        'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
     'requestPayout': 'Richiedi pagamento',
     'minPayout': 'Pagamento min.',
     'processingTime': 'Tempo di elaborazione',
@@ -398,6 +422,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'Bonifico bancario',
     'bankTransferSubtitle':
         'Aggiungi IBAN o numero di conto bancario per il pagamento manuale',
+    'walletAddress': 'indirizzo del portafoglio',
+    'pasteWalletAddress': 'Incolla l’indirizzo del tuo portafoglio',
+    'enterWalletAddress': 'Inserisci l’indirizzo del tuo portafoglio.',
+    'bitcoinTitle': 'Bitcoin',
+    'bitcoinSubtitle': 'Pagamento al tuo indirizzo wallet BTC',
+    'usdcSubtitle': 'Pagamento al tuo indirizzo wallet USDC',
     'viewFullHistory': 'Vedi cronologia completa',
     'inbox': 'Posta in arrivo',
     'markAllRead': 'Segna tutto come letto',
@@ -412,7 +442,7 @@ const extraLocalizedValues = {
     'requestPayoutTitle': 'Richiedi pagamento',
     'payoutRules': 'Regole di pagamento',
     'minimumPayoutIs':
-        'Il pagamento minimo è di {views} visualizzazioni.',
+        'Il pagamento minimo è di {views} ads.',
     'processingCanTake':
         'La procedura può richiedere fino a {days} giorni dopo l approvazione admin.',
     'everyRequestReviewed':
@@ -422,11 +452,11 @@ const extraLocalizedValues = {
     'submitUsingBalance':
         'Invia una richiesta di pagamento usando il tuo saldo di visualizzazioni.',
     'estimatedEarningsNotGuaranteed':
-        'Solo guadagni stimati. 50 visualizzazioni completate ≈ €0,01 e questa non è una promessa di pagamento garantita.',
+        'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
     'payoutCurrency': 'Valuta di pagamento',
     'payoutMethod': 'Metodo di pagamento',
-    'viewsToRequest': 'Visualizzazioni da richiedere',
-    'minimumViewsHelper': 'Minimo 5.000 visualizzazioni',
+    'viewsToRequest': 'Ads da richiedere',
+    'minimumViewsHelper': 'Minimo 1.000 ads',
     'enterAmount': 'Inserisci un importo.',
     'enterValidPositiveNumber':
         'Inserisci un numero positivo valido.',
@@ -504,6 +534,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'Impostazioni salvate.',
     'privacy': 'Privacy',
     'appVersion': 'Versione app',
+    'deleteAccount': 'Elimina account',
+    'deleteAccountSubtitle':
+        'Elimina il tuo account VideoMoney e rimuovi i dati salvati da questa app.',
+    'deleteAccountButton': 'Elimina account',
+    'deleteAccountDeleting': 'Eliminazione account...',
+    'deleteAccountConfirmTitle': 'Eliminare l\'account?',
+    'deleteAccountConfirmMessage':
+        'Questo eliminerà il tuo account VideoMoney e i dati salvati dell’app. Questa azione non può essere annullata.',
+    'deleteAccountConfirmAction': 'Elimina',
+    'deleteAccountDeleted': 'Il tuo account è stato eliminato.',
+    'deleteAccountRecentLoginRequired':
+        'Per sicurezza, accedi di nuovo prima di eliminare il tuo account.',
     'save': 'Salva',
     'saving': 'Salvataggio...',
     'termsUsingTitle': 'Usare VideoMoney',
@@ -523,7 +565,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'Le ricompense bonus giornaliere sono limitate alle attività idonee e possono essere rimosse se viene rilevato abuso.',
     'termsPayoutsBullet1':
-        'Il pagamento minimo resta 5.000 visualizzazioni.',
+        'Il pagamento minimo resta 1.000 ads.',
     'termsPayoutsBullet2':
         'Tutte le richieste di pagamento richiedono approvazione manuale admin e possono essere approvate, rifiutate o contrassegnate come pagate.',
     'termsPayoutsBullet3':
@@ -594,8 +636,11 @@ const extraLocalizedValues = {
     'profile': 'Profil',
     'rewardConfirmedViewsAdded':
         'Ödül onaylandı. Görüntülemeler eklendi.',
+    'rewardConfirmedViewsAddedCount': '+{count} görüntüleme eklendi.',
+    'bonusViewsAdded': '🎁 +{count} bonus görüntüleme',
     'rewardedAdNotCompleted':
         'Ödüllü reklam tamamlanmadı.',
+    'processingReward': 'Ödülün işleniyor...',
     'watchVideo': 'Video izle',
     'loading': 'Yükleniyor...',
     'welcomeBackShort': 'Tekrar hoş geldiniz,',
@@ -652,10 +697,10 @@ const extraLocalizedValues = {
     'reviewPayoutRequests': 'Ödeme isteklerini inceleyin',
     'logout': 'Çıkış yap',
     'yourWallet': 'Cüzdanınız',
-    'availableViews': 'Kullanılabilir görüntülemeler',
+    'availableViews': 'Kullanılabilir ads',
     'estimatedPayout': 'Tahmini ödeme',
     'remainingToPayout': 'Ödemeye kalan',
-    'viewsUnit': 'görüntüleme',
+    'viewsUnit': 'ads',
     'estimateOnly':
         'Yalnızca tahmindir. 50 görüntüleme ≈ €0.01 ve gerçek kazançlar değişebilir.',
     'requestPayout': 'Ödeme iste',
@@ -674,6 +719,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'Banka havalesi',
     'bankTransferSubtitle':
         'Manuel ödeme için IBAN veya banka hesap numarası ekleyin',
+    'walletAddress': 'cüzdan adresi',
+    'pasteWalletAddress': 'Cüzdan adresinizi yapıştırın',
+    'enterWalletAddress': 'Cüzdan adresinizi girin.',
+    'bitcoinTitle': 'Bitcoin',
+    'bitcoinSubtitle': 'BTC cüzdan adresinize ödeme',
+    'usdcSubtitle': 'USDC cüzdan adresinize ödeme',
     'viewFullHistory': 'Tüm geçmişi görüntüle',
     'inbox': 'Gelen kutusu',
     'markAllRead': 'Tümünü okundu olarak işaretle',
@@ -687,7 +738,7 @@ const extraLocalizedValues = {
     'thanksForRating': 'Puanınız için teşekkürler.',
     'requestPayoutTitle': 'Ödeme iste',
     'payoutRules': 'Ödeme kuralları',
-    'minimumPayoutIs': 'Minimum ödeme {views} görüntülemedir.',
+    'minimumPayoutIs': 'Minimum ödeme {views} ads değerindedir.',
     'processingCanTake':
         'İşlem, yönetici onayından sonra en fazla {days} gün sürebilir.',
     'everyRequestReviewed':
@@ -700,8 +751,8 @@ const extraLocalizedValues = {
         'Yalnızca tahmini kazançlar. 50 tamamlanmış görüntüleme ≈ €0.01 ve bu garantili bir ödeme vaadi değildir.',
     'payoutCurrency': 'Ödeme para birimi',
     'payoutMethod': 'Ödeme yöntemi',
-    'viewsToRequest': 'İstenecek görüntülemeler',
-    'minimumViewsHelper': 'Minimum 5.000 görüntüleme',
+    'viewsToRequest': 'İstenecek ads',
+    'minimumViewsHelper': 'Minimum 1.000 ads',
     'enterAmount': 'Bir tutar girin.',
     'enterValidPositiveNumber':
         'Geçerli bir pozitif sayı girin.',
@@ -779,6 +830,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'Ayarlar kaydedildi.',
     'privacy': 'Gizlilik',
     'appVersion': 'Uygulama sürümü',
+    'deleteAccount': 'Hesabı sil',
+    'deleteAccountSubtitle':
+        'VideoMoney hesabını sil ve bu uygulamadaki kayıtlı verilerini kaldır.',
+    'deleteAccountButton': 'Hesabı sil',
+    'deleteAccountDeleting': 'Hesap siliniyor...',
+    'deleteAccountConfirmTitle': 'Hesap silinsin mi?',
+    'deleteAccountConfirmMessage':
+        'Bu işlem VideoMoney hesabını ve kayıtlı uygulama verilerini silecektir. Bu işlem geri alınamaz.',
+    'deleteAccountConfirmAction': 'Sil',
+    'deleteAccountDeleted': 'Hesabın silindi.',
+    'deleteAccountRecentLoginRequired':
+        'Güvenlik için hesabını silmeden önce tekrar giriş yap.',
     'save': 'Kaydet',
     'saving': 'Kaydediliyor...',
     'termsUsingTitle': 'VideoMoney kullanımı',
@@ -798,7 +861,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'Günlük bonus ödülleri uygun etkinlikle sınırlıdır ve kötüye kullanım tespit edilirse kaldırılabilir.',
     'termsPayoutsBullet1':
-        'Minimum ödeme 5.000 görüntüleme olarak kalır.',
+        'Minimum ödeme 1.000 ads olarak kalır.',
     'termsPayoutsBullet2':
         'Tüm ödeme istekleri manuel yönetici onayı gerektirir ve onaylanabilir, reddedilebilir veya ödendi olarak işaretlenebilir.',
     'termsPayoutsBullet3':
@@ -867,8 +930,11 @@ const extraLocalizedValues = {
     'profile': 'الملف الشخصي',
     'rewardConfirmedViewsAdded':
         'تم تأكيد المكافأة. تمت إضافة المشاهدات.',
+    'rewardConfirmedViewsAddedCount': '+{count} مشاهدة تمت إضافتها.',
+    'bonusViewsAdded': '🎁 +{count} مشاهدة إضافية',
     'rewardedAdNotCompleted':
         'لم يتم إكمال الإعلان بمكافأة.',
+    'processingReward': 'جارٍ معالجة مكافأتك...',
     'watchVideo': 'شاهد الفيديو',
     'loading': 'جارٍ التحميل...',
     'welcomeBackShort': 'مرحبًا بعودتك،',
@@ -924,10 +990,10 @@ const extraLocalizedValues = {
     'reviewPayoutRequests': 'مراجعة طلبات السحب',
     'logout': 'تسجيل الخروج',
     'yourWallet': 'محفظتك',
-    'availableViews': 'المشاهدات المتاحة',
+    'availableViews': 'الإعلانات المتاحة',
     'estimatedPayout': 'السحب التقديري',
     'remainingToPayout': 'المتبقي للسحب',
-    'viewsUnit': 'مشاهدة',
+    'viewsUnit': 'ads',
     'estimateOnly':
         'تقدير فقط. 50 مشاهدة ≈ €0.01 وقد تختلف الأرباح الفعلية.',
     'requestPayout': 'طلب سحب',
@@ -946,6 +1012,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'تحويل بنكي',
     'bankTransferSubtitle':
         'أضف IBAN أو رقم الحساب البنكي للسحب اليدوي',
+    'walletAddress': 'عنوان المحفظة',
+    'pasteWalletAddress': 'الصق عنوان محفظتك',
+    'enterWalletAddress': 'أدخل عنوان محفظتك.',
+    'bitcoinTitle': 'بيتكوين',
+    'bitcoinSubtitle': 'الدفع إلى عنوان محفظة BTC الخاصة بك',
+    'usdcSubtitle': 'الدفع إلى عنوان محفظة USDC الخاصة بك',
     'viewFullHistory': 'عرض السجل الكامل',
     'inbox': 'الوارد',
     'markAllRead': 'تحديد الكل كمقروء',
@@ -972,8 +1044,8 @@ const extraLocalizedValues = {
         'الأرباح تقديرية فقط. 50 مشاهدة مكتملة ≈ €0.01 وهذا ليس وعدًا مضمونًا بالسحب.',
     'payoutCurrency': 'عملة السحب',
     'payoutMethod': 'طريقة السحب',
-    'viewsToRequest': 'المشاهدات المطلوب سحبها',
-    'minimumViewsHelper': 'الحد الأدنى 5,000 مشاهدة',
+    'viewsToRequest': 'ads المطلوب سحبها',
+    'minimumViewsHelper': 'الحد الأدنى 1,000 ads',
     'enterAmount': 'أدخل مبلغًا.',
     'enterValidPositiveNumber':
         'أدخل رقمًا موجبًا صالحًا.',
@@ -1049,6 +1121,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'تم حفظ الإعدادات.',
     'privacy': 'الخصوصية',
     'appVersion': 'إصدار التطبيق',
+    'deleteAccount': 'حذف الحساب',
+    'deleteAccountSubtitle':
+        'احذف حساب VideoMoney الخاص بك وأزل بيانات التطبيق المحفوظة من هذا التطبيق.',
+    'deleteAccountButton': 'حذف الحساب',
+    'deleteAccountDeleting': 'جارٍ حذف الحساب...',
+    'deleteAccountConfirmTitle': 'حذف الحساب؟',
+    'deleteAccountConfirmMessage':
+        'سيؤدي هذا إلى حذف حساب VideoMoney وبيانات التطبيق المحفوظة. لا يمكن التراجع عن هذا الإجراء.',
+    'deleteAccountConfirmAction': 'حذف',
+    'deleteAccountDeleted': 'تم حذف حسابك.',
+    'deleteAccountRecentLoginRequired':
+        'لأسباب أمنية، سجّل الدخول مرة أخرى قبل حذف حسابك.',
     'save': 'حفظ',
     'saving': 'جارٍ الحفظ...',
     'termsUsingTitle': 'استخدام VideoMoney',
@@ -1068,7 +1152,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'مكافآت البونص اليومي تقتصر على النشاط المؤهل ويمكن إزالتها إذا تم اكتشاف إساءة استخدام.',
     'termsPayoutsBullet1':
-        'يبقى الحد الأدنى للسحب 5,000 مشاهدة.',
+        'يبقى الحد الأدنى للسحب 1,000 ads.',
     'termsPayoutsBullet2':
         'تتطلب جميع طلبات السحب موافقة يدوية من المشرف ويمكن الموافقة عليها أو رفضها أو وضع علامة مدفوعة عليها.',
     'termsPayoutsBullet3':
@@ -1138,8 +1222,11 @@ const extraLocalizedValues = {
     'profile': 'প্রোফাইল',
     'rewardConfirmedViewsAdded':
         'পুরস্কার নিশ্চিত হয়েছে। ভিউ যোগ করা হয়েছে।',
+    'rewardConfirmedViewsAddedCount': '+{count} ভিউ যোগ করা হয়েছে।',
+    'bonusViewsAdded': '🎁 +{count} বোনাস ভিউ',
     'rewardedAdNotCompleted':
         'রিওয়ার্ডেড বিজ্ঞাপন সম্পূর্ণ করা হয়নি।',
+    'processingReward': 'আপনার রিওয়ার্ড প্রক্রিয়াকরণ হচ্ছে...',
     'watchVideo': 'ভিডিও দেখুন',
     'loading': 'লোড হচ্ছে...',
     'welcomeBackShort': 'আবার স্বাগতম,',
@@ -1197,10 +1284,10 @@ const extraLocalizedValues = {
     'reviewPayoutRequests': 'পেআউট অনুরোধসমূহ পর্যালোচনা করুন',
     'logout': 'লগআউট',
     'yourWallet': 'আপনার ওয়ালেট',
-    'availableViews': 'উপলব্ধ ভিউ',
+    'availableViews': 'উপলব্ধ ads',
     'estimatedPayout': 'আনুমানিক পেআউট',
     'remainingToPayout': 'পেআউটের জন্য বাকি',
-    'viewsUnit': 'ভিউ',
+    'viewsUnit': 'ads',
     'estimateOnly':
         'এটি শুধু আনুমানিক। ৫০ ভিউ ≈ €0.01 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
     'requestPayout': 'পেআউট অনুরোধ করুন',
@@ -1219,6 +1306,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'ব্যাংক ট্রান্সফার',
     'bankTransferSubtitle':
         'ম্যানুয়াল পেআউটের জন্য IBAN বা ব্যাংক অ্যাকাউন্ট নম্বর যোগ করুন',
+    'walletAddress': 'ওয়ালেট ঠিকানা',
+    'pasteWalletAddress': 'আপনার ওয়ালেট ঠিকানা পেস্ট করুন',
+    'enterWalletAddress': 'আপনার ওয়ালেট ঠিকানা লিখুন।',
+    'bitcoinTitle': 'বিটকয়েন',
+    'bitcoinSubtitle': 'আপনার BTC ওয়ালেট ঠিকানায় পেমেন্ট',
+    'usdcSubtitle': 'আপনার USDC ওয়ালেট ঠিকানায় পেমেন্ট',
     'viewFullHistory': 'সম্পূর্ণ ইতিহাস দেখুন',
     'inbox': 'ইনবক্স',
     'markAllRead': 'সব পড়া হিসেবে চিহ্নিত করুন',
@@ -1231,7 +1324,7 @@ const extraLocalizedValues = {
     'thanksForRating': 'আপনার রেটিংয়ের জন্য ধন্যবাদ।',
     'requestPayoutTitle': 'পেআউট অনুরোধ',
     'payoutRules': 'পেআউটের নিয়ম',
-    'minimumPayoutIs': 'সর্বনিম্ন পেআউট হলো {views} ভিউ।',
+    'minimumPayoutIs': 'সর্বনিম্ন পেআউট হলো {views} ads।',
     'processingCanTake':
         'অ্যাডমিন অনুমোদনের পরে প্রক্রিয়াকরণে সর্বোচ্চ {days} দিন লাগতে পারে।',
     'everyRequestReviewed':
@@ -1244,8 +1337,8 @@ const extraLocalizedValues = {
         'আনুমানিক আয় মাত্র। ৫০টি সম্পূর্ণ ভিউ ≈ €0.01 এবং এটি নিশ্চিত পেআউটের প্রতিশ্রুতি নয়।',
     'payoutCurrency': 'পেআউটের মুদ্রা',
     'payoutMethod': 'পেআউট পদ্ধতি',
-    'viewsToRequest': 'অনুরোধের জন্য ভিউ',
-    'minimumViewsHelper': 'সর্বনিম্ন ৫,০০০ ভিউ',
+    'viewsToRequest': 'অনুরোধের জন্য ads',
+    'minimumViewsHelper': 'সর্বনিম্ন ১,০০০ ads',
     'enterAmount': 'একটি পরিমাণ লিখুন।',
     'enterValidPositiveNumber':
         'একটি বৈধ ধনাত্মক সংখ্যা লিখুন।',
@@ -1322,6 +1415,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'সেটিংস সংরক্ষিত হয়েছে।',
     'privacy': 'গোপনীয়তা',
     'appVersion': 'অ্যাপের সংস্করণ',
+    'deleteAccount': 'অ্যাকাউন্ট মুছুন',
+    'deleteAccountSubtitle':
+        'আপনার VideoMoney অ্যাকাউন্ট মুছে ফেলুন এবং এই অ্যাপ থেকে সংরক্ষিত ডেটা সরিয়ে দিন।',
+    'deleteAccountButton': 'অ্যাকাউন্ট মুছুন',
+    'deleteAccountDeleting': 'অ্যাকাউন্ট মুছে ফেলা হচ্ছে...',
+    'deleteAccountConfirmTitle': 'অ্যাকাউন্ট মুছবেন?',
+    'deleteAccountConfirmMessage':
+        'এতে আপনার VideoMoney অ্যাকাউন্ট এবং সংরক্ষিত অ্যাপ ডেটা মুছে যাবে। এই কাজ আর ফেরানো যাবে না।',
+    'deleteAccountConfirmAction': 'মুছুন',
+    'deleteAccountDeleted': 'আপনার অ্যাকাউন্ট মুছে ফেলা হয়েছে।',
+    'deleteAccountRecentLoginRequired':
+        'নিরাপত্তার জন্য, অ্যাকাউন্ট মুছার আগে আবার লগ ইন করুন।',
     'save': 'সংরক্ষণ করুন',
     'saving': 'সংরক্ষণ করা হচ্ছে...',
     'termsUsingTitle': 'ভিডিওমানি ব্যবহার',
@@ -1341,7 +1446,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'দৈনিক বোনাস পুরস্কার শুধুমাত্র যোগ্য কার্যকলাপের জন্য সীমাবদ্ধ এবং অপব্যবহার শনাক্ত হলে তা সরিয়ে দেওয়া হতে পারে।',
     'termsPayoutsBullet1':
-        'সর্বনিম্ন পেআউট ৫,০০০ ভিউই থাকবে।',
+        'সর্বনিম্ন পেআউট ১,০০০ adsই থাকবে।',
     'termsPayoutsBullet2':
         'সব পেআউট অনুরোধে ম্যানুয়াল অ্যাডমিন অনুমোদন প্রয়োজন এবং তা অনুমোদিত, প্রত্যাখ্যাত, অথবা পরিশোধিত হিসেবে চিহ্নিত হতে পারে।',
     'termsPayoutsBullet3':
@@ -1416,8 +1521,11 @@ const extraLocalizedValues = {
     'profile': 'சுயவிவரம்',
     'rewardConfirmedViewsAdded':
         'பரிசு உறுதிப்படுத்தப்பட்டது. பார்வைகள் சேர்க்கப்பட்டன.',
+    'rewardConfirmedViewsAddedCount': '+{count} பார்வைகள் சேர்க்கப்பட்டன.',
+    'bonusViewsAdded': '🎁 +{count} bonus பார்வைகள்',
     'rewardedAdNotCompleted':
         'பரிசளிக்கும் விளம்பரம் நிறைவுபெறவில்லை.',
+    'processingReward': 'உங்கள் பரிசு செயலாக்கப்படுகிறது...',
     'watchVideo': 'வீடியோவை பார்க்கவும்',
     'loading': 'ஏற்றப்படுகிறது...',
     'welcomeBackShort': 'மீண்டும் வரவேற்கிறோம்,',
@@ -1478,10 +1586,10 @@ const extraLocalizedValues = {
         'கட்டண கோரிக்கைகளை மதிப்பாய்வு செய்யுங்கள்',
     'logout': 'வெளியேறு',
     'yourWallet': 'உங்கள் வாலெட்',
-    'availableViews': 'கிடைக்கும் பார்வைகள்',
+    'availableViews': 'கிடைக்கும் ads',
     'estimatedPayout': 'மதிப்பிடப்பட்ட கட்டணம்',
     'remainingToPayout': 'கட்டணத்திற்கு மீதமுள்ளது',
-    'viewsUnit': 'பார்வைகள்',
+    'viewsUnit': 'ads',
     'estimateOnly':
         'இது ஒரு மதிப்பீடு மட்டுமே. 50 பார்வைகள் ≈ €0.01 மற்றும் உண்மையான வருவாய் மாறுபடலாம்.',
     'requestPayout': 'கட்டணம் கோருங்கள்',
@@ -1501,6 +1609,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'வங்கி பரிமாற்றம்',
     'bankTransferSubtitle':
         'கைமுறை கட்டணத்திற்காக IBAN அல்லது வங்கி கணக்கு எண்ணை சேர்க்கவும்',
+    'walletAddress': 'வாலெட் முகவரி',
+    'pasteWalletAddress': 'உங்கள் வாலெட் முகவரியை ஒட்டவும்',
+    'enterWalletAddress': 'உங்கள் வாலெட் முகவரியை உள்ளிடவும்.',
+    'bitcoinTitle': 'பிட்காயின்',
+    'bitcoinSubtitle': 'உங்கள் BTC வாலெட் முகவரிக்கு பணப்பரிமாற்றம்',
+    'usdcSubtitle': 'உங்கள் USDC வாலெட் முகவரிக்கு பணப்பரிமாற்றம்',
     'viewFullHistory': 'முழு வரலாற்றைப் பார்க்கவும்',
     'inbox': 'இன்பாக்ஸ்',
     'markAllRead':
@@ -1530,8 +1644,8 @@ const extraLocalizedValues = {
         'மதிப்பிடப்பட்ட வருமானம் மட்டுமே. 50 நிறைவு செய்யப்பட்ட பார்வைகள் ≈ €0.01, இது உத்தரவாதப்பட்ட கட்டண வாக்குறுதி அல்ல.',
     'payoutCurrency': 'கட்டண நாணயம்',
     'payoutMethod': 'கட்டண முறை',
-    'viewsToRequest': 'கோர வேண்டிய பார்வைகள்',
-    'minimumViewsHelper': 'குறைந்தபட்சம் 5,000 பார்வைகள்',
+    'viewsToRequest': 'கோர வேண்டிய ads',
+    'minimumViewsHelper': 'குறைந்தபட்சம் 1,000 ads',
     'enterAmount': 'ஒரு தொகையை உள்ளிடுங்கள்.',
     'enterValidPositiveNumber':
         'சரியான நேர்ம தொகையை உள்ளிடுங்கள்.',
@@ -1613,6 +1727,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'அமைப்புகள் சேமிக்கப்பட்டன.',
     'privacy': 'தனியுரிமை',
     'appVersion': 'பயன்பாட்டு பதிப்பு',
+    'deleteAccount': 'கணக்கை நீக்கு',
+    'deleteAccountSubtitle':
+        'உங்கள் VideoMoney கணக்கையும் இந்த app-ல் சேமிக்கப்பட்ட தரவையும் நீக்கவும்.',
+    'deleteAccountButton': 'கணக்கை நீக்கு',
+    'deleteAccountDeleting': 'கணக்கு நீக்கப்படுகிறது...',
+    'deleteAccountConfirmTitle': 'கணக்கை நீக்கவா?',
+    'deleteAccountConfirmMessage':
+        'இது உங்கள் VideoMoney கணக்கையும் சேமிக்கப்பட்ட app தரவையும் நீக்கும். இந்த செயலை மீட்டெடுக்க முடியாது.',
+    'deleteAccountConfirmAction': 'நீக்கு',
+    'deleteAccountDeleted': 'உங்கள் கணக்கு நீக்கப்பட்டது.',
+    'deleteAccountRecentLoginRequired':
+        'பாதுகாப்பிற்காக, கணக்கை நீக்குவதற்கு முன் மீண்டும் உள்நுழைக.',
     'save': 'சேமி',
     'saving': 'சேமிக்கப்படுகிறது...',
     'termsUsingTitle': 'VideoMoney-ஐ பயன்படுத்துவது',
@@ -1632,7 +1758,7 @@ const extraLocalizedValues = {
     'termsViewsBullet3':
         'தினசரி போனஸ் பரிசுகள் தகுதியான செயல்பாட்டிற்கு மட்டுமே வரம்புபடுத்தப்பட்டவை; தவறான பயன்பாடு கண்டறியப்பட்டால் அவை நீக்கப்படலாம்.',
     'termsPayoutsBullet1':
-        'குறைந்தபட்ச கட்டணம் 5,000 பார்வைகளாகவே இருக்கும்.',
+        'குறைந்தபட்ச கட்டணம் 1,000 ads ஆகவே இருக்கும்.',
     'termsPayoutsBullet2':
         'அனைத்து கட்டண கோரிக்கைகளுக்கும் கைமுறை நிர்வாகி ஒப்புதல் அவசியம்; அவை ஒப்புதல், நிராகரம், அல்லது செலுத்தப்பட்டது என குறிக்கப்படலாம்.',
     'termsPayoutsBullet3':
@@ -1705,8 +1831,11 @@ const extraLocalizedValues = {
     'profile': 'ప్రొఫైల్',
     'rewardConfirmedViewsAdded':
         'రివార్డ్ నిర్ధారించబడింది. వ్యూలు జోడించబడ్డాయి.',
+    'rewardConfirmedViewsAddedCount': '+{count} వ్యూలు జోడించబడ్డాయి.',
+    'bonusViewsAdded': '🎁 +{count} బోనస్ వ్యూలు',
     'rewardedAdNotCompleted':
         'రివార్డెడ్ ప్రకటన పూర్తికాలేదు.',
+    'processingReward': 'మీ రివార్డ్ ప్రాసెస్ అవుతోంది...',
     'watchVideo': 'వీడియో చూడండి',
     'loading': 'లోడ్ అవుతోంది...',
     'welcomeBackShort': 'మళ్లీ స్వాగతం,',
@@ -1766,10 +1895,10 @@ const extraLocalizedValues = {
         'చెల్లింపు అభ్యర్థనలను సమీక్షించండి',
     'logout': 'లాగ్ఔట్',
     'yourWallet': 'మీ వాలెట్',
-    'availableViews': 'అందుబాటులో ఉన్న వ్యూలు',
+    'availableViews': 'అందుబాటులో ఉన్న ads',
     'estimatedPayout': 'అంచనా చెల్లింపు',
     'remainingToPayout': 'చెల్లింపుకు మిగిలినవి',
-    'viewsUnit': 'వ్యూలు',
+    'viewsUnit': 'ads',
     'estimateOnly':
         'ఇది కేవలం అంచనా మాత్రమే. 50 వ్యూలు ≈ €0.01 మరియు అసలు ఆదాయం మారవచ్చు.',
     'requestPayout': 'చెల్లింపును అభ్యర్థించండి',
@@ -1788,6 +1917,12 @@ const extraLocalizedValues = {
     'bankTransferTitle': 'బ్యాంక్ బదిలీ',
     'bankTransferSubtitle':
         'మాన్యువల్ చెల్లింపుకు IBAN లేదా బ్యాంక్ ఖాతా సంఖ్యను జోడించండి',
+    'walletAddress': 'వాలెట్ చిరునామా',
+    'pasteWalletAddress': 'మీ వాలెట్ చిరునామాను పేస్ట్ చేయండి',
+    'enterWalletAddress': 'మీ వాలెట్ చిరునామాను నమోదు చేయండి.',
+    'bitcoinTitle': 'బిట్‌కాయిన్',
+    'bitcoinSubtitle': 'మీ BTC వాలెట్ చిరునామాకు చెల్లింపు',
+    'usdcSubtitle': 'మీ USDC వాలెట్ చిరునామాకు చెల్లింపు',
     'viewFullHistory': 'పూర్తి చరిత్రను చూడండి',
     'inbox': 'ఇన్‌బాక్స్',
     'markAllRead': 'అన్నీ చదివినట్లుగా గుర్తించండి',
@@ -1800,7 +1935,7 @@ const extraLocalizedValues = {
     'thanksForRating': 'మీ రేటింగ్‌కు ధన్యవాదాలు.',
     'requestPayoutTitle': 'చెల్లింపును అభ్యర్థించండి',
     'payoutRules': 'చెల్లింపు నియమాలు',
-    'minimumPayoutIs': 'కనీస చెల్లింపు {views} వ్యూలు.',
+    'minimumPayoutIs': 'కనీస చెల్లింపు {views} ads.',
     'processingCanTake':
         'అడ్మిన్ ఆమోదం తర్వాత ప్రాసెసింగ్‌కు గరిష్టంగా {days} రోజులు పట్టవచ్చు.',
     'everyRequestReviewed':
@@ -1813,8 +1948,8 @@ const extraLocalizedValues = {
         'అంచనా ఆదాయమే. 50 పూర్తయిన వ్యూలు ≈ €0.01 మరియు ఇది హామీ ఇచ్చిన చెల్లింపు కాదు.',
     'payoutCurrency': 'చెల్లింపు కరెన్సీ',
     'payoutMethod': 'చెల్లింపు పద్ధతి',
-    'viewsToRequest': 'అభ్యర్థించాల్సిన వ్యూలు',
-    'minimumViewsHelper': 'కనీసం 5,000 వ్యూలు',
+    'viewsToRequest': 'అభ్యర్థించాల్సిన ads',
+    'minimumViewsHelper': 'కనీసం 1,000 ads',
     'enterAmount': 'ఒక మొత్తాన్ని నమోదు చేయండి.',
     'enterValidPositiveNumber':
         'చెల్లుబాటు అయ్యే ధన సంఖ్యను నమోదు చేయండి.',
@@ -1892,6 +2027,18 @@ const extraLocalizedValues = {
     'settingsSaved': 'సెట్టింగ్‌లు సేవ్ అయ్యాయి.',
     'privacy': 'గోప్యత',
     'appVersion': 'యాప్ వెర్షన్',
+    'deleteAccount': 'ఖాతాను తొలగించు',
+    'deleteAccountSubtitle':
+        'మీ VideoMoney ఖాతాను తొలగించి, ఈ యాప్‌లో సేవ్ అయిన డేటాను తీసివేయండి.',
+    'deleteAccountButton': 'ఖాతాను తొలగించు',
+    'deleteAccountDeleting': 'ఖాతా తొలగించబడుతోంది...',
+    'deleteAccountConfirmTitle': 'ఖాతాను తొలగించాలా?',
+    'deleteAccountConfirmMessage':
+        'ఇది మీ VideoMoney ఖాతా మరియు సేవ్ చేసిన యాప్ డేటాను తొలగిస్తుంది. ఈ చర్యను తిరిగి పొందలేరు.',
+    'deleteAccountConfirmAction': 'తొలగించు',
+    'deleteAccountDeleted': 'మీ ఖాతా తొలగించబడింది.',
+    'deleteAccountRecentLoginRequired':
+        'భద్రత కోసం, ఖాతాను తొలగించే ముందు మళ్లీ లాగిన్ అవ్వండి.',
     'save': 'సేవ్ చేయండి',
     'saving': 'సేవ్ అవుతోంది...',
     'termsUsingTitle': 'VideoMoney వినియోగం',
@@ -1910,7 +2057,7 @@ const extraLocalizedValues = {
         'అంచనా ఆదాయం కేవలం సమాచార కోసం మాత్రమే మరియు ప్లాట్‌ఫారమ్ పనితీరు, విధానం, మోసం తనిఖీలు మరియు చెల్లింపు సమీక్ష ఆధారంగా మారవచ్చు.',
     'termsViewsBullet3':
         'రోజువారీ బోనస్ బహుమతులు అర్హమైన కార్యకలాపాలకు మాత్రమే పరిమితం; దుర్వినియోగం గుర్తిస్తే తొలగించబడవచ్చు.',
-    'termsPayoutsBullet1': 'కనీస చెల్లింపు 5,000 వ్యూలుగానే ఉంటుంది.',
+    'termsPayoutsBullet1': 'కనీస చెల్లింపు 1,000 adsగానే ఉంటుంది.',
     'termsPayoutsBullet2':
         'అన్ని చెల్లింపు అభ్యర్థనలకు మాన్యువల్ అడ్మిన్ ఆమోదం అవసరం మరియు అవి ఆమోదించబడవచ్చు, తిరస్కరించబడవచ్చు లేదా చెల్లించబడినట్లుగా గుర్తించబడవచ్చు.',
     'termsPayoutsBullet3':
