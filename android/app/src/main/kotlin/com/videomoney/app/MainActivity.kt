@@ -108,21 +108,30 @@ class MainActivity : FlutterActivity() {
                         result.success(Appodeal.isInitialized(REWARDED_VIDEO_TYPE))
                     }
 
-                    "ensureLevelPlayInitialized" -> {
+                    "ensureUnityInitialized" -> {
                         initializeLevelPlayIfNeeded()
                         result.success(levelPlayInitialized)
                     }
 
-                    "isRewardedVideoLoaded" -> {
+                    "isAppodealRewardedVideoLoaded" -> {
                         result.success(Appodeal.isLoaded(REWARDED_VIDEO_TYPE))
                     }
 
-                    "preloadRewardedVideo" -> {
+                    "preloadAppodealRewardedVideo" -> {
                         cacheRewardedVideo()
                         result.success(null)
                     }
 
-                    "preloadLevelPlayRewardedVideo" -> {
+                    "showAppodealRewardedVideo" -> {
+                        if (!Appodeal.isLoaded(REWARDED_VIDEO_TYPE)) {
+                            cacheRewardedVideo()
+                            result.success(false)
+                        } else {
+                            result.success(Appodeal.show(this, REWARDED_VIDEO_TYPE))
+                        }
+                    }
+
+                    "preloadUnityRewardedVideo" -> {
                         preloadLevelPlayRewardedVideo()
                         result.success(null)
                     }
@@ -181,20 +190,11 @@ class MainActivity : FlutterActivity() {
                         result.success(appnextRewardedVideo?.isAdLoaded == true)
                     }
 
-                    "showRewardedVideo" -> {
-                        if (!Appodeal.isLoaded(REWARDED_VIDEO_TYPE)) {
-                            cacheRewardedVideo()
-                            result.success(false)
-                        } else {
-                            result.success(Appodeal.show(this, REWARDED_VIDEO_TYPE))
-                        }
-                    }
-
-                    "isLevelPlayRewardedVideoLoaded" -> {
+                    "isUnityRewardedVideoLoaded" -> {
                         result.success(levelPlayRewardedLoaded || levelPlayRewardedAd?.isAdReady == true)
                     }
 
-                    "showLevelPlayRewardedVideo" -> {
+                    "showUnityRewardedVideo" -> {
                         result.success(showLevelPlayRewardedVideo())
                     }
 
@@ -336,10 +336,7 @@ class MainActivity : FlutterActivity() {
                     levelPlayInitialized = false
                     levelPlayRewardedLoaded = false
                     levelPlayRewardedLoading = false
-                    emitEvent(
-                        "onLevelPlayRewardedVideoFailedToLoad",
-                        mapOf("error" to error.toString()),
-                    )
+                    emitEvent("onUnityRewardedVideoFailedToLoad", mapOf("error" to error.toString()))
                     Log.w(LOG_TAG, "[rewarded][levelplay] init failed: $error")
                 }
             },
@@ -363,30 +360,27 @@ class MainActivity : FlutterActivity() {
                     override fun onAdLoaded(adInfo: LevelPlayAdInfo) {
                         levelPlayRewardedLoaded = true
                         levelPlayRewardedLoading = false
-                        emitEvent("onLevelPlayRewardedVideoLoaded")
+                        emitEvent("onUnityRewardedVideoLoaded")
                         Log.d(LOG_TAG, "[rewarded][levelplay] loaded.")
                     }
 
                     override fun onAdLoadFailed(error: LevelPlayAdError) {
                         levelPlayRewardedLoaded = false
                         levelPlayRewardedLoading = false
-                        emitEvent(
-                            "onLevelPlayRewardedVideoFailedToLoad",
-                            mapOf("error" to error.toString()),
-                        )
+                        emitEvent("onUnityRewardedVideoFailedToLoad", mapOf("error" to error.toString()))
                         Log.w(LOG_TAG, "[rewarded][levelplay] failed to load: $error")
                     }
 
                     override fun onAdDisplayed(adInfo: LevelPlayAdInfo) {
                         levelPlayRewardedLoaded = false
                         levelPlayRewardedLoading = false
-                        emitEvent("onLevelPlayRewardedVideoShown")
+                        emitEvent("onUnityRewardedVideoShown")
                         Log.d(LOG_TAG, "[rewarded][levelplay] shown.")
                     }
 
                     override fun onAdRewarded(reward: LevelPlayReward, adInfo: LevelPlayAdInfo) {
                         emitEvent(
-                            "onLevelPlayRewardedVideoFinished",
+                            "onUnityRewardedVideoFinished",
                             mapOf(
                                 "amount" to reward.amount,
                                 "currency" to reward.name,
@@ -404,10 +398,7 @@ class MainActivity : FlutterActivity() {
                     ) {
                         levelPlayRewardedLoaded = false
                         levelPlayRewardedLoading = false
-                        emitEvent(
-                            "onLevelPlayRewardedVideoShowFailed",
-                            mapOf("error" to error.toString()),
-                        )
+                        emitEvent("onUnityRewardedVideoShowFailed", mapOf("error" to error.toString()))
                         Log.w(LOG_TAG, "[rewarded][levelplay] failed to show: $error")
                         preloadLevelPlayRewardedVideo()
                     }
@@ -415,7 +406,7 @@ class MainActivity : FlutterActivity() {
                     override fun onAdClicked(adInfo: LevelPlayAdInfo) = Unit
 
                     override fun onAdClosed(adInfo: LevelPlayAdInfo) {
-                        emitEvent("onLevelPlayRewardedVideoClosed")
+                        emitEvent("onUnityRewardedVideoClosed")
                         Log.d(LOG_TAG, "[rewarded][levelplay] closed.")
                         preloadLevelPlayRewardedVideo()
                     }

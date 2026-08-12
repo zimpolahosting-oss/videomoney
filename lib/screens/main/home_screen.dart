@@ -801,12 +801,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           pendingProvider == ShortsProgressService.providerAppodeal;
       final isGraviteBreak =
           pendingProvider == ShortsProgressService.providerGravite;
+      final isUnityBreak =
+          pendingProvider == ShortsProgressService.providerUnity;
       final isRewardedTurn =
           isAdmobBreak ||
           isAppodealBreak ||
-          isGraviteBreak;
+          isGraviteBreak ||
+          isUnityBreak;
       final shouldFallbackToMonetag =
-          isAdmobBreak || isAppodealBreak || isGraviteBreak;
+          isAdmobBreak || isAppodealBreak || isGraviteBreak || isUnityBreak;
       final adProviderName = widget.compactMode
           ? 'Monetag'
           : _providerLabelForAdBreak(pendingProvider);
@@ -819,9 +822,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               await _earningsService.showRewardedBonusAd(
                 provider: isAdmobBreak
                         ? RewardedAdProvider.admob
+                        : isAppodealBreak
+                        ? RewardedAdProvider.appodeal
                         : isGraviteBreak
                         ? RewardedAdProvider.gravite
-                        : RewardedAdProvider.appodeal,
+                        : RewardedAdProvider.unity,
                 onAdStatus: (message) {
                   debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                 },
@@ -832,7 +837,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               callbacks: VideomoneyAdCallbacks(
                 onFailed: (provider, reason) {
                   debugPrint(
-                    '[VideomoneyAds][Home] ${provider.name} failed during Monetag fallback: '
+                    '[VideomoneyAds][Home] ${provider.name} failed during Monetag backup fallback: '
                     '$reason',
                   );
                 },
@@ -905,6 +910,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ? 'No Appodeal or Monetag ad available for this turn.'
                   : isGraviteBreak
                   ? 'No Gravite or Monetag ad available for this turn.'
+                  : isUnityBreak
+                  ? 'No Unity or Monetag ad available for this turn.'
                   : 'No interstitial ad available. Continuing to the next short.',
             ),
           ),
@@ -932,6 +939,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _providerLabelForAdBreak(String provider) {
+    if (provider == ShortsProgressService.providerAdmob) return 'AdMob';
+    if (provider == ShortsProgressService.providerAppodeal) return 'Appodeal';
+    if (provider == ShortsProgressService.providerGravite) return 'Gravite';
+    if (provider == ShortsProgressService.providerUnity) return 'Unity';
+    if (provider == ShortsProgressService.providerMonetag) return 'Monetag';
     return 'Ad';
   }
 

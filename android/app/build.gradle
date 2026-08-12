@@ -60,7 +60,7 @@ def levelPlayAppKey = (
 def levelPlayRewardedAdUnitId = (
         localProperties.getProperty('levelplay.rewardedAdUnitId')
                 ?: System.getenv('LEVELPLAY_REWARDED_AD_UNIT_ID')
-                ?: 'gy6g2shjrzmhy0bm'
+                ?: '25002460'
 ).trim()
 def graviteRewardedPlacementName = (
         localProperties.getProperty('gravite.rewardedPlacementName')
