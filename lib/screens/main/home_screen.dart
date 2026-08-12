@@ -688,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       setState(() {
         _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
-        _bonusProgressShorts = result.snapshot.bonusProgressShorts;
+        _bonusProgressShorts = 0;
         _giftReady = result.snapshot.giftReady;
         _pendingAdBreakShorts = result.snapshot.pendingAdBreakShorts;
         _pendingAdBreakProvider = result.snapshot.pendingAdBreakProvider;
@@ -697,19 +697,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (result.adBreakReached) {
         await _presentAdBreakSheet();
-      }
-
-      if (result.bonusViewsAwarded > 0) {
-        await _firestoreService.applyUserProgress(
-          uid: user.uid,
-          viewsDelta: result.bonusViewsAwarded,
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎁 +${result.bonusViewsAwarded} bonus views'),
-          ),
-        );
       }
 
       if (result.shortsThresholdReached) {

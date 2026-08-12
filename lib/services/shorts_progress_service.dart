@@ -83,9 +83,9 @@ class ShortsProgressService {
   static final ShortsProgressService instance = ShortsProgressService._();
 
   static const int rewardThresholdShorts = 10;
-  static const int bonusViewsReward = 45;
+  static const int bonusViewsReward = 0;
   static const int giftBoxViewsReward = 0;
-  static const int adBreakViewsReward = 10;
+  static const int adBreakViewsReward = 1;
   static const int adBreakThresholdShorts = 3;
   static const String providerStartio = 'startio';
   static const String providerGravite = 'gravite';
@@ -143,10 +143,9 @@ class ShortsProgressService {
   Future<ShortsProgressResult> markShortCompleted(String uid) async {
     final snapshot = await load(uid);
     final nextCompletedShorts = snapshot.completedShortsInCycle + 1;
-    final nextBonusProgress =
-        (snapshot.bonusProgressShorts + 1) % rewardThresholdShorts;
+    const nextBonusProgress = 0;
     final giftReady = false;
-    final bonusAwarded = nextBonusProgress == 0 ? bonusViewsReward : 0;
+    const bonusAwarded = 0;
     final rawAdBreakProgress = snapshot.adBreakProgressShorts + 1;
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
