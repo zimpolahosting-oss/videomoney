@@ -10,8 +10,7 @@ const extraLocalizedValues = {
         'Não foi possível restaurar a sua sessão agora.',
     'welcomeBack': 'Bem-vindo de volta',
     'createYourAccount': 'Crie a sua conta',
-    'signInBody':
-        'Inicie sessão para continuar a ganhar visualizações e gerir pagamentos.',
+    'signInBody': 'Inicie sessão para continuar a contar ads e gerir pagamentos.',
     'signUpBody':
         'Registe-se para começar a ver vídeos recompensados e aumentar o seu saldo.',
     'login': 'Iniciar sessão',
@@ -45,10 +44,9 @@ const extraLocalizedValues = {
     'earn': 'Ganhar',
     'wallet': 'Carteira',
     'profile': 'Perfil',
-    'rewardConfirmedViewsAdded':
-        'Recompensa confirmada. Visualizações adicionadas.',
-    'rewardConfirmedViewsAddedCount': '+{count} visualizações adicionadas.',
-    'bonusViewsAdded': '🎁 +{count} visualizações bónus',
+    'rewardConfirmedViewsAdded': 'Recompensa confirmada. Ad contabilizado.',
+    'rewardConfirmedViewsAddedCount': '+{count} ads contabilizados.',
+    'bonusViewsAdded': '🎁 +{count} ads contabilizados',
     'rewardedAdNotCompleted':
         'O anúncio recompensado não foi concluído.',
     'processingReward': 'A processar a sua recompensa...',
@@ -56,36 +54,31 @@ const extraLocalizedValues = {
     'loading': 'A carregar...',
     'welcomeBackShort': 'Bem-vindo de volta,',
     'signedInUser': 'Utilizador com sessão iniciada',
-    'watchVideosEarnPaid':
-        'Veja vídeos, ganhe visualizações e receba pagamentos.',
-    'currentViews': 'Visualizações atuais',
+    'watchVideosEarnPaid': 'Veja ads, conte ads e receba pagamentos.',
+    'currentViews': 'Ads atuais',
     'videosWatched': 'Vídeos vistos',
     'progressToPayout': 'Progresso até ao pagamento',
     'youAreOnYourWay': 'Está no caminho certo.',
-    'earnViewsNow': 'Ganhe visualizações agora.',
+    'earnViewsNow': 'Ganhe ads agora.',
     'payoutUnlocked':
         'Pagamento desbloqueado. Pode solicitar um pagamento na Carteira.',
-    'moreViewsUntilPayout':
-        'Faltam {views} visualizações para o pagamento.',
+    'moreViewsUntilPayout': 'Faltam {views} ads para o pagamento.',
     'dailyBonus': 'Bónus diário',
-    'watchDailyVideosBonus':
-        'Veja {videos} vídeos por dia para obter visualizações de bónus.',
+    'watchDailyVideosBonus': 'Complete {videos} ads por dia para contar mais ads.',
     'bonusClaimed': 'Bónus reclamado',
     'bonus': 'Bónus',
-    'earnViewsTitle': 'Ganhar visualizações',
-    'watchRewardedEarnViews':
-        'Veja vídeos recompensados e ganhe visualizações instantaneamente.',
-    'earnViews': 'Ganhar visualizações',
+    'earnViewsTitle': 'Ganhar ads',
+    'watchRewardedEarnViews': 'Veja ads recompensados e conte ads instantaneamente.',
+    'earnViews': 'Ganhar ads',
     'howItWorks': 'Como funciona',
     'watch': 'Ver',
     'watchShortVideo': 'Ver um vídeo curto',
     'earnStep': 'Ganhar',
-    'getViewsReward': 'Receba visualizações como recompensa',
+    'getViewsReward': 'Receba ads contabilizados como recompensa',
     'cashOut': 'Levantar',
-    'reachViews': 'Atinga {views} visualizações',
+    'reachViews': 'Atinga {views} ads',
     'dailyChallenge': 'Desafio diário',
-    'watchTodayVideosBonus':
-        'Veja {videos} vídeos hoje e receba visualizações de bónus!',
+    'watchTodayVideosBonus': 'Complete hoje {videos} ads e conte mais ads!',
     'totalVideosWatched': 'Total de vídeos vistos',
     'memberSince': 'Membro desde: {date}',
     'notAvailableYet': 'Ainda não disponível',
@@ -111,8 +104,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Pagamento estimado',
     'remainingToPayout': 'Restante até ao pagamento',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+=======
+    'estimateOnly': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+>>>>>>> theirs
     'requestPayout': 'Solicitar pagamento',
     'minPayout': 'Pagamento mín.',
     'processingTime': 'Tempo de processamento',
@@ -147,18 +144,27 @@ const extraLocalizedValues = {
     'thanksForRating': 'Obrigado pela sua avaliação.',
     'requestPayoutTitle': 'Solicitar pagamento',
     'payoutRules': 'Regras de pagamento',
+<<<<<<< ours
     'minimumPayoutIs':
         'O pagamento mínimo é de {views} ads.',
+=======
+    'minimumPayoutIs': 'O pagamento mínimo é de {views} ads.',
+>>>>>>> theirs
     'processingCanTake':
         'O processamento pode demorar até {days} dias após a aprovação do administrador.',
     'everyRequestReviewed':
         'Cada pedido é revisto pelo administrador antes de ser pago.',
     'useBankAddIban':
         'Utilize Banco para transferência manual e adicione o seu IBAN ou número de conta bancária.',
+<<<<<<< ours
     'submitUsingBalance':
         'Envie um pedido de pagamento utilizando o seu saldo de ads.',
     'estimatedEarningsNotGuaranteed':
         'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+=======
+    'submitUsingBalance': 'Envie um pedido de pagamento utilizando o seu saldo de ads.',
+    'estimatedEarningsNotGuaranteed': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+>>>>>>> theirs
     'payoutCurrency': 'Moeda de pagamento',
     'payoutMethod': 'Método de pagamento',
     'viewsToRequest': 'Ads a solicitar',
@@ -253,17 +259,15 @@ const extraLocalizedValues = {
     'save': 'Guardar',
     'saving': 'A guardar...',
     'termsUsingTitle': 'Utilizar o VideoMoney',
-    'termsViewsTitle': 'Visualizações e recompensas',
+    'termsViewsTitle': 'Ads e recompensas',
     'termsPayoutsTitle': 'Pagamentos e revisão',
     'termsSupportTitle': 'Suporte e mensagens',
     'termsUsingBullet1':
         'Deve utilizar informações de conta corretas.',
-    'termsUsingBullet2':
-        'Uma pessoa não pode abusar de múltiplas contas, bots, scripts, rotação de VPN ou quintas de emuladores para gerar visualizações extra.',
+    'termsUsingBullet2': 'Uma pessoa não pode abusar de múltiplas contas, bots, scripts, rotação de VPN ou quintas de emuladores para gerar ads extra.',
     'termsUsingBullet3':
         'Os anúncios recompensados, a autenticação Firebase e a revisão de pagamentos permanecem protegidos pela configuração atual da plataforma.',
-    'termsViewsBullet1':
-        'As visualizações mostradas na app são unidades promocionais de recompensa usadas dentro do VideoMoney.',
+    'termsViewsBullet1': 'Os ads contados na app são unidades promocionais de recompensa usadas dentro do VideoMoney.',
     'termsViewsBullet2':
         'Os ganhos estimados são apenas informativos e podem mudar com base no desempenho da plataforma, na política, nas verificações de fraude e na revisão de pagamentos.',
     'termsViewsBullet3':
@@ -303,8 +307,7 @@ const extraLocalizedValues = {
         'Impossibile ripristinare la tua sessione in questo momento.',
     'welcomeBack': 'Bentornato',
     'createYourAccount': 'Crea il tuo account',
-    'signInBody':
-        'Accedi per continuare a guadagnare visualizzazioni e gestire i pagamenti.',
+    'signInBody': 'Accedi per continuare a contare ads e gestire i pagamenti.',
     'signUpBody':
         'Registrati per iniziare a guardare video con premio e aumentare il tuo saldo.',
     'login': 'Accedi',
@@ -338,10 +341,9 @@ const extraLocalizedValues = {
     'earn': 'Guadagna',
     'wallet': 'Portafoglio',
     'profile': 'Profilo',
-    'rewardConfirmedViewsAdded':
-        'Ricompensa confermata. Visualizzazioni aggiunte.',
-    'rewardConfirmedViewsAddedCount': '+{count} visualizzazioni aggiunte.',
-    'bonusViewsAdded': '🎁 +{count} visualizzazioni bonus',
+    'rewardConfirmedViewsAdded': 'Ricompensa confermata. Ad conteggiato.',
+    'rewardConfirmedViewsAddedCount': '+{count} ads conteggiati.',
+    'bonusViewsAdded': '🎁 +{count} ads conteggiati',
     'rewardedAdNotCompleted':
         'Il video pubblicitario con premio non è stato completato.',
     'processingReward': 'Elaborazione della tua ricompensa...',
@@ -349,36 +351,31 @@ const extraLocalizedValues = {
     'loading': 'Caricamento...',
     'welcomeBackShort': 'Bentornato,',
     'signedInUser': 'Utente con accesso effettuato',
-    'watchVideosEarnPaid':
-        'Guarda video, guadagna visualizzazioni e ricevi pagamenti.',
-    'currentViews': 'Visualizzazioni attuali',
+    'watchVideosEarnPaid': 'Guarda ads, conta ads e ricevi pagamenti.',
+    'currentViews': 'Ads attuali',
     'videosWatched': 'Video guardati',
     'progressToPayout': 'Avanzamento verso il pagamento',
     'youAreOnYourWay': 'Sei sulla buona strada.',
-    'earnViewsNow': 'Guadagna visualizzazioni ora.',
+    'earnViewsNow': 'Guadagna ads ora.',
     'payoutUnlocked':
         'Pagamento sbloccato. Puoi richiedere un pagamento nel Portafoglio.',
-    'moreViewsUntilPayout':
-        'Mancano {views} visualizzazioni al pagamento.',
+    'moreViewsUntilPayout': 'Mancano {views} ads al pagamento.',
     'dailyBonus': 'Bonus giornaliero',
-    'watchDailyVideosBonus':
-        'Guarda {videos} video al giorno per ottenere visualizzazioni bonus.',
+    'watchDailyVideosBonus': 'Completa {videos} ads al giorno per contare più ads.',
     'bonusClaimed': 'Bonus richiesto',
     'bonus': 'Bonus',
-    'earnViewsTitle': 'Guadagna visualizzazioni',
-    'watchRewardedEarnViews':
-        'Guarda video con premio e guadagna visualizzazioni subito.',
-    'earnViews': 'Guadagna visualizzazioni',
+    'earnViewsTitle': 'Guadagna ads',
+    'watchRewardedEarnViews': 'Guarda ads rewarded e conta ads subito.',
+    'earnViews': 'Guadagna ads',
     'howItWorks': 'Come funziona',
     'watch': 'Guarda',
     'watchShortVideo': 'Guarda un breve video',
     'earnStep': 'Guadagna',
-    'getViewsReward': 'Ottieni visualizzazioni come ricompensa',
+    'getViewsReward': 'Ricevi ads conteggiati come ricompensa',
     'cashOut': 'Incassa',
-    'reachViews': 'Raggiungi {views} visualizzazioni',
+    'reachViews': 'Raggiungi {views} ads',
     'dailyChallenge': 'Sfida giornaliera',
-    'watchTodayVideosBonus':
-        'Guarda {videos} video oggi e ottieni visualizzazioni bonus!',
+    'watchTodayVideosBonus': 'Completa oggi {videos} ads e conta più ads!',
     'totalVideosWatched': 'Totale video guardati',
     'memberSince': 'Membro dal: {date}',
     'notAvailableYet': 'Non ancora disponibile',
@@ -404,8 +401,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Pagamento stimato',
     'remainingToPayout': 'Mancante al pagamento',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+=======
+    'estimateOnly': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+>>>>>>> theirs
     'requestPayout': 'Richiedi pagamento',
     'minPayout': 'Pagamento min.',
     'processingTime': 'Tempo di elaborazione',
@@ -441,18 +442,27 @@ const extraLocalizedValues = {
     'thanksForRating': 'Grazie per la tua valutazione.',
     'requestPayoutTitle': 'Richiedi pagamento',
     'payoutRules': 'Regole di pagamento',
+<<<<<<< ours
     'minimumPayoutIs':
         'Il pagamento minimo è di {views} ads.',
+=======
+    'minimumPayoutIs': 'Il pagamento minimo è di {views} ads.',
+>>>>>>> theirs
     'processingCanTake':
         'La procedura può richiedere fino a {days} giorni dopo l approvazione admin.',
     'everyRequestReviewed':
         'Ogni richiesta viene esaminata da admin prima del pagamento.',
     'useBankAddIban':
         'Usa Banca per il trasferimento manuale e aggiungi il tuo IBAN o numero di conto bancario.',
+<<<<<<< ours
     'submitUsingBalance':
         'Invia una richiesta di pagamento usando il tuo saldo di visualizzazioni.',
     'estimatedEarningsNotGuaranteed':
         'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+=======
+    'submitUsingBalance': 'Invia una richiesta di pagamento utilizzando il tuo saldo ads.',
+    'estimatedEarningsNotGuaranteed': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+>>>>>>> theirs
     'payoutCurrency': 'Valuta di pagamento',
     'payoutMethod': 'Metodo di pagamento',
     'viewsToRequest': 'Ads da richiedere',
@@ -549,17 +559,15 @@ const extraLocalizedValues = {
     'save': 'Salva',
     'saving': 'Salvataggio...',
     'termsUsingTitle': 'Usare VideoMoney',
-    'termsViewsTitle': 'Visualizzazioni e ricompense',
+    'termsViewsTitle': 'Ads e ricompense',
     'termsPayoutsTitle': 'Pagamenti e revisione',
     'termsSupportTitle': 'Supporto e messaggi',
     'termsUsingBullet1':
         'Devi usare informazioni account accurate.',
-    'termsUsingBullet2':
-        'Una persona non può abusare di account multipli, bot, script, rotazione VPN o farm di emulatori per generare visualizzazioni extra.',
+    'termsUsingBullet2': 'Una persona non può abusare di account multipli, bot, script, rotazione VPN o farm di emulatori per generare ads extra.',
     'termsUsingBullet3':
         'Gli annunci con premio, Firebase Authentication e la revisione dei pagamenti restano protetti dalla configurazione esistente della piattaforma.',
-    'termsViewsBullet1':
-        'Le visualizzazioni mostrate in app sono unità promozionali di ricompensa usate dentro VideoMoney.',
+    'termsViewsBullet1': 'Gli ads conteggiati nell’app sono unità promozionali di ricompensa usate dentro VideoMoney.',
     'termsViewsBullet2':
         'I guadagni stimati sono solo informativi e possono cambiare in base al rendimento della piattaforma, alla policy, ai controlli antifrode e alla revisione dei pagamenti.',
     'termsViewsBullet3':
@@ -599,8 +607,7 @@ const extraLocalizedValues = {
         'Oturumunuz şu anda geri yüklenemiyor.',
     'welcomeBack': 'Tekrar hoş geldiniz',
     'createYourAccount': 'Hesabınızı oluşturun',
-    'signInBody':
-        'Görüntüleme kazanmaya devam etmek ve ödemeleri yönetmek için giriş yapın.',
+    'signInBody': 'Ads saymaya devam etmek ve ödemeleri yönetmek için giriş yapın.',
     'signUpBody':
         'Ödüllü videolar izlemeye ve bakiyenizi oluşturmaya başlamak için kaydolun.',
     'login': 'Giriş yap',
@@ -634,10 +641,9 @@ const extraLocalizedValues = {
     'earn': 'Kazan',
     'wallet': 'Cüzdan',
     'profile': 'Profil',
-    'rewardConfirmedViewsAdded':
-        'Ödül onaylandı. Görüntülemeler eklendi.',
-    'rewardConfirmedViewsAddedCount': '+{count} görüntüleme eklendi.',
-    'bonusViewsAdded': '🎁 +{count} bonus görüntüleme',
+    'rewardConfirmedViewsAdded': 'Ödül onaylandı. Ad sayıldı.',
+    'rewardConfirmedViewsAddedCount': '+{count} ads sayıldı.',
+    'bonusViewsAdded': '🎁 +{count} ads sayıldı',
     'rewardedAdNotCompleted':
         'Ödüllü reklam tamamlanmadı.',
     'processingReward': 'Ödülün işleniyor...',
@@ -645,36 +651,31 @@ const extraLocalizedValues = {
     'loading': 'Yükleniyor...',
     'welcomeBackShort': 'Tekrar hoş geldiniz,',
     'signedInUser': 'Oturum açmış kullanıcı',
-    'watchVideosEarnPaid':
-        'Videolar izleyin, görüntüleme kazanın ve ödeme alın.',
-    'currentViews': 'Mevcut görüntülemeler',
+    'watchVideosEarnPaid': 'Ads izle, ads say ve ödeme al.',
+    'currentViews': 'Mevcut ads',
     'videosWatched': 'İzlenen videolar',
     'progressToPayout': 'Ödemeye ilerleme',
     'youAreOnYourWay': 'Doğru yoldasınız.',
-    'earnViewsNow': 'Şimdi görüntüleme kazanın.',
+    'earnViewsNow': 'Şimdi ads kazanın.',
     'payoutUnlocked':
         'Ödeme açıldı. Cüzdan bölümünden ödeme isteğinde bulunabilirsiniz.',
-    'moreViewsUntilPayout':
-        'Ödeme için {views} görüntüleme daha gerekli.',
+    'moreViewsUntilPayout': 'Ödemeye {views} ads kaldı.',
     'dailyBonus': 'Günlük bonus',
-    'watchDailyVideosBonus':
-        'Bonus görüntüleme almak için her gün {videos} video izleyin.',
+    'watchDailyVideosBonus': 'Her gün {videos} ads tamamlayarak daha fazla ads say.',
     'bonusClaimed': 'Bonus alındı',
     'bonus': 'Bonus',
-    'earnViewsTitle': 'Görüntüleme kazan',
-    'watchRewardedEarnViews':
-        'Ödüllü videolar izleyin ve anında görüntüleme kazanın.',
-    'earnViews': 'Görüntüleme kazan',
+    'earnViewsTitle': 'Ads kazan',
+    'watchRewardedEarnViews': 'Rewarded ads izle ve ads anında sayılsın.',
+    'earnViews': 'Ads kazan',
     'howItWorks': 'Nasıl çalışır',
     'watch': 'İzle',
     'watchShortVideo': 'Kısa bir video izle',
     'earnStep': 'Kazan',
-    'getViewsReward': 'Ödül olarak görüntüleme alın',
+    'getViewsReward': 'Ödül olarak sayılmış ads al',
     'cashOut': 'Nakit çek',
-    'reachViews': '{views} görüntülemeye ulaşın',
+    'reachViews': '{views} ads ulaş',
     'dailyChallenge': 'Günlük görev',
-    'watchTodayVideosBonus':
-        'Bugün {videos} video izleyin ve bonus görüntüleme alın!',
+    'watchTodayVideosBonus': 'Bugün {videos} ads tamamla ve daha fazla ads say!',
     'totalVideosWatched': 'Toplam izlenen video',
     'memberSince': 'Üyelik tarihi: {date}',
     'notAvailableYet': 'Henüz mevcut değil',
@@ -701,8 +702,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Tahmini ödeme',
     'remainingToPayout': 'Ödemeye kalan',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'Yalnızca tahmindir. 50 görüntüleme ≈ €0.01 ve gerçek kazançlar değişebilir.',
+=======
+    'estimateOnly': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
+>>>>>>> theirs
     'requestPayout': 'Ödeme iste',
     'minPayout': 'Min. ödeme',
     'processingTime': 'İşlem süresi',
@@ -745,10 +750,8 @@ const extraLocalizedValues = {
         'Her istek ödenmeden önce yönetici tarafından incelenir.',
     'useBankAddIban':
         'Manuel transfer için Banka seçeneğini kullanın ve IBAN veya banka hesap numaranızı ekleyin.',
-    'submitUsingBalance':
-        'Görüntüleme bakiyenizi kullanarak bir ödeme isteği gönderin.',
-    'estimatedEarningsNotGuaranteed':
-        'Yalnızca tahmini kazançlar. 50 tamamlanmış görüntüleme ≈ €0.01 ve bu garantili bir ödeme vaadi değildir.',
+    'submitUsingBalance': 'Ad bakiyenizi kullanarak ödeme talebi gönderin.',
+    'estimatedEarningsNotGuaranteed': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
     'payoutCurrency': 'Ödeme para birimi',
     'payoutMethod': 'Ödeme yöntemi',
     'viewsToRequest': 'İstenecek ads',
@@ -845,17 +848,15 @@ const extraLocalizedValues = {
     'save': 'Kaydet',
     'saving': 'Kaydediliyor...',
     'termsUsingTitle': 'VideoMoney kullanımı',
-    'termsViewsTitle': 'Görüntülemeler ve ödüller',
+    'termsViewsTitle': 'Ads ve ödüller',
     'termsPayoutsTitle': 'Ödemeler ve inceleme',
     'termsSupportTitle': 'Destek ve mesajlar',
     'termsUsingBullet1':
         'Doğru hesap bilgileri kullanmalısınız.',
-    'termsUsingBullet2':
-        'Bir kişi ek görüntüleme oluşturmak için birden fazla hesap, bot, komut dosyası, VPN döndürme veya emülatör çiftliklerini kötüye kullanamaz.',
+    'termsUsingBullet2': 'Bir kişi ekstra ads oluşturmak için çoklu hesapları, botları, scriptleri, VPN rotasyonunu veya emulator farm’ları kötüye kullanamaz.',
     'termsUsingBullet3':
         'Ödüllü reklamlar, Firebase kimlik doğrulaması ve ödeme incelemesi mevcut platform kurulumu tarafından korunmaya devam eder.',
-    'termsViewsBullet1':
-        'Uygulamada gösterilen görüntülemeler, VideoMoney içinde kullanılan promosyon ödül birimleridir.',
+    'termsViewsBullet1': 'Uygulamada sayılan ads, VideoMoney içinde kullanılan promosyon ödül birimleridir.',
     'termsViewsBullet2':
         'Tahmini kazançlar yalnızca bilgilendirme amaçlıdır ve platform performansı, politika, dolandırıcılık kontrolleri ve ödeme incelemesine göre değişebilir.',
     'termsViewsBullet3':
@@ -894,8 +895,7 @@ const extraLocalizedValues = {
     'unableRestoreSession': 'تعذر استعادة جلستك الآن.',
     'welcomeBack': 'مرحبًا بعودتك',
     'createYourAccount': 'أنشئ حسابك',
-    'signInBody':
-        'سجّل الدخول لمواصلة كسب المشاهدات وإدارة عمليات السحب.',
+    'signInBody': 'سجّل الدخول لمواصلة احتساب ads وإدارة عمليات السحب.',
     'signUpBody':
         'سجّل لبدء مشاهدة الفيديوهات بمكافأة وبناء رصيدك.',
     'login': 'تسجيل الدخول',
@@ -928,10 +928,9 @@ const extraLocalizedValues = {
     'earn': 'اكسب',
     'wallet': 'المحفظة',
     'profile': 'الملف الشخصي',
-    'rewardConfirmedViewsAdded':
-        'تم تأكيد المكافأة. تمت إضافة المشاهدات.',
-    'rewardConfirmedViewsAddedCount': '+{count} مشاهدة تمت إضافتها.',
-    'bonusViewsAdded': '🎁 +{count} مشاهدة إضافية',
+    'rewardConfirmedViewsAdded': 'تم تأكيد المكافأة. تم احتساب ad.',
+    'rewardConfirmedViewsAddedCount': 'تم احتساب +{count} ads.',
+    'bonusViewsAdded': '🎁 تم احتساب +{count} ads',
     'rewardedAdNotCompleted':
         'لم يتم إكمال الإعلان بمكافأة.',
     'processingReward': 'جارٍ معالجة مكافأتك...',
@@ -939,36 +938,31 @@ const extraLocalizedValues = {
     'loading': 'جارٍ التحميل...',
     'welcomeBackShort': 'مرحبًا بعودتك،',
     'signedInUser': 'المستخدم المسجل دخوله',
-    'watchVideosEarnPaid':
-        'شاهد الفيديوهات، اكسب المشاهدات، واحصل على المال.',
-    'currentViews': 'المشاهدات الحالية',
+    'watchVideosEarnPaid': 'شاهد ads واحتسب ads واحصل على الدفع.',
+    'currentViews': 'الـ ads الحالية',
     'videosWatched': 'الفيديوهات التي تمت مشاهدتها',
     'progressToPayout': 'التقدم نحو السحب',
     'youAreOnYourWay': 'أنت على الطريق الصحيح.',
-    'earnViewsNow': 'اكسب المشاهدات الآن.',
+    'earnViewsNow': 'اكسب ads الآن.',
     'payoutUnlocked':
         'تم فتح السحب. يمكنك طلب السحب من المحفظة.',
-    'moreViewsUntilPayout':
-        'متبقي {views} مشاهدة حتى السحب.',
+    'moreViewsUntilPayout': 'متبقي {views} ads حتى السحب.',
     'dailyBonus': 'المكافأة اليومية',
-    'watchDailyVideosBonus':
-        'شاهد {videos} فيديوهات يوميًا للحصول على مشاهدات إضافية.',
+    'watchDailyVideosBonus': 'أكمل {videos} ads يوميًا لاحتساب المزيد من ads.',
     'bonusClaimed': 'تم استلام المكافأة',
     'bonus': 'مكافأة',
-    'earnViewsTitle': 'اكسب المشاهدات',
-    'watchRewardedEarnViews':
-        'شاهد الفيديوهات بمكافأة واكسب المشاهدات فورًا.',
-    'earnViews': 'اكسب المشاهدات',
+    'earnViewsTitle': 'اكسب ads',
+    'watchRewardedEarnViews': 'شاهد ads بمكافأة واحتسب ads فورًا.',
+    'earnViews': 'اكسب ads',
     'howItWorks': 'كيف يعمل',
     'watch': 'شاهد',
     'watchShortVideo': 'شاهد فيديو قصير',
     'earnStep': 'اكسب',
-    'getViewsReward': 'احصل على المشاهدات كمكافأة',
+    'getViewsReward': 'احصل على ads محتسبة كمكافأة',
     'cashOut': 'سحب الأرباح',
-    'reachViews': 'صل إلى {views} مشاهدة',
+    'reachViews': 'صل إلى {views} ads',
     'dailyChallenge': 'التحدي اليومي',
-    'watchTodayVideosBonus':
-        'شاهد {videos} فيديوهات اليوم واحصل على مشاهدات إضافية!',
+    'watchTodayVideosBonus': 'أكمل اليوم {videos} ads واحتسب المزيد من ads.',
     'totalVideosWatched': 'إجمالي الفيديوهات المشاهدة',
     'memberSince': 'عضو منذ: {date}',
     'notAvailableYet': 'غير متاح بعد',
@@ -994,8 +988,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'السحب التقديري',
     'remainingToPayout': 'المتبقي للسحب',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'تقدير فقط. 50 مشاهدة ≈ €0.01 وقد تختلف الأرباح الفعلية.',
+=======
+    'estimateOnly': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
+>>>>>>> theirs
     'requestPayout': 'طلب سحب',
     'minPayout': 'الحد الأدنى للسحب',
     'processingTime': 'مدة المعالجة',
@@ -1030,18 +1028,15 @@ const extraLocalizedValues = {
     'thanksForRating': 'شكرًا على تقييمك.',
     'requestPayoutTitle': 'طلب سحب',
     'payoutRules': 'قواعد السحب',
-    'minimumPayoutIs':
-        'الحد الأدنى للسحب هو {views} مشاهدة.',
+    'minimumPayoutIs': 'الحد الأدنى للسحب هو {views} ads.',
     'processingCanTake':
         'قد تستغرق المعالجة حتى {days} أيام بعد موافقة المشرف.',
     'everyRequestReviewed':
         'يتم مراجعة كل طلب من قبل المشرف قبل دفعه.',
     'useBankAddIban':
         'استخدم البنك للتحويل اليدوي وأضف IBAN أو رقم حسابك البنكي.',
-    'submitUsingBalance':
-        'قدّم طلب سحب باستخدام رصيد المشاهدات الخاص بك.',
-    'estimatedEarningsNotGuaranteed':
-        'الأرباح تقديرية فقط. 50 مشاهدة مكتملة ≈ €0.01 وهذا ليس وعدًا مضمونًا بالسحب.',
+    'submitUsingBalance': 'أرسل طلب سحب باستخدام رصيد ads الخاص بك.',
+    'estimatedEarningsNotGuaranteed': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
     'payoutCurrency': 'عملة السحب',
     'payoutMethod': 'طريقة السحب',
     'viewsToRequest': 'ads المطلوب سحبها',
@@ -1136,17 +1131,15 @@ const extraLocalizedValues = {
     'save': 'حفظ',
     'saving': 'جارٍ الحفظ...',
     'termsUsingTitle': 'استخدام VideoMoney',
-    'termsViewsTitle': 'المشاهدات والمكافآت',
+    'termsViewsTitle': 'Ads والمكافآت',
     'termsPayoutsTitle': 'السحب والمراجعة',
     'termsSupportTitle': 'الدعم والرسائل',
     'termsUsingBullet1':
         'يجب عليك استخدام معلومات حساب دقيقة.',
-    'termsUsingBullet2':
-        'لا يجوز للشخص الواحد إساءة استخدام حسابات متعددة أو الروبوتات أو السكربتات أو تدوير VPN أو مزارع المحاكيات لتوليد مشاهدات إضافية.',
+    'termsUsingBullet2': 'لا يجوز لشخص واحد إساءة استخدام حسابات متعددة أو bots أو scripts أو تدوير VPN أو مزارع المحاكيات لإنشاء ads إضافية.',
     'termsUsingBullet3':
         'تظل الإعلانات بمكافأة ومصادقة Firebase ومراجعة السحب محمية من خلال إعداد المنصة الحالي.',
-    'termsViewsBullet1':
-        'المشاهدات المعروضة في التطبيق هي وحدات مكافأة ترويجية تُستخدم داخل VideoMoney.',
+    'termsViewsBullet1': 'الـ ads التي يتم احتسابها داخل التطبيق هي وحدات مكافأة ترويجية مستخدمة داخل VideoMoney.',
     'termsViewsBullet2':
         'الأرباح التقديرية هي لأغراض إعلامية فقط ويمكن أن تتغير بناءً على أداء المنصة والسياسات وفحوصات الاحتيال ومراجعة السحب.',
     'termsViewsBullet3':
@@ -1186,8 +1179,7 @@ const extraLocalizedValues = {
         'এই মুহূর্তে আপনার সেশন পুনরুদ্ধার করা যাচ্ছে না।',
     'welcomeBack': 'আবার স্বাগতম',
     'createYourAccount': 'আপনার অ্যাকাউন্ট তৈরি করুন',
-    'signInBody':
-        'ভিউ উপার্জন চালিয়ে যেতে এবং পেআউট পরিচালনা করতে সাইন ইন করুন।',
+    'signInBody': 'Ads গণনা চালিয়ে যেতে এবং পেআউট পরিচালনা করতে সাইন ইন করুন।',
     'signUpBody':
         'রিওয়ার্ডেড ভিডিও দেখা শুরু করতে এবং আপনার ব্যালেন্স বাড়াতে নিবন্ধন করুন।',
     'login': 'লগইন',
@@ -1220,10 +1212,9 @@ const extraLocalizedValues = {
     'earn': 'আয় করুন',
     'wallet': 'ওয়ালেট',
     'profile': 'প্রোফাইল',
-    'rewardConfirmedViewsAdded':
-        'পুরস্কার নিশ্চিত হয়েছে। ভিউ যোগ করা হয়েছে।',
-    'rewardConfirmedViewsAddedCount': '+{count} ভিউ যোগ করা হয়েছে।',
-    'bonusViewsAdded': '🎁 +{count} বোনাস ভিউ',
+    'rewardConfirmedViewsAdded': 'রিওয়ার্ড নিশ্চিত। Ad গণনা হয়েছে।',
+    'rewardConfirmedViewsAddedCount': '+{count} ads গণনা হয়েছে।',
+    'bonusViewsAdded': '🎁 +{count} ads গণনা হয়েছে',
     'rewardedAdNotCompleted':
         'রিওয়ার্ডেড বিজ্ঞাপন সম্পূর্ণ করা হয়নি।',
     'processingReward': 'আপনার রিওয়ার্ড প্রক্রিয়াকরণ হচ্ছে...',
@@ -1231,36 +1222,31 @@ const extraLocalizedValues = {
     'loading': 'লোড হচ্ছে...',
     'welcomeBackShort': 'আবার স্বাগতম,',
     'signedInUser': 'সাইন-ইন করা ব্যবহারকারী',
-    'watchVideosEarnPaid':
-        'ভিডিও দেখুন, ভিউ উপার্জন করুন, এবং অর্থ পান।',
-    'currentViews': 'বর্তমান ভিউ',
+    'watchVideosEarnPaid': 'Ads দেখুন, ads গণনা করুন এবং পেমেন্ট পান।',
+    'currentViews': 'বর্তমান ads',
     'videosWatched': 'দেখা ভিডিও',
     'progressToPayout': 'পেআউটের অগ্রগতি',
     'youAreOnYourWay': 'আপনি সঠিক পথে আছেন।',
-    'earnViewsNow': 'এখনই ভিউ আয় করুন।',
+    'earnViewsNow': 'এখনই ads আয় করুন।',
     'payoutUnlocked':
         'পেআউট আনলক হয়েছে। আপনি Wallet-এ পেআউট অনুরোধ করতে পারেন।',
-    'moreViewsUntilPayout':
-        'পেআউট পর্যন্ত আরও {views} ভিউ বাকি।',
+    'moreViewsUntilPayout': 'পেআউট পর্যন্ত আরও {views} ads বাকি।',
     'dailyBonus': 'দৈনিক বোনাস',
-    'watchDailyVideosBonus':
-        'দৈনিক বোনাস পেতে প্রতিদিন {videos}টি ভিডিও দেখুন।',
+    'watchDailyVideosBonus': 'প্রতিদিন {videos} ads সম্পূর্ণ করে আরও ads গণনা করুন।',
     'bonusClaimed': 'বোনাস গ্রহণ করা হয়েছে',
     'bonus': 'বোনাস',
-    'earnViewsTitle': 'ভিউ আয় করুন',
-    'watchRewardedEarnViews':
-        'রিওয়ার্ডেড ভিডিও দেখুন এবং সঙ্গে সঙ্গে ভিউ আয় করুন।',
-    'earnViews': 'ভিউ আয় করুন',
+    'earnViewsTitle': 'Ads আয় করুন',
+    'watchRewardedEarnViews': 'Rewarded ads দেখে সঙ্গে সঙ্গে ads গণনা করুন।',
+    'earnViews': 'Ads আয় করুন',
     'howItWorks': 'এটি কীভাবে কাজ করে',
     'watch': 'দেখুন',
     'watchShortVideo': 'একটি ছোট ভিডিও দেখুন',
     'earnStep': 'আয় করুন',
-    'getViewsReward': 'পুরস্কার হিসেবে ভিউ পান',
+    'getViewsReward': 'পুরস্কার হিসেবে গণনা হওয়া ads পান',
     'cashOut': 'ক্যাশ আউট',
-    'reachViews': '{views} ভিউতে পৌঁছান',
+    'reachViews': '{views} ads পূরণ করুন',
     'dailyChallenge': 'দৈনিক চ্যালেঞ্জ',
-    'watchTodayVideosBonus':
-        'আজ {videos}টি ভিডিও দেখুন এবং বোনাস ভিউ পান!',
+    'watchTodayVideosBonus': 'আজ {videos} ads সম্পূর্ণ করে আরও ads গণনা করুন!',
     'totalVideosWatched': 'মোট দেখা ভিডিও',
     'memberSince': 'সদস্য হয়েছেন: {date}',
     'notAvailableYet': 'এখনও উপলব্ধ নয়',
@@ -1288,8 +1274,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'আনুমানিক পেআউট',
     'remainingToPayout': 'পেআউটের জন্য বাকি',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'এটি শুধু আনুমানিক। ৫০ ভিউ ≈ €0.01 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
+=======
+    'estimateOnly': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
+>>>>>>> theirs
     'requestPayout': 'পেআউট অনুরোধ করুন',
     'minPayout': 'সর্বনিম্ন পেআউট',
     'processingTime': 'প্রক্রিয়াকরণের সময়',
@@ -1331,10 +1321,8 @@ const extraLocalizedValues = {
         'প্রতিটি অনুরোধ অর্থ প্রদান করার আগে অ্যাডমিন দ্বারা পর্যালোচিত হয়।',
     'useBankAddIban':
         'ম্যানুয়াল ট্রান্সফারের জন্য Bank ব্যবহার করুন এবং আপনার IBAN বা ব্যাংক অ্যাকাউন্ট নম্বর যোগ করুন।',
-    'submitUsingBalance':
-        'আপনার ভিউ ব্যালেন্স ব্যবহার করে একটি পেআউট অনুরোধ জমা দিন।',
-    'estimatedEarningsNotGuaranteed':
-        'আনুমানিক আয় মাত্র। ৫০টি সম্পূর্ণ ভিউ ≈ €0.01 এবং এটি নিশ্চিত পেআউটের প্রতিশ্রুতি নয়।',
+    'submitUsingBalance': 'আপনার ad ব্যালেন্স ব্যবহার করে একটি পেআউট অনুরোধ জমা দিন।',
+    'estimatedEarningsNotGuaranteed': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
     'payoutCurrency': 'পেআউটের মুদ্রা',
     'payoutMethod': 'পেআউট পদ্ধতি',
     'viewsToRequest': 'অনুরোধের জন্য ads',
@@ -1430,17 +1418,15 @@ const extraLocalizedValues = {
     'save': 'সংরক্ষণ করুন',
     'saving': 'সংরক্ষণ করা হচ্ছে...',
     'termsUsingTitle': 'ভিডিওমানি ব্যবহার',
-    'termsViewsTitle': 'ভিউ এবং পুরস্কার',
+    'termsViewsTitle': 'Ads এবং রিওয়ার্ড',
     'termsPayoutsTitle': 'পেআউট এবং পর্যালোচনা',
     'termsSupportTitle': 'সাপোর্ট এবং বার্তা',
     'termsUsingBullet1':
         'আপনাকে সঠিক অ্যাকাউন্ট তথ্য ব্যবহার করতে হবে।',
-    'termsUsingBullet2':
-        'অতিরিক্ত ভিউ তৈরির জন্য একজন ব্যক্তি একাধিক অ্যাকাউন্ট, বট, স্ক্রিপ্ট, VPN রোটেশন, বা এমুলেটর ফার্মের অপব্যবহার করতে পারবেন না।',
+    'termsUsingBullet2': 'অতিরিক্ত ads তৈরির জন্য একজন ব্যক্তি একাধিক অ্যাকাউন্ট, বট, স্ক্রিপ্ট, VPN রোটেশন বা এমুলেটর ফার্মের অপব্যবহার করতে পারবেন না।',
     'termsUsingBullet3':
         'রিওয়ার্ডেড বিজ্ঞাপন, Firebase authentication, এবং পেআউট পর্যালোচনা বিদ্যমান প্ল্যাটফর্ম সেটআপ দ্বারা সুরক্ষিত থাকবে।',
-    'termsViewsBullet1':
-        'অ্যাপে প্রদর্শিত ভিউ হলো VideoMoney-এর ভেতরে ব্যবহৃত প্রচারণামূলক পুরস্কার একক।',
+    'termsViewsBullet1': 'অ্যাপে গণনা হওয়া ads হলো VideoMoney-এর ভেতরে ব্যবহৃত promotional reward units।',
     'termsViewsBullet2':
         'আনুমানিক আয় শুধুমাত্র তথ্যগত উদ্দেশ্যে এবং প্ল্যাটফর্মের কার্যকারিতা, নীতি, জালিয়াতি যাচাই, ও পেআউট পর্যালোচনার ভিত্তিতে পরিবর্তিত হতে পারে।',
     'termsViewsBullet3':
@@ -1480,8 +1466,7 @@ const extraLocalizedValues = {
         'இப்போது உங்கள் அமர்வை மீட்டெடுக்க முடியவில்லை.',
     'welcomeBack': 'மீண்டும் வரவேற்கிறோம்',
     'createYourAccount': 'உங்கள் கணக்கை உருவாக்குங்கள்',
-    'signInBody':
-        'தொடர்ந்து பார்வைகள் சம்பாதிக்கவும், கட்டணங்களை நிர்வகிக்கவும் உள்நுழையுங்கள்.',
+    'signInBody': 'Ads எண்ணத் தொடரவும், கட்டணங்களை நிர்வகிக்கவும் உள்நுழையுங்கள்.',
     'signUpBody':
         'பரிசளிக்கும் வீடியோக்களை பார்க்கவும், உங்கள் இருப்பை உருவாக்கவும் பதிவு செய்யுங்கள்.',
     'login': 'உள்நுழை',
@@ -1519,10 +1504,9 @@ const extraLocalizedValues = {
     'earn': 'சம்பாதி',
     'wallet': 'வாலெட்',
     'profile': 'சுயவிவரம்',
-    'rewardConfirmedViewsAdded':
-        'பரிசு உறுதிப்படுத்தப்பட்டது. பார்வைகள் சேர்க்கப்பட்டன.',
-    'rewardConfirmedViewsAddedCount': '+{count} பார்வைகள் சேர்க்கப்பட்டன.',
-    'bonusViewsAdded': '🎁 +{count} bonus பார்வைகள்',
+    'rewardConfirmedViewsAdded': 'வெகுமதி உறுதி செய்யப்பட்டது. Ad எண்ணப்பட்டது.',
+    'rewardConfirmedViewsAddedCount': '+{count} ads எண்ணப்பட்டன.',
+    'bonusViewsAdded': '🎁 +{count} ads எண்ணப்பட்டன',
     'rewardedAdNotCompleted':
         'பரிசளிக்கும் விளம்பரம் நிறைவுபெறவில்லை.',
     'processingReward': 'உங்கள் பரிசு செயலாக்கப்படுகிறது...',
@@ -1530,36 +1514,31 @@ const extraLocalizedValues = {
     'loading': 'ஏற்றப்படுகிறது...',
     'welcomeBackShort': 'மீண்டும் வரவேற்கிறோம்,',
     'signedInUser': 'உள்நுழைந்த பயனர்',
-    'watchVideosEarnPaid':
-        'வீடியோக்களை பாருங்கள், பார்வைகள் சம்பாதியுங்கள், மற்றும் பணம் பெறுங்கள்.',
-    'currentViews': 'தற்போதைய பார்வைகள்',
+    'watchVideosEarnPaid': 'Ads பாருங்கள், ads எண்ணுங்கள், மற்றும் பணம் பெறுங்கள்.',
+    'currentViews': 'தற்போதைய ads',
     'videosWatched': 'பார்க்கப்பட்ட வீடியோக்கள்',
     'progressToPayout': 'கட்டணத்திற்கு முன்னேற்றம்',
     'youAreOnYourWay': 'நீங்கள் சரியான பாதையில் உள்ளீர்கள்.',
-    'earnViewsNow': 'இப்போது பார்வைகள் சம்பாதியுங்கள்.',
+    'earnViewsNow': 'இப்போது ads சம்பாதியுங்கள்.',
     'payoutUnlocked':
         'கட்டணம் திறக்கப்பட்டுள்ளது. Wallet-ல் இருந்து கட்டணம் கோரலாம்.',
-    'moreViewsUntilPayout':
-        'கட்டணத்திற்கு இன்னும் {views} பார்வைகள் வேண்டும்.',
+    'moreViewsUntilPayout': 'பணப்பரிவர்த்தனைக்கு இன்னும் {views} ads தேவை.',
     'dailyBonus': 'தினசரி போனஸ்',
-    'watchDailyVideosBonus':
-        'போனஸ் பார்வைகள் பெற தினமும் {videos} வீடியோக்களை பாருங்கள்.',
+    'watchDailyVideosBonus': 'தினமும் {videos} ads முடித்து மேலும் ads எண்ணுங்கள்.',
     'bonusClaimed': 'போனஸ் பெறப்பட்டது',
     'bonus': 'போனஸ்',
-    'earnViewsTitle': 'பார்வைகள் சம்பாதி',
-    'watchRewardedEarnViews':
-        'பரிசளிக்கும் வீடியோக்களை பார்த்து உடனே பார்வைகள் சம்பாதியுங்கள்.',
-    'earnViews': 'பார்வைகள் சம்பாதி',
+    'earnViewsTitle': 'Ads சம்பாதிக்கவும்',
+    'watchRewardedEarnViews': 'Rewarded ads பார்த்து உடனே ads எண்ணுங்கள்.',
+    'earnViews': 'Ads சம்பாதிக்கவும்',
     'howItWorks': 'இது எப்படி செயல்படுகிறது',
     'watch': 'பார்',
     'watchShortVideo': 'சிறிய வீடியோவை பாருங்கள்',
     'earnStep': 'சம்பாதி',
-    'getViewsReward': 'பரிசாக பார்வைகள் பெறுங்கள்',
+    'getViewsReward': 'வெகுமதியாக எண்ணப்பட்ட ads பெறுங்கள்',
     'cashOut': 'பணம் எடு',
-    'reachViews': '{views} பார்வைகளை அடையுங்கள்',
+    'reachViews': '{views} ads எட்டுங்கள்',
     'dailyChallenge': 'தினசரி சவால்',
-    'watchTodayVideosBonus':
-        'இன்று {videos} வீடியோக்களை பார்த்து போனஸ் பார்வைகள் பெறுங்கள்!',
+    'watchTodayVideosBonus': 'இன்று {videos} ads முடித்து மேலும் ads எண்ணுங்கள்!',
     'totalVideosWatched': 'மொத்தம் பார்க்கப்பட்ட வீடியோக்கள்',
     'memberSince': 'உறுப்பினராக உள்ள தேதி: {date}',
     'notAvailableYet': 'இன்னும் கிடைக்கவில்லை',
@@ -1590,8 +1569,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'மதிப்பிடப்பட்ட கட்டணம்',
     'remainingToPayout': 'கட்டணத்திற்கு மீதமுள்ளது',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'இது ஒரு மதிப்பீடு மட்டுமே. 50 பார்வைகள் ≈ €0.01 மற்றும் உண்மையான வருவாய் மாறுபடலாம்.',
+=======
+    'estimateOnly': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
+>>>>>>> theirs
     'requestPayout': 'கட்டணம் கோருங்கள்',
     'minPayout': 'குறைந்தபட்ச கட்டணம்',
     'processingTime': 'செயலாக்க நேரம்',
@@ -1630,18 +1613,15 @@ const extraLocalizedValues = {
     'thanksForRating': 'உங்கள் மதிப்பீட்டுக்கு நன்றி.',
     'requestPayoutTitle': 'கட்டணம் கோருங்கள்',
     'payoutRules': 'கட்டண விதிகள்',
-    'minimumPayoutIs':
-        'குறைந்தபட்ச கட்டணம் {views} பார்வைகள்.',
+    'minimumPayoutIs': 'குறைந்தபட்ச கட்டணம் {views} ads ஆகும்.',
     'processingCanTake':
         'நிர்வாகி ஒப்புதலுக்குப் பிறகு செயலாக்கம் அதிகபட்சம் {days} நாட்கள் ஆகலாம்.',
     'everyRequestReviewed':
         'ஒவ்வொரு கோரிக்கையும் கட்டணம் செலுத்தப்படும் முன் நிர்வாகியால் மதிப்பாய்வு செய்யப்படும்.',
     'useBankAddIban':
         'கைமுறை பரிமாற்றத்திற்கு வங்கியை பயன்படுத்தி உங்கள் IBAN அல்லது வங்கி கணக்கு எண்ணை சேர்க்கவும்.',
-    'submitUsingBalance':
-        'உங்கள் பார்வை இருப்பைப் பயன்படுத்தி கட்டண கோரிக்கையை சமர்ப்பிக்கவும்.',
-    'estimatedEarningsNotGuaranteed':
-        'மதிப்பிடப்பட்ட வருமானம் மட்டுமே. 50 நிறைவு செய்யப்பட்ட பார்வைகள் ≈ €0.01, இது உத்தரவாதப்பட்ட கட்டண வாக்குறுதி அல்ல.',
+    'submitUsingBalance': 'உங்கள் ad இருப்பைப் பயன்படுத்தி பணப்பரிமாற்ற கோரிக்கையை அனுப்புங்கள்.',
+    'estimatedEarningsNotGuaranteed': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
     'payoutCurrency': 'கட்டண நாணயம்',
     'payoutMethod': 'கட்டண முறை',
     'viewsToRequest': 'கோர வேண்டிய ads',
@@ -1742,17 +1722,15 @@ const extraLocalizedValues = {
     'save': 'சேமி',
     'saving': 'சேமிக்கப்படுகிறது...',
     'termsUsingTitle': 'VideoMoney-ஐ பயன்படுத்துவது',
-    'termsViewsTitle': 'பார்வைகள் மற்றும் பரிசுகள்',
+    'termsViewsTitle': 'Ads மற்றும் வெகுமதிகள்',
     'termsPayoutsTitle': 'கட்டணங்கள் மற்றும் மதிப்பாய்வு',
     'termsSupportTitle': 'ஆதரவு மற்றும் செய்திகள்',
     'termsUsingBullet1':
         'நீங்கள் சரியான கணக்கு தகவலை பயன்படுத்த வேண்டும்.',
-    'termsUsingBullet2':
-        'கூடுதல் பார்வைகள் உருவாக்க பல கணக்குகள், போட்கள், ஸ்கிரிப்ட்கள், VPN மாற்றம், அல்லது எமுலேட்டர் குழுக்களை ஒரே நபர் தவறாக பயன்படுத்தக்கூடாது.',
+    'termsUsingBullet2': 'கூடுதல் ads உருவாக்க பல கணக்குகள், bots, scripts, VPN மாற்றம் அல்லது emulator குழுக்களை ஒரே நபர் தவறாக பயன்படுத்தக்கூடாது.',
     'termsUsingBullet3':
         'பரிசளிக்கும் விளம்பரங்கள், Firebase அங்கீகாரம், மற்றும் கட்டண மதிப்பாய்வு ஏற்கனவே உள்ள தள அமைப்பால் பாதுகாக்கப்படுகின்றன.',
-    'termsViewsBullet1':
-        'பயன்பாட்டில் காட்டப்படும் பார்வைகள் VideoMoney-க்குள் பயன்படுத்தப்படும் விளம்பர பரிசு அலகுகள் ஆகும்.',
+    'termsViewsBullet1': 'பயன்பாட்டில் எண்ணப்படும் ads, VideoMoney-க்குள் பயன்படுத்தப்படும் promotional reward units ஆகும்.',
     'termsViewsBullet2':
         'மதிப்பிடப்பட்ட வருமானம் தகவலுக்காக மட்டுமே; தள செயல்திறன், கொள்கை, மோசடி சரிபார்ப்பு, மற்றும் கட்டண மதிப்பாய்வின் அடிப்படையில் மாறக்கூடும்.',
     'termsViewsBullet3':
@@ -1792,8 +1770,7 @@ const extraLocalizedValues = {
         'ప్రస్తుతం మీ సెషన్‌ను తిరిగి పునరుద్ధరించలేకపోయాం.',
     'welcomeBack': 'మళ్లీ స్వాగతం',
     'createYourAccount': 'మీ ఖాతాను సృష్టించండి',
-    'signInBody':
-        'వ్యూలు సంపాదించడం మరియు చెల్లింపులను నిర్వహించడం కోసం సైన్ ఇన్ చేయండి.',
+    'signInBody': 'Ads లెక్కించడం కొనసాగించడానికి మరియు చెల్లింపులను నిర్వహించడానికి సైన్ ఇన్ చేయండి.',
     'signUpBody':
         'రివార్డెడ్ వీడియోలు చూడటం ప్రారంభించి మీ బ్యాలెన్స్ పెంచుకోవడానికి నమోదు చేసుకోండి.',
     'login': 'లాగిన్',
@@ -1829,10 +1806,9 @@ const extraLocalizedValues = {
     'earn': 'సంపాదించండి',
     'wallet': 'వాలెట్',
     'profile': 'ప్రొఫైల్',
-    'rewardConfirmedViewsAdded':
-        'రివార్డ్ నిర్ధారించబడింది. వ్యూలు జోడించబడ్డాయి.',
-    'rewardConfirmedViewsAddedCount': '+{count} వ్యూలు జోడించబడ్డాయి.',
-    'bonusViewsAdded': '🎁 +{count} బోనస్ వ్యూలు',
+    'rewardConfirmedViewsAdded': 'రివార్డ్ నిర్ధారించబడింది. Ad లెక్కించబడింది.',
+    'rewardConfirmedViewsAddedCount': '+{count} ads లెక్కించబడ్డాయి.',
+    'bonusViewsAdded': '🎁 +{count} ads లెక్కించబడ్డాయి',
     'rewardedAdNotCompleted':
         'రివార్డెడ్ ప్రకటన పూర్తికాలేదు.',
     'processingReward': 'మీ రివార్డ్ ప్రాసెస్ అవుతోంది...',
@@ -1840,36 +1816,31 @@ const extraLocalizedValues = {
     'loading': 'లోడ్ అవుతోంది...',
     'welcomeBackShort': 'మళ్లీ స్వాగతం,',
     'signedInUser': 'సైన్ ఇన్ చేసిన వినియోగదారు',
-    'watchVideosEarnPaid':
-        'వీడియోలు చూడండి, వ్యూలు సంపాదించండి, చెల్లింపు పొందండి.',
-    'currentViews': 'ప్రస్తుత వ్యూలు',
+    'watchVideosEarnPaid': 'Ads చూడండి, ads లెక్కించండి, చెల్లింపు పొందండి.',
+    'currentViews': 'ప్రస్తుత ads',
     'videosWatched': 'చూసిన వీడియోలు',
     'progressToPayout': 'చెల్లింపుకు ప్రగతి',
     'youAreOnYourWay': 'మీరు సరైన దారిలో ఉన్నారు.',
-    'earnViewsNow': 'ఇప్పుడే వ్యూలు సంపాదించండి.',
+    'earnViewsNow': 'ఇప్పుడే ads సంపాదించండి.',
     'payoutUnlocked':
         'చెల్లింపు అన్‌లాక్ అయింది. మీరు వాలెట్‌లో చెల్లింపును అభ్యర్థించవచ్చు.',
-    'moreViewsUntilPayout':
-        'చెల్లింపుకు ఇంకా {views} వ్యూలు కావాలి.',
+    'moreViewsUntilPayout': 'చెల్లింపుకు ఇంకా {views} ads కావాలి.',
     'dailyBonus': 'రోజువారీ బోనస్',
-    'watchDailyVideosBonus':
-        'రోజుకు {videos} వీడియోలు చూస్తే బోనస్ వ్యూలు పొందండి.',
+    'watchDailyVideosBonus': 'రోజుకు {videos} ads పూర్తి చేసి మరిన్ని ads లెక్కించండి.',
     'bonusClaimed': 'బోనస్ పొందారు',
     'bonus': 'బోనస్',
-    'earnViewsTitle': 'వ్యూలు సంపాదించండి',
-    'watchRewardedEarnViews':
-        'రివార్డెడ్ వీడియోలు చూసి వెంటనే వ్యూలు సంపాదించండి.',
-    'earnViews': 'వ్యూలు సంపాదించండి',
+    'earnViewsTitle': 'Ads సంపాదించండి',
+    'watchRewardedEarnViews': 'Rewarded ads చూసి వెంటనే ads లెక్కించండి.',
+    'earnViews': 'Ads సంపాదించండి',
     'howItWorks': 'ఇది ఎలా పని చేస్తుంది',
     'watch': 'చూడండి',
     'watchShortVideo': 'ఒక చిన్న వీడియో చూడండి',
     'earnStep': 'సంపాదించండి',
-    'getViewsReward': 'రివార్డ్‌గా వ్యూలు పొందండి',
+    'getViewsReward': 'బహుమతిగా లెక్కించబడిన ads పొందండి',
     'cashOut': 'నగదీకరించండి',
-    'reachViews': '{views} వ్యూలకు చేరుకోండి',
+    'reachViews': '{views} ads చేరుకోండి',
     'dailyChallenge': 'రోజువారీ ఛాలెంజ్',
-    'watchTodayVideosBonus':
-        'ఈరోజు {videos} వీడియోలు చూసి బోనస్ వ్యూలు పొందండి!',
+    'watchTodayVideosBonus': 'ఈ రోజు {videos} ads పూర్తి చేసి మరిన్ని ads లెక్కించండి!',
     'totalVideosWatched': 'మొత్తం చూసిన వీడియోలు',
     'memberSince': 'సభ్యత్వం ప్రారంభం: {date}',
     'notAvailableYet': 'ఇంకా అందుబాటులో లేదు',
@@ -1899,8 +1870,12 @@ const extraLocalizedValues = {
     'estimatedPayout': 'అంచనా చెల్లింపు',
     'remainingToPayout': 'చెల్లింపుకు మిగిలినవి',
     'viewsUnit': 'ads',
+<<<<<<< ours
     'estimateOnly':
         'ఇది కేవలం అంచనా మాత్రమే. 50 వ్యూలు ≈ €0.01 మరియు అసలు ఆదాయం మారవచ్చు.',
+=======
+    'estimateOnly': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
+>>>>>>> theirs
     'requestPayout': 'చెల్లింపును అభ్యర్థించండి',
     'minPayout': 'కనీస చెల్లింపు',
     'processingTime': 'ప్రాసెసింగ్ సమయం',
@@ -1942,10 +1917,8 @@ const extraLocalizedValues = {
         'ప్రతి అభ్యర్థన చెల్లింపుకు ముందు అడ్మిన్ ద్వారా సమీక్షించబడుతుంది.',
     'useBankAddIban':
         'మాన్యువల్ బదిలీ కోసం Bank ను ఉపయోగించి మీ IBAN లేదా బ్యాంక్ ఖాతా సంఖ్యను జోడించండి.',
-    'submitUsingBalance':
-        'మీ వ్యూ బ్యాలెన్స్ ఉపయోగించి చెల్లింపు అభ్యర్థనను పంపండి.',
-    'estimatedEarningsNotGuaranteed':
-        'అంచనా ఆదాయమే. 50 పూర్తయిన వ్యూలు ≈ €0.01 మరియు ఇది హామీ ఇచ్చిన చెల్లింపు కాదు.',
+    'submitUsingBalance': 'మీ ad బ్యాలెన్స్‌ను ఉపయోగించి చెల్లింపు అభ్యర్థన పంపండి.',
+    'estimatedEarningsNotGuaranteed': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
     'payoutCurrency': 'చెల్లింపు కరెన్సీ',
     'payoutMethod': 'చెల్లింపు పద్ధతి',
     'viewsToRequest': 'అభ్యర్థించాల్సిన ads',
@@ -2042,17 +2015,15 @@ const extraLocalizedValues = {
     'save': 'సేవ్ చేయండి',
     'saving': 'సేవ్ అవుతోంది...',
     'termsUsingTitle': 'VideoMoney వినియోగం',
-    'termsViewsTitle': 'వ్యూలు మరియు బహుమతులు',
+    'termsViewsTitle': 'Ads మరియు రివార్డులు',
     'termsPayoutsTitle': 'చెల్లింపులు మరియు సమీక్ష',
     'termsSupportTitle': 'సహాయం మరియు సందేశాలు',
     'termsUsingBullet1':
         'మీరు ఖచ్చితమైన ఖాతా సమాచారాన్ని ఉపయోగించాలి.',
-    'termsUsingBullet2':
-        'ఒక వ్యక్తి అదనపు వ్యూలు సృష్టించడానికి బహుళ ఖాతాలు, బాట్లు, స్క్రిప్టులు, VPN రొటేషన్ లేదా ఎమ్యులేటర్ ఫార్మ్‌లను దుర్వినియోగం చేయకూడదు.',
+    'termsUsingBullet2': 'అదనపు ads సృష్టించడానికి ఒక వ్యక్తి బహుళ ఖాతాలు, bots, scripts, VPN రొటేషన్ లేదా emulator farms ను దుర్వినియోగం చేయకూడదు.',
     'termsUsingBullet3':
         'రివార్డెడ్ ప్రకటనలు, Firebase ప్రామాణీకరణ మరియు చెల్లింపు సమీక్ష ప్రస్తుత ప్లాట్‌ఫారమ్ సెటప్ ద్వారా రక్షించబడుతూనే ఉంటాయి.',
-    'termsViewsBullet1':
-        'యాప్‌లో చూపించే వ్యూలు VideoMoney లో ఉపయోగించే ప్రమోషనల్ రివార్డ్ యూనిట్‌లు.',
+    'termsViewsBullet1': 'యాప్‌లో లెక్కించబడే ads అనేవి VideoMoney లో ఉపయోగించే promotional reward units.',
     'termsViewsBullet2':
         'అంచనా ఆదాయం కేవలం సమాచార కోసం మాత్రమే మరియు ప్లాట్‌ఫారమ్ పనితీరు, విధానం, మోసం తనిఖీలు మరియు చెల్లింపు సమీక్ష ఆధారంగా మారవచ్చు.',
     'termsViewsBullet3':
