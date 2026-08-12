@@ -462,16 +462,7 @@ class AppLocalizations {
       'leaderboardYou': '(you)',
       'leaderboardViews': '{count} ads',
       'leaderboardIncome': 'income',
-<<<<<<< ours
-<<<<<<< ours
-      'estimateOnly':
-          'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
-=======
       'estimateOnly': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
->>>>>>> theirs
-=======
-      'estimateOnly': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
->>>>>>> theirs
       'requestPayout': 'Request Payout',
       'minPayout': 'Min. Payout',
       'processingTime': 'Processing Time',
@@ -511,20 +502,8 @@ class AppLocalizations {
           'Every request is reviewed by admin before it is paid.',
       'useBankAddIban':
           'Use Bank for manual transfer and add your IBAN or bank account number.',
-<<<<<<< ours
-<<<<<<< ours
-      'submitUsingBalance':
-          'Submit a payout request using your ad balance.',
-      'estimatedEarningsNotGuaranteed':
-          'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
-=======
       'submitUsingBalance': 'Submit a payout request using your ad balance.',
       'estimatedEarningsNotGuaranteed': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
->>>>>>> theirs
-=======
-      'submitUsingBalance': 'Submit a payout request using your ad balance.',
-      'estimatedEarningsNotGuaranteed': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
->>>>>>> theirs
       'payoutCurrency': 'Payout currency',
       'payoutMethod': 'Payout method',
       'viewsToRequest': 'Ads to request',
@@ -757,16 +736,7 @@ class AppLocalizations {
       'leaderboardYou': '(jij)',
       'leaderboardViews': '{count} ads',
       'leaderboardIncome': 'inkomen',
-<<<<<<< ours
-<<<<<<< ours
-      'estimateOnly':
-          'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
-=======
       'estimateOnly': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
->>>>>>> theirs
-=======
-      'estimateOnly': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
->>>>>>> theirs
       'requestPayout': 'Uitbetaling aanvragen',
       'minPayout': 'Min. uitbetaling',
       'processingTime': 'Verwerkingstijd',
@@ -806,20 +776,8 @@ class AppLocalizations {
           'Elke aanvraag wordt door de admin beoordeeld voordat deze wordt uitbetaald.',
       'useBankAddIban':
           'Gebruik Bank voor handmatige overschrijving en voeg je IBAN of rekeningnummer toe.',
-<<<<<<< ours
-<<<<<<< ours
-      'submitUsingBalance':
-          'Dien een uitbetalingsaanvraag in met je adsaldo.',
-      'estimatedEarningsNotGuaranteed':
-          'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
-=======
       'submitUsingBalance': 'Dien een uitbetalingsaanvraag in met je adsaldo.',
       'estimatedEarningsNotGuaranteed': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
->>>>>>> theirs
-=======
-      'submitUsingBalance': 'Dien een uitbetalingsaanvraag in met je adsaldo.',
-      'estimatedEarningsNotGuaranteed': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
->>>>>>> theirs
       'payoutCurrency': 'Uitbetalingsvaluta',
       'payoutMethod': 'Uitbetalingsmethode',
       'viewsToRequest': 'Aan te vragen ads',
@@ -1045,16 +1003,7 @@ class AppLocalizations {
       'estimatedPayout': 'अनुमानित भुगतान',
       'remainingToPayout': 'भुगतान तक बाकी',
       'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-      'estimateOnly':
-          'केवल अनुमान। 50 व्यू ≈ €0.01 और वास्तविक आय अलग हो सकती है।',
-=======
       'estimateOnly': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
->>>>>>> theirs
-=======
-      'estimateOnly': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
->>>>>>> theirs
       'requestPayout': 'भुगतान अनुरोध करें',
       'minPayout': 'न्यूनतम भुगतान',
       'processingTime': 'प्रोसेसिंग समय',
@@ -1094,20 +1043,8 @@ class AppLocalizations {
           'हर अनुरोध का भुगतान से पहले एडमिन द्वारा समीक्षा की जाती है।',
       'useBankAddIban':
           'मैन्युअल ट्रांसफ़र के लिए Bank चुनें और अपना IBAN या बैंक खाता नंबर जोड़ें।',
-<<<<<<< ours
-<<<<<<< ours
-      'submitUsingBalance':
-          'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
-      'estimatedEarningsNotGuaranteed':
-          'आय केवल अनुमानित है। 50 पूर्ण व्यू ≈ €0.01 और यह गारंटीकृत भुगतान नहीं है।',
-=======
       'submitUsingBalance': 'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
       'estimatedEarningsNotGuaranteed': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
->>>>>>> theirs
-=======
-      'submitUsingBalance': 'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
-      'estimatedEarningsNotGuaranteed': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
->>>>>>> theirs
       'payoutCurrency': 'भुगतान मुद्रा',
       'payoutMethod': 'भुगतान तरीका',
       'viewsToRequest': 'अनुरोधित ads',
@@ -1334,16 +1271,7 @@ class AppLocalizations {
       'estimatedPayout': 'Geschätzte Auszahlung',
       'remainingToPayout': 'Verbleibend bis Auszahlung',
       'viewsUnit': 'Ads',
-<<<<<<< ours
-<<<<<<< ours
-      'estimateOnly':
-          'Nur Schätzung. 50 Views ≈ €0,01 und die tatsächlichen Einnahmen können abweichen.',
-=======
       'estimateOnly': 'Nur eine Schätzung. 1 Ad ≈ €0,001 und die tatsächlichen Einnahmen können variieren.',
->>>>>>> theirs
-=======
-      'estimateOnly': 'Nur eine Schätzung. 1 Ad ≈ €0,001 und die tatsächlichen Einnahmen können variieren.',
->>>>>>> theirs
       'requestPayout': 'Auszahlung anfordern',
       'minPayout': 'Mindestbetrag',
       'processingTime': 'Bearbeitungszeit',
@@ -1885,15 +1813,7 @@ class AppLocalizations {
       'processingCanTake': 'Le traitement peut prendre jusqu\'à {days} jours après l\'approbation de l\'administrateur.',
       'everyRequestReviewed': 'Chaque demande est examinée par l\'administrateur avant d\'être payée.',
       'useBankAddIban': 'Utilisez Banque pour un transfert manuel et ajoutez votre IBAN ou numéro de compte bancaire.',
-<<<<<<< ours
-<<<<<<< ours
-      'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d\'ads.',
-=======
       'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d’ads.',
->>>>>>> theirs
-=======
-      'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d’ads.',
->>>>>>> theirs
       'estimatedEarningsNotGuaranteed': 'Estimation uniquement. 1 ad ≈ 0,001 € et les gains réels peuvent varier.',
       'payoutCurrency': 'Devise du paiement',
       'payoutMethod': 'Mode de paiement',

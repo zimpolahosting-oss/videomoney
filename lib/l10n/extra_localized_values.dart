@@ -104,16 +104,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Pagamento estimado',
     'remainingToPayout': 'Restante até ao pagamento',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
-=======
     'estimateOnly': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
->>>>>>> theirs
     'requestPayout': 'Solicitar pagamento',
     'minPayout': 'Pagamento mín.',
     'processingTime': 'Tempo de processamento',
@@ -148,36 +139,15 @@ const extraLocalizedValues = {
     'thanksForRating': 'Obrigado pela sua avaliação.',
     'requestPayoutTitle': 'Solicitar pagamento',
     'payoutRules': 'Regras de pagamento',
-<<<<<<< ours
-<<<<<<< ours
-    'minimumPayoutIs':
-        'O pagamento mínimo é de {views} ads.',
-=======
     'minimumPayoutIs': 'O pagamento mínimo é de {views} ads.',
->>>>>>> theirs
-=======
-    'minimumPayoutIs': 'O pagamento mínimo é de {views} ads.',
->>>>>>> theirs
     'processingCanTake':
         'O processamento pode demorar até {days} dias após a aprovação do administrador.',
     'everyRequestReviewed':
         'Cada pedido é revisto pelo administrador antes de ser pago.',
     'useBankAddIban':
         'Utilize Banco para transferência manual e adicione o seu IBAN ou número de conta bancária.',
-<<<<<<< ours
-<<<<<<< ours
-    'submitUsingBalance':
-        'Envie um pedido de pagamento utilizando o seu saldo de ads.',
-    'estimatedEarningsNotGuaranteed':
-        'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
-=======
     'submitUsingBalance': 'Envie um pedido de pagamento utilizando o seu saldo de ads.',
     'estimatedEarningsNotGuaranteed': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
->>>>>>> theirs
-=======
-    'submitUsingBalance': 'Envie um pedido de pagamento utilizando o seu saldo de ads.',
-    'estimatedEarningsNotGuaranteed': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
->>>>>>> theirs
     'payoutCurrency': 'Moeda de pagamento',
     'payoutMethod': 'Método de pagamento',
     'viewsToRequest': 'Ads a solicitar',
@@ -414,16 +384,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Pagamento stimato',
     'remainingToPayout': 'Mancante al pagamento',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
-=======
     'estimateOnly': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
->>>>>>> theirs
     'requestPayout': 'Richiedi pagamento',
     'minPayout': 'Pagamento min.',
     'processingTime': 'Tempo di elaborazione',
@@ -459,36 +420,15 @@ const extraLocalizedValues = {
     'thanksForRating': 'Grazie per la tua valutazione.',
     'requestPayoutTitle': 'Richiedi pagamento',
     'payoutRules': 'Regole di pagamento',
-<<<<<<< ours
-<<<<<<< ours
-    'minimumPayoutIs':
-        'Il pagamento minimo è di {views} ads.',
-=======
     'minimumPayoutIs': 'Il pagamento minimo è di {views} ads.',
->>>>>>> theirs
-=======
-    'minimumPayoutIs': 'Il pagamento minimo è di {views} ads.',
->>>>>>> theirs
     'processingCanTake':
         'La procedura può richiedere fino a {days} giorni dopo l approvazione admin.',
     'everyRequestReviewed':
         'Ogni richiesta viene esaminata da admin prima del pagamento.',
     'useBankAddIban':
         'Usa Banca per il trasferimento manuale e aggiungi il tuo IBAN o numero di conto bancario.',
-<<<<<<< ours
-<<<<<<< ours
-    'submitUsingBalance':
-        'Invia una richiesta di pagamento usando il tuo saldo di visualizzazioni.',
-    'estimatedEarningsNotGuaranteed':
-        'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
-=======
     'submitUsingBalance': 'Invia una richiesta di pagamento utilizzando il tuo saldo ads.',
     'estimatedEarningsNotGuaranteed': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
->>>>>>> theirs
-=======
-    'submitUsingBalance': 'Invia una richiesta di pagamento utilizzando il tuo saldo ads.',
-    'estimatedEarningsNotGuaranteed': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
->>>>>>> theirs
     'payoutCurrency': 'Valuta di pagamento',
     'payoutMethod': 'Metodo di pagamento',
     'viewsToRequest': 'Ads da richiedere',
@@ -728,16 +668,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'Tahmini ödeme',
     'remainingToPayout': 'Ödemeye kalan',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'Yalnızca tahmindir. 50 görüntüleme ≈ €0.01 ve gerçek kazançlar değişebilir.',
-=======
     'estimateOnly': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
->>>>>>> theirs
     'requestPayout': 'Ödeme iste',
     'minPayout': 'Min. ödeme',
     'processingTime': 'İşlem süresi',
@@ -1018,16 +949,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'السحب التقديري',
     'remainingToPayout': 'المتبقي للسحب',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'تقدير فقط. 50 مشاهدة ≈ €0.01 وقد تختلف الأرباح الفعلية.',
-=======
     'estimateOnly': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
->>>>>>> theirs
     'requestPayout': 'طلب سحب',
     'minPayout': 'الحد الأدنى للسحب',
     'processingTime': 'مدة المعالجة',
@@ -1308,16 +1230,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'আনুমানিক পেআউট',
     'remainingToPayout': 'পেআউটের জন্য বাকি',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'এটি শুধু আনুমানিক। ৫০ ভিউ ≈ €0.01 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
-=======
     'estimateOnly': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
->>>>>>> theirs
-=======
-    'estimateOnly': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
->>>>>>> theirs
     'requestPayout': 'পেআউট অনুরোধ করুন',
     'minPayout': 'সর্বনিম্ন পেআউট',
     'processingTime': 'প্রক্রিয়াকরণের সময়',
@@ -1607,16 +1520,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'மதிப்பிடப்பட்ட கட்டணம்',
     'remainingToPayout': 'கட்டணத்திற்கு மீதமுள்ளது',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'இது ஒரு மதிப்பீடு மட்டுமே. 50 பார்வைகள் ≈ €0.01 மற்றும் உண்மையான வருவாய் மாறுபடலாம்.',
-=======
     'estimateOnly': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
->>>>>>> theirs
     'requestPayout': 'கட்டணம் கோருங்கள்',
     'minPayout': 'குறைந்தபட்ச கட்டணம்',
     'processingTime': 'செயலாக்க நேரம்',
@@ -1912,16 +1816,7 @@ const extraLocalizedValues = {
     'estimatedPayout': 'అంచనా చెల్లింపు',
     'remainingToPayout': 'చెల్లింపుకు మిగిలినవి',
     'viewsUnit': 'ads',
-<<<<<<< ours
-<<<<<<< ours
-    'estimateOnly':
-        'ఇది కేవలం అంచనా మాత్రమే. 50 వ్యూలు ≈ €0.01 మరియు అసలు ఆదాయం మారవచ్చు.',
-=======
     'estimateOnly': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
->>>>>>> theirs
-=======
-    'estimateOnly': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
->>>>>>> theirs
     'requestPayout': 'చెల్లింపును అభ్యర్థించండి',
     'minPayout': 'కనీస చెల్లింపు',
     'processingTime': 'ప్రాసెసింగ్ సమయం',
