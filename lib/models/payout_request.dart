@@ -24,6 +24,13 @@ class PayoutRequest {
     required this.paidAmountLabel,
     required this.paidNote,
     required this.paidAt,
+    required this.appVersion,
+    required this.versionName,
+    required this.buildNumber,
+    required this.minimumRequiredVersion,
+    required this.minimumRequiredBuildNumber,
+    required this.rejectReasonCode,
+    required this.rejectReasonNote,
   });
 
   final String id;
@@ -50,6 +57,13 @@ class PayoutRequest {
   final String paidAmountLabel;
   final String paidNote;
   final DateTime? paidAt;
+  final String appVersion;
+  final String versionName;
+  final int buildNumber;
+  final String minimumRequiredVersion;
+  final int minimumRequiredBuildNumber;
+  final String rejectReasonCode;
+  final String rejectReasonNote;
 
   int get viewsRequested => coinsRequested;
   bool get isBankTransfer => payoutMethod == 'bank';
@@ -155,6 +169,14 @@ class PayoutRequest {
             ),
       paidNote: data['paidNote'] as String? ?? '',
       paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
+      appVersion: data['appVersion'] as String? ?? '',
+      versionName: data['versionName'] as String? ?? '',
+      buildNumber: (data['buildNumber'] as num?)?.toInt() ?? 0,
+      minimumRequiredVersion: data['minimumRequiredVersion'] as String? ?? '',
+      minimumRequiredBuildNumber:
+          (data['minimumRequiredBuildNumber'] as num?)?.toInt() ?? 0,
+      rejectReasonCode: data['rejectReasonCode'] as String? ?? '',
+      rejectReasonNote: data['rejectReasonNote'] as String? ?? '',
     );
   }
 

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
@@ -23,16 +26,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dailyReminderEnabled = true;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isDeletingAccount = false;
   String _selectedLanguageCode = AppLanguageService.defaultLanguageCode;
+  String _appVersionLabel = '';
+  Timer? _startupLoadTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _loadPackageVersion();
+    _startupLoadTimer = Timer(const Duration(seconds: 2), _loadSettings);
+  }
+
+  Future<void> _loadPackageVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _appVersionLabel = '${info.version}+${info.buildNumber}';
+    });
   }
 
   @override
   void dispose() {
+    _startupLoadTimer?.cancel();
     _leaderboardNameController.dispose();
     super.dispose();
   }
@@ -93,6 +109,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final l10n = context.l10n;
+    if (_isDeletingAccount || _isSaving) return;
+
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.deleteAccountConfirmTitle),
+            content: Text(l10n.deleteAccountConfirmMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(l10n.deleteAccountConfirmAction),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed) return;
+    await _deleteAccount();
+  }
+
+  Future<void> _deleteAccount() async {
+    final l10n = context.l10n;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await user.delete();
+      await _firestoreService.deleteUserAccountData(uid);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.deleteAccountDeleted)),
+      );
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.authGate,
+        (_) => false,
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = error.code == 'requires-recent-login'
+          ? l10n.deleteAccountRecentLoginRequired
+          : (error.message ?? error.code);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
+      }
     }
   }
 
@@ -201,6 +286,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _currentLanguageLabel(l10n),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.error.withOpacity(0.38),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.deleteAccount,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.deleteAccountSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _isDeletingAccount || _isSaving ? null : _confirmDeleteAccount,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error.withOpacity(0.5),
+                      ),
+                    ),
+                    icon: _isDeletingAccount
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete_forever_outlined),
+                    label: Text(
+                      _isDeletingAccount
+                          ? l10n.deleteAccountDeleting
+                          : l10n.deleteAccountButton,
                     ),
                   ),
                 ),
@@ -339,7 +477,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 Text(
-                  '1.0.1+6',
+                  _appVersionLabel.isEmpty ? '-' : _appVersionLabel,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -349,7 +487,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _isSaving || _isLoading ? null : _save,
+              onPressed: _isSaving || _isLoading || _isDeletingAccount ? null : _save,
               child: Text(_isSaving ? l10n.saving : l10n.save),
             ),
           ),

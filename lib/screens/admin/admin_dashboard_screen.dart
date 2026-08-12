@@ -11,6 +11,7 @@ import '../../models/payout_request.dart';
 import '../../models/support_ticket.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/payout_i18n.dart';
 
 enum _AdminFilter { pending, approved, paid, rejected, all }
 enum _NotificationAudience { all, user }
@@ -143,6 +144,99 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ? 'Marked payout as manually paid.'
                 : 'Updated payout to ${status.toUpperCase()}',
           ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Future<void> _openRejectDialog(PayoutRequest payout) async {
+    final noteController = TextEditingController();
+    String selectedReasonCode = 'new_build_only';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(PayoutI18n.rejectReasonLabel(context)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: selectedReasonCode,
+                    items: [
+                      DropdownMenuItem(
+                        value: 'new_build_only',
+                        child: Text(
+                          PayoutI18n.rejectReasonCodeLabel(
+                            context,
+                            'new_build_only',
+                          ),
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'other',
+                        child: Text(
+                          PayoutI18n.rejectReasonCodeLabel(context, 'other'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setDialogState(() {
+                        selectedReasonCode = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: noteController,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: PayoutI18n.rejectReasonLabel(context),
+                      helperText: selectedReasonCode == 'new_build_only'
+                          ? '${FirestoreService.minimumPayoutVersion}+'
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(
+                    PayoutI18n.rejectReasonCodeLabel(context, selectedReasonCode),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (confirmed != true) return;
+    try {
+      await _firestoreService.updatePayoutStatus(
+        payoutId: payout.id,
+        status: 'rejected',
+        rejectReasonCode: selectedReasonCode,
+        rejectReasonNote: noteController.text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Updated payout to REJECTED'),
         ),
       );
     } catch (error) {
@@ -627,6 +721,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         payout.destinationSummary,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      if (payout.appVersion.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'App version: ${payout.appVersion}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                      if (payout.status.toLowerCase() == 'rejected' &&
+                          (payout.rejectReasonCode.trim().isNotEmpty ||
+                              payout.rejectReasonNote.trim().isNotEmpty)) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${PayoutI18n.rejectReasonLabel(context)}: ${PayoutI18n.localizedRejectReason(
+                            context,
+                            code: payout.rejectReasonCode.trim(),
+                            minimumVersion: payout.minimumRequiredVersion,
+                            note: payout.rejectReasonNote,
+                          )}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                       if (copyActions.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Wrap(
@@ -678,7 +793,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFFFF7B7B),
                                   ),
-                                  onPressed: () => _setStatus(payout, 'rejected'),
+                                  onPressed: () => _openRejectDialog(payout),
                                   child: const Text('Reject'),
                                 ),
                               ),

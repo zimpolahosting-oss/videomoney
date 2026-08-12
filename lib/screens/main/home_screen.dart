@@ -1204,7 +1204,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                             ),
                                             const SizedBox(height: 2),
                                             AnimatedIntText(
-                                              value: currentViews,
+                                              value: currentAds,
                                               style: TextStyle(
                                                 color: Colors.white,
                                                 fontSize: widget.compactMode ? 18 : 22,

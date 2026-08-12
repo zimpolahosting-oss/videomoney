@@ -12,13 +12,15 @@ class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Views awarded for each completed rewarded video.
+  /// Ad credits awarded for each completed rewarded video.
   static const int rewardCoinsPerVideo = 1;
   static const int dailyBonusTargetVideos = 20;
-  static const int dailyBonusViews = 500;
-  static const int minimumPayoutCoins = 10000;
-  static const int payoutProcessingDays = 30;
-  static const int estimatedViewsPerCent = 50;
+  static const int dailyBonusViews = 0;
+  static const int minimumPayoutCoins = 1000;
+  static const int payoutProcessingDays = 5;
+  static const double estimatedEuroPerAd = 0.001;
+  static const int minimumPayoutBuildNumber = 59;
+  static const String minimumPayoutVersion = '1.0.1+59';
   static const int presenceHeartbeatSeconds = 30;
   static const int presenceTtlSeconds = 90;
   static const String rewardBalanceResetAppliedField =
@@ -84,8 +86,12 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _leaderboard =>
       _firestore.collection('leaderboard');
 
-  static double estimateEarningsEuro(int views) {
-    return views / estimatedViewsPerCent / 100;
+  static double estimateEarningsEuro(int ads) {
+    return ads * estimatedEuroPerAd;
+  }
+
+  static bool isPayoutBuildAllowed(int buildNumber) {
+    return buildNumber >= minimumPayoutBuildNumber;
   }
 
   static String formatLocalDateKey(DateTime dateTime) {
@@ -515,6 +521,9 @@ class FirestoreService {
   Future<void> createPayoutRequest({
     required String uid,
     required int coinsRequested,
+    required String appVersion,
+    required String versionName,
+    required int buildNumber,
     required String payoutMethod,
     required String payPalEmail,
     required String revolutUsername,
@@ -548,12 +557,17 @@ class FirestoreService {
       }
 
       final currentCoins = (userData['coins'] as num?)?.toInt() ?? 0;
+      if (!isPayoutBuildAllowed(buildNumber)) {
+        throw Exception(
+          'Update required. Payout is only available on $minimumPayoutVersion or higher.',
+        );
+      }
       if (coinsRequested <= 0) {
-        throw Exception('Requested views must be greater than zero.');
+        throw Exception('Requested ads must be greater than zero.');
       }
       if (coinsRequested < minimumPayoutCoins) {
         throw Exception(
-          'Minimum payout is $minimumPayoutCoins views.',
+          'Minimum payout is $minimumPayoutCoins ads.',
         );
       }
       if (trimmedAccountHolderName.isEmpty) {
@@ -584,7 +598,7 @@ class FirestoreService {
         throw Exception('Enter your crypto wallet address.');
       }
       if (currentCoins < coinsRequested) {
-        throw Exception('Not enough views available.');
+        throw Exception('Not enough ads available.');
       }
 
       final userEmail = userData['email'] as String? ?? '';
@@ -626,6 +640,11 @@ class FirestoreService {
         'iban': trimmedIban,
         'bankAccountNumber': trimmedBankAccountNumber,
         'cryptoAddress': trimmedCryptoAddress,
+        'appVersion': appVersion.trim(),
+        'versionName': versionName.trim(),
+        'buildNumber': buildNumber,
+        'minimumRequiredVersion': minimumPayoutVersion,
+        'minimumRequiredBuildNumber': minimumPayoutBuildNumber,
         'minimumPayoutCoins': minimumPayoutCoins,
         'processingDays': payoutProcessingDays,
         'createdAt': FieldValue.serverTimestamp(),
@@ -657,6 +676,8 @@ class FirestoreService {
     required String status,
     double? manualPaidAmountValue,
     String? manualPaidAmountCurrency,
+    String? rejectReasonCode,
+    String? rejectReasonNote,
   }) async {
     final normalized = status.trim().toLowerCase();
     if (normalized.isEmpty) return;
@@ -787,6 +808,9 @@ class FirestoreService {
       }
       if (normalized == 'rejected') {
         updates['rejectedAt'] = FieldValue.serverTimestamp();
+        updates['rejectReasonCode'] =
+            (rejectReasonCode ?? '').trim().toLowerCase();
+        updates['rejectReasonNote'] = (rejectReasonNote ?? '').trim();
       }
 
       final refundAlreadyApplied =
