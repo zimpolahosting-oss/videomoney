@@ -463,8 +463,12 @@ class AppLocalizations {
       'leaderboardViews': '{count} ads',
       'leaderboardIncome': 'income',
 <<<<<<< ours
+<<<<<<< ours
       'estimateOnly':
           'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+=======
+      'estimateOnly': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+>>>>>>> theirs
 =======
       'estimateOnly': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
 >>>>>>> theirs
@@ -508,10 +512,15 @@ class AppLocalizations {
       'useBankAddIban':
           'Use Bank for manual transfer and add your IBAN or bank account number.',
 <<<<<<< ours
+<<<<<<< ours
       'submitUsingBalance':
           'Submit a payout request using your ad balance.',
       'estimatedEarningsNotGuaranteed':
           'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+=======
+      'submitUsingBalance': 'Submit a payout request using your ad balance.',
+      'estimatedEarningsNotGuaranteed': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
+>>>>>>> theirs
 =======
       'submitUsingBalance': 'Submit a payout request using your ad balance.',
       'estimatedEarningsNotGuaranteed': 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
@@ -749,8 +758,12 @@ class AppLocalizations {
       'leaderboardViews': '{count} ads',
       'leaderboardIncome': 'inkomen',
 <<<<<<< ours
+<<<<<<< ours
       'estimateOnly':
           'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
+=======
+      'estimateOnly': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
+>>>>>>> theirs
 =======
       'estimateOnly': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
 >>>>>>> theirs
@@ -794,10 +807,15 @@ class AppLocalizations {
       'useBankAddIban':
           'Gebruik Bank voor handmatige overschrijving en voeg je IBAN of rekeningnummer toe.',
 <<<<<<< ours
+<<<<<<< ours
       'submitUsingBalance':
           'Dien een uitbetalingsaanvraag in met je adsaldo.',
       'estimatedEarningsNotGuaranteed':
           'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
+=======
+      'submitUsingBalance': 'Dien een uitbetalingsaanvraag in met je adsaldo.',
+      'estimatedEarningsNotGuaranteed': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
+>>>>>>> theirs
 =======
       'submitUsingBalance': 'Dien een uitbetalingsaanvraag in met je adsaldo.',
       'estimatedEarningsNotGuaranteed': 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
@@ -1028,8 +1046,12 @@ class AppLocalizations {
       'remainingToPayout': 'भुगतान तक बाकी',
       'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
       'estimateOnly':
           'केवल अनुमान। 50 व्यू ≈ €0.01 और वास्तविक आय अलग हो सकती है।',
+=======
+      'estimateOnly': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
+>>>>>>> theirs
 =======
       'estimateOnly': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
 >>>>>>> theirs
@@ -1073,10 +1095,15 @@ class AppLocalizations {
       'useBankAddIban':
           'मैन्युअल ट्रांसफ़र के लिए Bank चुनें और अपना IBAN या बैंक खाता नंबर जोड़ें।',
 <<<<<<< ours
+<<<<<<< ours
       'submitUsingBalance':
           'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
       'estimatedEarningsNotGuaranteed':
           'आय केवल अनुमानित है। 50 पूर्ण व्यू ≈ €0.01 और यह गारंटीकृत भुगतान नहीं है।',
+=======
+      'submitUsingBalance': 'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
+      'estimatedEarningsNotGuaranteed': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
+>>>>>>> theirs
 =======
       'submitUsingBalance': 'अपने ad बैलेंस का उपयोग करके भुगतान अनुरोध भेजें।',
       'estimatedEarningsNotGuaranteed': 'केवल अनुमान। 1 ad ≈ €0.001 और वास्तविक कमाई अलग हो सकती है।',
@@ -1308,8 +1335,12 @@ class AppLocalizations {
       'remainingToPayout': 'Verbleibend bis Auszahlung',
       'viewsUnit': 'Ads',
 <<<<<<< ours
+<<<<<<< ours
       'estimateOnly':
           'Nur Schätzung. 50 Views ≈ €0,01 und die tatsächlichen Einnahmen können abweichen.',
+=======
+      'estimateOnly': 'Nur eine Schätzung. 1 Ad ≈ €0,001 und die tatsächlichen Einnahmen können variieren.',
+>>>>>>> theirs
 =======
       'estimateOnly': 'Nur eine Schätzung. 1 Ad ≈ €0,001 und die tatsächlichen Einnahmen können variieren.',
 >>>>>>> theirs
@@ -1855,7 +1886,11 @@ class AppLocalizations {
       'everyRequestReviewed': 'Chaque demande est examinée par l\'administrateur avant d\'être payée.',
       'useBankAddIban': 'Utilisez Banque pour un transfert manuel et ajoutez votre IBAN ou numéro de compte bancaire.',
 <<<<<<< ours
+<<<<<<< ours
       'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d\'ads.',
+=======
+      'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d’ads.',
+>>>>>>> theirs
 =======
       'submitUsingBalance': 'Soumettez une demande de paiement en utilisant votre solde d’ads.',
 >>>>>>> theirs

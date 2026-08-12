@@ -105,8 +105,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'Restante até ao pagamento',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+=======
+    'estimateOnly': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
 >>>>>>> theirs
@@ -145,8 +149,12 @@ const extraLocalizedValues = {
     'requestPayoutTitle': 'Solicitar pagamento',
     'payoutRules': 'Regras de pagamento',
 <<<<<<< ours
+<<<<<<< ours
     'minimumPayoutIs':
         'O pagamento mínimo é de {views} ads.',
+=======
+    'minimumPayoutIs': 'O pagamento mínimo é de {views} ads.',
+>>>>>>> theirs
 =======
     'minimumPayoutIs': 'O pagamento mínimo é de {views} ads.',
 >>>>>>> theirs
@@ -157,10 +165,15 @@ const extraLocalizedValues = {
     'useBankAddIban':
         'Utilize Banco para transferência manual e adicione o seu IBAN ou número de conta bancária.',
 <<<<<<< ours
+<<<<<<< ours
     'submitUsingBalance':
         'Envie um pedido de pagamento utilizando o seu saldo de ads.',
     'estimatedEarningsNotGuaranteed':
         'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+=======
+    'submitUsingBalance': 'Envie um pedido de pagamento utilizando o seu saldo de ads.',
+    'estimatedEarningsNotGuaranteed': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
+>>>>>>> theirs
 =======
     'submitUsingBalance': 'Envie um pedido de pagamento utilizando o seu saldo de ads.',
     'estimatedEarningsNotGuaranteed': 'Apenas uma estimativa. 1 ad ≈ €0,001 e os ganhos reais podem variar.',
@@ -402,8 +415,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'Mancante al pagamento',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+=======
+    'estimateOnly': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
 >>>>>>> theirs
@@ -443,8 +460,12 @@ const extraLocalizedValues = {
     'requestPayoutTitle': 'Richiedi pagamento',
     'payoutRules': 'Regole di pagamento',
 <<<<<<< ours
+<<<<<<< ours
     'minimumPayoutIs':
         'Il pagamento minimo è di {views} ads.',
+=======
+    'minimumPayoutIs': 'Il pagamento minimo è di {views} ads.',
+>>>>>>> theirs
 =======
     'minimumPayoutIs': 'Il pagamento minimo è di {views} ads.',
 >>>>>>> theirs
@@ -455,10 +476,15 @@ const extraLocalizedValues = {
     'useBankAddIban':
         'Usa Banca per il trasferimento manuale e aggiungi il tuo IBAN o numero di conto bancario.',
 <<<<<<< ours
+<<<<<<< ours
     'submitUsingBalance':
         'Invia una richiesta di pagamento usando il tuo saldo di visualizzazioni.',
     'estimatedEarningsNotGuaranteed':
         'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+=======
+    'submitUsingBalance': 'Invia una richiesta di pagamento utilizzando il tuo saldo ads.',
+    'estimatedEarningsNotGuaranteed': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
+>>>>>>> theirs
 =======
     'submitUsingBalance': 'Invia una richiesta di pagamento utilizzando il tuo saldo ads.',
     'estimatedEarningsNotGuaranteed': 'Solo una stima. 1 ad ≈ €0,001 e i guadagni effettivi possono variare.',
@@ -703,8 +729,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'Ödemeye kalan',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'Yalnızca tahmindir. 50 görüntüleme ≈ €0.01 ve gerçek kazançlar değişebilir.',
+=======
+    'estimateOnly': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'Yalnızca tahmindir. 1 ad ≈ €0,001 ve gerçek kazanç değişebilir.',
 >>>>>>> theirs
@@ -989,8 +1019,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'المتبقي للسحب',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'تقدير فقط. 50 مشاهدة ≈ €0.01 وقد تختلف الأرباح الفعلية.',
+=======
+    'estimateOnly': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'مجرد تقدير. 1 ad ≈ €0,001 وقد تختلف الأرباح الفعلية.',
 >>>>>>> theirs
@@ -1275,8 +1309,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'পেআউটের জন্য বাকি',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'এটি শুধু আনুমানিক। ৫০ ভিউ ≈ €0.01 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
+=======
+    'estimateOnly': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
+>>>>>>> theirs
 =======
     'estimateOnly': 'শুধু একটি অনুমান। 1 ad ≈ €0,001 এবং প্রকৃত আয় ভিন্ন হতে পারে।',
 >>>>>>> theirs
@@ -1570,8 +1608,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'கட்டணத்திற்கு மீதமுள்ளது',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'இது ஒரு மதிப்பீடு மட்டுமே. 50 பார்வைகள் ≈ €0.01 மற்றும் உண்மையான வருவாய் மாறுபடலாம்.',
+=======
+    'estimateOnly': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'இது ஒரு மதிப்பீடு மட்டும். 1 ad ≈ €0,001 மற்றும் உண்மையான வருமானம் மாறலாம்.',
 >>>>>>> theirs
@@ -1871,8 +1913,12 @@ const extraLocalizedValues = {
     'remainingToPayout': 'చెల్లింపుకు మిగిలినవి',
     'viewsUnit': 'ads',
 <<<<<<< ours
+<<<<<<< ours
     'estimateOnly':
         'ఇది కేవలం అంచనా మాత్రమే. 50 వ్యూలు ≈ €0.01 మరియు అసలు ఆదాయం మారవచ్చు.',
+=======
+    'estimateOnly': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
+>>>>>>> theirs
 =======
     'estimateOnly': 'ఇది కేవలం అంచనా మాత్రమే. 1 ad ≈ €0,001 మరియు నిజమైన ఆదాయం మారవచ్చు.',
 >>>>>>> theirs
