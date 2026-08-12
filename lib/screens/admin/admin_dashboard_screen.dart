@@ -130,6 +130,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return double.tryParse(normalized);
   }
 
+  String _payoutVersionLabel(PayoutRequest payout) {
+    final minimumBuild = payout.minimumRequiredBuildNumber > 0
+        ? payout.minimumRequiredBuildNumber
+        : FirestoreService.minimumPayoutBuildNumber;
+    final minimumVersion = payout.minimumRequiredVersion.trim().isNotEmpty
+        ? payout.minimumRequiredVersion.trim()
+        : FirestoreService.minimumPayoutVersion;
+
+    if (payout.buildNumber < minimumBuild) {
+      return 'Old version';
+    }
+    return '$minimumVersion or higher';
+  }
+
   Future<void> _setStatus(PayoutRequest payout, String status) async {
     try {
       await _firestoreService.updatePayoutStatus(
@@ -721,13 +735,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         payout.destinationSummary,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      if (payout.appVersion.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'App version: ${payout.appVersion}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'App version: ${_payoutVersionLabel(payout)}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       if (payout.status.toLowerCase() == 'rejected' &&
                           (payout.rejectReasonCode.trim().isNotEmpty ||
                               payout.rejectReasonNote.trim().isNotEmpty)) ...[
