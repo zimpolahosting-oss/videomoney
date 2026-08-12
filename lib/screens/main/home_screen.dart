@@ -723,6 +723,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _presentAdBreakSheet() async {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
+    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
 
     _isShowingAdBreak = true;
     _blockPlaybackResume(const Duration(minutes: 2));
@@ -830,14 +831,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SnackBar(
             content: Text(
               isAdmobBreak
-                  ? 'No AdMob or Monetag ad available for this turn.'
+                  ? (isDutch
+                        ? 'Geen AdMob- of Monetag-ad beschikbaar voor deze beurt.'
+                        : 'No AdMob or Monetag ad available for this turn.')
                   : isAppodealBreak
-                  ? 'No Appodeal or Monetag ad available for this turn.'
+                  ? (isDutch
+                        ? 'Geen Appodeal- of Monetag-ad beschikbaar voor deze beurt.'
+                        : 'No Appodeal or Monetag ad available for this turn.')
                   : isGraviteBreak
-                  ? 'No Gravite or Monetag ad available for this turn.'
+                  ? (isDutch
+                        ? 'Geen Gravite- of Monetag-ad beschikbaar voor deze beurt.'
+                        : 'No Gravite or Monetag ad available for this turn.')
                   : isUnityBreak
-                  ? 'No Unity or Monetag ad available for this turn.'
-                  : 'No interstitial ad available. Continuing to the next short.',
+                  ? (isDutch
+                        ? 'Geen Unity- of Monetag-ad beschikbaar voor deze beurt.'
+                        : 'No Unity or Monetag ad available for this turn.')
+                  : (isDutch
+                        ? 'Geen advertentie beschikbaar. De volgende short gaat verder.'
+                        : 'No interstitial ad available. Continuing to the next short.'),
             ),
           ),
         );
@@ -845,7 +856,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '+10 views added.',
+              isDutch ? '+1 ad geteld.' : '+1 ad counted.',
             ),
           ),
         );
@@ -943,8 +954,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
         final appUser = snapshot.data;
-        final currentViews = appUser?.views ?? 0;
-        final payoutProgress = (currentViews / FirestoreService.minimumPayoutCoins)
+        final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
+        final currentAds = appUser?.views ?? 0;
+        final payoutProgress = (currentAds / FirestoreService.minimumPayoutCoins)
             .clamp(0, 1)
             .toDouble();
 
@@ -1169,7 +1181,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
-                                                '$_bonusProgressShorts / ${ShortsProgressService.rewardThresholdShorts} shorts',
+                                                isDutch
+                                                    ? 'Na 3 shorts druk je op de ad-knop'
+                                                    : 'After 3 shorts, tap the ad button',
                                                 style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 11,
@@ -1186,7 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   _CompactProgressLine(
                                     title: l10n.progressToPayout,
                                     valueLabel:
-                                        '${NumberFormat.decimalPattern().format(currentViews)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)}',
+                                        '${NumberFormat.decimalPattern().format(currentAds)} / ${NumberFormat.decimalPattern().format(FirestoreService.minimumPayoutCoins)} ads',
                                     value: payoutProgress,
                                     color: AppTheme.primary,
                                   ),

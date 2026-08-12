@@ -1,13 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-import '../../l10n/crypto_payout_text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 
-enum _PayoutMethod { paypal, revolut, btc, usdc }
+enum _PayoutMethod { paypal, revolut, bank, btc, usdc }
 enum _PayoutCurrency { eur, gbp, usd }
 
 class PayoutRequestScreen extends StatefulWidget {
@@ -41,6 +39,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     final initial = (widget.initialMethod ?? '').toLowerCase();
     _method = switch (initial) {
       'revolut' => _PayoutMethod.revolut,
+      'bank' => _PayoutMethod.bank,
       'btc' => _PayoutMethod.btc,
       'usdc' => _PayoutMethod.usdc,
       _ => _PayoutMethod.paypal,
@@ -60,10 +59,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     super.dispose();
   }
 
-  String _normalizedViewsInput([String? value]) {
-    return (value ?? _viewsController.text).replaceAll(RegExp(r'[^0-9]'), '');
-  }
-
   Future<void> _submit() async {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
@@ -74,13 +69,13 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final requestedViews = int.parse(_normalizedViewsInput());
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
-        coinsRequested: requestedViews,
+        coinsRequested: int.parse(_viewsController.text.trim()),
         payoutMethod: switch (_method) {
           _PayoutMethod.paypal => 'paypal',
           _PayoutMethod.revolut => 'revolut',
+          _PayoutMethod.bank => 'bank',
           _PayoutMethod.btc => 'btc',
           _PayoutMethod.usdc => 'usdc',
         },
@@ -93,9 +88,10 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
           _PayoutMethod.usdc => 'USDC',
           _ => _currency.name.toUpperCase(),
         },
-        bankName: '',
-        iban: '',
-        bankAccountNumber: '',
+        bankName: _method == _PayoutMethod.bank ? _bankNameController.text : '',
+        iban: _method == _PayoutMethod.bank ? _ibanController.text : '',
+        bankAccountNumber:
+            _method == _PayoutMethod.bank ? _bankAccountNumberController.text : '',
         cryptoAddress:
             (_method == _PayoutMethod.btc || _method == _PayoutMethod.usdc)
                 ? _cryptoAddressController.text
@@ -123,8 +119,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bitcoinTitle = CryptoPayoutText.bitcoinTitle(context);
-    final usdcPolygonTitle = CryptoPayoutText.usdcPolygonTitle(context);
+    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
     return Scaffold(
       appBar: AppBar(title: Text(l10n.requestPayoutTitle)),
       body: SingleChildScrollView(
@@ -151,31 +146,39 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     const SizedBox(height: 12),
                     _RuleLine(
                       icon: Icons.flag_circle_outlined,
-                        text: l10n.minimumPayoutIs(
-                          '${FirestoreService.minimumPayoutCoins}',
-                        ),
+                      text: isDutch
+                          ? 'Minimale uitbetaling: ${FirestoreService.minimumPayoutCoins} ads.'
+                          : 'Minimum payout: ${FirestoreService.minimumPayoutCoins} ads.',
                     ),
                     _RuleLine(
                       icon: Icons.schedule_outlined,
-                        text: l10n.processingCanTake(
-                          '${FirestoreService.payoutProcessingDays}',
-                        ),
+                      text: isDutch
+                          ? 'Verwerking kan tot ${FirestoreService.payoutProcessingDays} uur duren na admin-goedkeuring.'
+                          : 'Processing can take up to ${FirestoreService.payoutProcessingDays} hours after admin approval.',
                     ),
                     _RuleLine(
                       icon: Icons.verified_user_outlined,
                       text: l10n.everyRequestReviewed,
+                    ),
+                    _RuleLine(
+                      icon: Icons.account_balance_outlined,
+                      text: l10n.useBankAddIban,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
               Text(
-                l10n.submitUsingBalance,
+                isDutch
+                    ? 'Dien een uitbetalingsaanvraag in met je adsaldo.'
+                    : 'Submit a payout request using your ad balance.',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.estimatedEarningsNotGuaranteed,
+                isDutch
+                    ? 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.'
+                    : 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
@@ -187,26 +190,31 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SegmentedButton<_PayoutMethod>(
-                  segments: [
+                  segments: const [
                     ButtonSegment(
                       value: _PayoutMethod.paypal,
-                      icon: const Icon(Icons.payments_outlined),
-                      label: const Text('PayPal'),
+                      icon: Icon(Icons.payments_outlined),
+                      label: Text('PayPal'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.revolut,
-                      icon: const Icon(Icons.account_balance_wallet_outlined),
-                      label: const Text('Revolut'),
+                      icon: Icon(Icons.account_balance_wallet_outlined),
+                      label: Text('Revolut'),
+                    ),
+                    ButtonSegment(
+                      value: _PayoutMethod.bank,
+                      icon: Icon(Icons.account_balance_outlined),
+                      label: Text('Bank'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.btc,
-                      icon: const Icon(Icons.currency_bitcoin_rounded),
-                      label: Text(bitcoinTitle),
+                      icon: Icon(Icons.currency_bitcoin_rounded),
+                      label: Text('BTC'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.usdc,
-                      icon: const Icon(Icons.token_rounded),
-                      label: Text(usdcPolygonTitle),
+                      icon: Icon(Icons.token_rounded),
+                      label: Text('USDC'),
                     ),
                   ],
                   selected: {_method},
@@ -271,42 +279,24 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ],
               TextFormField(
                 controller: _viewsController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: false,
-                  signed: false,
-                ),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: l10n.viewsToRequest,
-                  helperText: l10n.minimumViewsHelper,
+                  labelText: isDutch ? 'Ads aanvragen' : 'Ads to request',
+                  helperText: isDutch ? 'Minimaal 1.000 ads' : 'Minimum 1,000 ads',
                 ),
-                onChanged: (value) {
-                  final normalized = _normalizedViewsInput(value);
-                  if (normalized == value) return;
-                  _viewsController.value = TextEditingValue(
-                    text: normalized,
-                    selection: TextSelection.collapsed(
-                      offset: normalized.length,
-                    ),
-                  );
-                },
                 validator: (value) {
-                  final normalized = _normalizedViewsInput(value);
-                  if (normalized.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return l10n.enterAmount;
                   }
 
-                  final number = int.tryParse(normalized);
+                  final number = int.tryParse(value.trim());
                   if (number == null || number <= 0) {
                     return l10n.enterValidPositiveNumber;
                   }
                   if (number < FirestoreService.minimumPayoutCoins) {
-                    return l10n.minimumPayoutIs(
-                      '${FirestoreService.minimumPayoutCoins}',
-                    );
+                    return isDutch
+                        ? 'Minimale uitbetaling is ${FirestoreService.minimumPayoutCoins} ads.'
+                        : 'Minimum payout is ${FirestoreService.minimumPayoutCoins} ads.';
                   }
                   return null;
                 },
@@ -358,23 +348,55 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     return null;
                   },
                 ),
-              ] else ...[
+              ] else if (_method == _PayoutMethod.bank) ...[
                 TextFormField(
-                  controller: _cryptoAddressController,
+                  controller: _bankNameController,
                   decoration: InputDecoration(
-                    labelText: _method == _PayoutMethod.btc
-                        ? CryptoPayoutText.bitcoinAddressLabel(context)
-                        : CryptoPayoutText.usdcPolygonAddressLabel(context),
-                    helperText: _method == _PayoutMethod.btc
-                        ? CryptoPayoutText.pasteBitcoinAddress(context)
-                        : CryptoPayoutText.pasteUsdcPolygonAddress(context),
+                    labelText: l10n.bankName,
                   ),
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
-                      return _method == _PayoutMethod.btc
-                          ? CryptoPayoutText.enterBitcoinAddress(context)
-                          : CryptoPayoutText.enterUsdcPolygonAddress(context);
+                      return l10n.enterBankName;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _ibanController,
+                  decoration: InputDecoration(
+                    labelText: l10n.iban,
+                    helperText: l10n.ibanOptional,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _bankAccountNumberController,
+                  decoration: InputDecoration(
+                    labelText: l10n.bankAccountNumber,
+                    helperText: l10n.bankRequiredIfNoIban,
+                  ),
+                  validator: (value) {
+                    final iban = _ibanController.text.trim();
+                    final accountNumber = value?.trim() ?? '';
+                    if (iban.isEmpty && accountNumber.isEmpty) {
+                      return l10n.enterIbanOrBank;
+                    }
+                    return null;
+                  },
+                ),
+              ] else ...[
+                TextFormField(
+                  controller: _cryptoAddressController,
+                  decoration: InputDecoration(
+                    labelText: '${_method == _PayoutMethod.btc ? 'BTC' : 'USDC'} ${l10n.walletAddress}',
+                    helperText: l10n.pasteWalletAddress,
+                  ),
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return l10n.enterWalletAddress;
                     }
                     return null;
                   },

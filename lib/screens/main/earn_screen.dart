@@ -46,7 +46,7 @@ class _EarnScreenState extends State<EarnScreen> {
             builder: (pageContext) => ShortsAdBreakScreen(
               providerName: 'Rewarded ad',
               onPrepare: () async {},
-              onStartAd: (_) {
+              onStartAd: (_, __) {
                 return _earningsService.watchRewardedVideo(
                   uid: user.uid,
                   onAdStatus: (message) {
@@ -102,6 +102,7 @@ class _EarnScreenState extends State<EarnScreen> {
     return StreamBuilder<AppUser?>(
       stream: _firestoreService.watchUser(user.uid),
       builder: (context, snapshot) {
+        final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
         final appUser = snapshot.data;
         final totalVideos = appUser?.videosWatched ?? 0;
         final todayKey = FirestoreService.formatLocalDateKey(DateTime.now());
@@ -154,7 +155,7 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            l10n.earnViewsTitle,
+                            isDutch ? 'Verdien ads' : 'Earn ads',
                             style: Theme.of(context).textTheme.headlineMedium,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -164,7 +165,9 @@ class _EarnScreenState extends State<EarnScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 235),
                           child: Text(
-                            l10n.watchRewardedEarnViews,
+                            isDutch
+                                ? 'Kijk een rewarded advertentie om 1 ad te tellen voor je uitbetaling.'
+                                : 'Watch a rewarded ad to count 1 ad toward your payout.',
                             style: Theme.of(context).textTheme.bodyMedium,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -226,7 +229,7 @@ class _EarnScreenState extends State<EarnScreen> {
                             child: _HowStep(
                               icon: Icons.visibility_outlined,
                               title: l10n.earnStep,
-                              subtitle: l10n.earnViews,
+                              subtitle: isDutch ? '1 ad telt mee' : '1 ad counted',
                             ),
                           ),
                           SizedBox(
@@ -234,7 +237,7 @@ class _EarnScreenState extends State<EarnScreen> {
                             child: _HowStep(
                               icon: Icons.account_balance_wallet_outlined,
                               title: l10n.cashOut,
-                              subtitle: '5,000 ${l10n.viewsUnit}',
+                              subtitle: '${FirestoreService.minimumPayoutCoins} ads',
                             ),
                           ),
                         ],
@@ -275,7 +278,7 @@ class _EarnScreenState extends State<EarnScreen> {
                               ),
                             ),
                             child: Text(
-                              '+${FirestoreService.dailyBonusViews}',
+                              isDutch ? 'Ads-only' : 'Ads only',
                               style: const TextStyle(
                                 color: AppTheme.primarySoft,
                                 fontWeight: FontWeight.w800,
@@ -287,9 +290,9 @@ class _EarnScreenState extends State<EarnScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        l10n.watchTodayVideosBonus(
-                          '${FirestoreService.dailyBonusTargetVideos}',
-                        ),
+                        isDutch
+                            ? 'Alleen volledig bekeken advertenties tellen mee voor je saldo.'
+                            : 'Only fully completed ads count toward your balance.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 14),
@@ -297,12 +300,12 @@ class _EarnScreenState extends State<EarnScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '$dailyCount / ${FirestoreService.dailyBonusTargetVideos} ${l10n.videosWatched.toLowerCase()}',
+                              '${appUser?.views ?? 0} / ${FirestoreService.minimumPayoutCoins} ads',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
                           Text(
-                            l10n.bonus,
+                            isDutch ? 'Saldo' : 'Balance',
                             style: const TextStyle(color: AppTheme.textMuted),
                           ),
                         ],
@@ -312,7 +315,9 @@ class _EarnScreenState extends State<EarnScreen> {
                         borderRadius: BorderRadius.circular(999),
                         child: LinearProgressIndicator(
                           minHeight: 10,
-                          value: dailyProgress,
+                          value: ((appUser?.views ?? 0) / FirestoreService.minimumPayoutCoins)
+                              .clamp(0, 1)
+                              .toDouble(),
                           backgroundColor: Colors.white.withOpacity(0.08),
                           valueColor:
                               const AlwaysStoppedAnimation(AppTheme.primary),

@@ -13,8 +13,9 @@ class AboutScreen extends StatelessWidget {
     final l10n = context.l10n;
     final languageCode = Localizations.localeOf(context).languageCode.toLowerCase();
     final processingLabel = languageCode == 'nl'
-        ? '${FirestoreService.payoutProcessingDays} dagen'
-        : '${FirestoreService.payoutProcessingDays} days';
+        ? '${FirestoreService.payoutProcessingDays} uur'
+        : '${FirestoreService.payoutProcessingDays} hours';
+    const adsUnit = 'ads';
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aboutVideoMoney)),
       body: ListView(
@@ -45,8 +46,11 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _Line(label: l10n.version, value: '1.0.1+6'),
-                _Line(label: l10n.minimumPayoutLabel, value: '5,000 ${l10n.viewsUnit}'),
-                _Line(label: l10n.processingTimeLabel, value: '30 days'),
+                _Line(
+                  label: l10n.minimumPayoutLabel,
+                  value: '${FirestoreService.minimumPayoutCoins} $adsUnit',
+                ),
+                _Line(label: l10n.processingTimeLabel, value: processingLabel),
                 _Line(label: l10n.reviewLabel, value: l10n.adminApproval),
                 const SizedBox(height: 14),
                 Text(

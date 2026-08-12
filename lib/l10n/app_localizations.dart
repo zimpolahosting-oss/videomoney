@@ -98,7 +98,12 @@ class AppLocalizations {
   String get wallet => _text('wallet');
   String get profile => _text('profile');
   String get rewardConfirmedViewsAdded => _text('rewardConfirmedViewsAdded');
+  String rewardConfirmedViewsAddedCount(String count) =>
+      _format('rewardConfirmedViewsAddedCount', {'count': count});
+  String bonusViewsAdded(String count) =>
+      _format('bonusViewsAdded', {'count': count});
   String get rewardedAdNotCompleted => _text('rewardedAdNotCompleted');
+  String get processingReward => _text('processingReward');
   String get watchVideo => _text('watchVideo');
   String get loading => _text('loading');
   String get welcomeBackShort => _text('welcomeBackShort');
@@ -175,6 +180,12 @@ class AppLocalizations {
   String get revolutSubtitle => _text('revolutSubtitle');
   String get bankTransferTitle => _text('bankTransferTitle');
   String get bankTransferSubtitle => _text('bankTransferSubtitle');
+  String get walletAddress => _text('walletAddress');
+  String get pasteWalletAddress => _text('pasteWalletAddress');
+  String get enterWalletAddress => _text('enterWalletAddress');
+  String get bitcoinTitle => _text('bitcoinTitle');
+  String get bitcoinSubtitle => _text('bitcoinSubtitle');
+  String get usdcSubtitle => _text('usdcSubtitle');
   String get viewFullHistory => _text('viewFullHistory');
   String get inbox => _text('inbox');
   String get markAllRead => _text('markAllRead');
@@ -265,6 +276,16 @@ class AppLocalizations {
   String get settingsSaved => _text('settingsSaved');
   String get privacy => _text('privacy');
   String get appVersion => _text('appVersion');
+  String get deleteAccount => _text('deleteAccount');
+  String get deleteAccountSubtitle => _text('deleteAccountSubtitle');
+  String get deleteAccountButton => _text('deleteAccountButton');
+  String get deleteAccountDeleting => _text('deleteAccountDeleting');
+  String get deleteAccountConfirmTitle => _text('deleteAccountConfirmTitle');
+  String get deleteAccountConfirmMessage => _text('deleteAccountConfirmMessage');
+  String get deleteAccountConfirmAction => _text('deleteAccountConfirmAction');
+  String get deleteAccountDeleted => _text('deleteAccountDeleted');
+  String get deleteAccountRecentLoginRequired =>
+      _text('deleteAccountRecentLoginRequired');
   String get save => _text('save');
   String get saving => _text('saving');
   String get termsUsingTitle => _text('termsUsingTitle');
@@ -380,7 +401,10 @@ class AppLocalizations {
       'wallet': 'Wallet',
       'profile': 'Profile',
       'rewardConfirmedViewsAdded': 'Reward confirmed. Views added.',
+      'rewardConfirmedViewsAddedCount': '+{count} views added.',
+      'bonusViewsAdded': '🎁 +{count} bonus views',
       'rewardedAdNotCompleted': 'Rewarded ad was not completed.',
+      'processingReward': 'Processing your reward...',
       'watchVideo': 'Watch Video',
       'loading': 'Loading...',
       'welcomeBackShort': 'Welcome back,',
@@ -431,10 +455,10 @@ class AppLocalizations {
       'reviewPayoutRequests': 'Review payout requests',
       'logout': 'Logout',
       'yourWallet': 'Your Wallet',
-      'availableViews': 'Available Views',
+      'availableViews': 'Available ads',
       'estimatedPayout': 'Estimated Payout',
-      'remainingToPayout': 'Remaining to Payout',
-      'viewsUnit': 'views',
+      'remainingToPayout': 'Remaining to payout',
+      'viewsUnit': 'ads',
       'usersOnline': '{count} users online',
       'leaderboardTitle': 'Leaderboard',
       'leaderboardSubtitle': 'Top views and estimated earnings from players.',
@@ -443,7 +467,7 @@ class AppLocalizations {
       'leaderboardViews': '{count} views',
       'leaderboardIncome': 'income',
       'estimateOnly':
-          'Estimate only. 50 views ≈ €0.01 and actual earnings may vary.',
+          'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
       'requestPayout': 'Request Payout',
       'minPayout': 'Min. Payout',
       'processingTime': 'Processing Time',
@@ -458,6 +482,12 @@ class AppLocalizations {
       'bankTransferTitle': 'Bank Transfer',
       'bankTransferSubtitle':
           'Add IBAN or bank account number for manual payout',
+      'walletAddress': 'wallet address',
+      'pasteWalletAddress': 'Paste your wallet address',
+      'enterWalletAddress': 'Enter your wallet address.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Payout to your BTC wallet address',
+      'usdcSubtitle': 'Payout to your USDC wallet address',
       'viewFullHistory': 'View full history',
       'inbox': 'Inbox',
       'markAllRead': 'Mark all read',
@@ -470,21 +500,21 @@ class AppLocalizations {
       'thanksForRating': 'Thanks for your rating.',
       'requestPayoutTitle': 'Request Payout',
       'payoutRules': 'Payout rules',
-      'minimumPayoutIs': 'Minimum payout is {views} views.',
+      'minimumPayoutIs': 'Minimum payout is {views} ads.',
       'processingCanTake':
-          'Processing can take up to {days} days after admin approval.',
+          'Processing can take up to {days} hours after admin approval.',
       'everyRequestReviewed':
           'Every request is reviewed by admin before it is paid.',
       'useBankAddIban':
           'Use Bank for manual transfer and add your IBAN or bank account number.',
       'submitUsingBalance':
-          'Submit a payout request using your view balance.',
+          'Submit a payout request using your ad balance.',
       'estimatedEarningsNotGuaranteed':
-          'Estimated earnings only. 50 completed views ≈ €0.01 and this is not a guaranteed payout promise.',
+          'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
       'payoutCurrency': 'Payout currency',
       'payoutMethod': 'Payout method',
-      'viewsToRequest': 'Views to request',
-      'minimumViewsHelper': 'Minimum 5,000 views',
+      'viewsToRequest': 'Ads to request',
+      'minimumViewsHelper': 'Minimum 1,000 ads',
       'enterAmount': 'Enter an amount.',
       'enterValidPositiveNumber': 'Enter a valid positive number.',
       'accountHolderName': 'Account holder name',
@@ -554,6 +584,18 @@ class AppLocalizations {
       'settingsSaved': 'Settings saved.',
       'privacy': 'Privacy',
       'appVersion': 'App version',
+      'deleteAccount': 'Delete account',
+      'deleteAccountSubtitle':
+          'Delete your VideoMoney account and remove your saved app data from this app.',
+      'deleteAccountButton': 'Delete account',
+      'deleteAccountDeleting': 'Deleting account...',
+      'deleteAccountConfirmTitle': 'Delete account?',
+      'deleteAccountConfirmMessage':
+          'This removes your VideoMoney account and stored app data. This action cannot be undone.',
+      'deleteAccountConfirmAction': 'Delete',
+      'deleteAccountDeleted': 'Your account has been deleted.',
+      'deleteAccountRecentLoginRequired':
+          'For security, log in again before deleting your account.',
       'save': 'Save',
       'saving': 'Saving...',
       'termsUsingTitle': 'Using VideoMoney',
@@ -571,7 +613,7 @@ class AppLocalizations {
           'Estimated earnings are informational only and can change based on platform performance, policy, fraud checks, and payout review.',
       'termsViewsBullet3':
           'Daily bonus rewards are limited to eligible activity and can be removed if abuse is detected.',
-      'termsPayoutsBullet1': 'Minimum payout remains 5,000 views.',
+      'termsPayoutsBullet1': 'Minimum payout remains 1,000 ads.',
       'termsPayoutsBullet2':
           'All payout requests require manual admin approval and can be approved, rejected, or marked paid.',
       'termsPayoutsBullet3':
@@ -641,7 +683,10 @@ class AppLocalizations {
       'wallet': 'Wallet',
       'profile': 'Profiel',
       'rewardConfirmedViewsAdded': 'Beloning bevestigd. Views toegevoegd.',
+      'rewardConfirmedViewsAddedCount': '+{count} views toegevoegd.',
+      'bonusViewsAdded': '🎁 +{count} bonus views',
       'rewardedAdNotCompleted': 'De rewarded advertentie is niet voltooid.',
+      'processingReward': 'Je beloning wordt verwerkt...',
       'watchVideo': 'Video bekijken',
       'loading': 'Laden...',
       'welcomeBackShort': 'Welkom terug,',
@@ -693,10 +738,10 @@ class AppLocalizations {
       'reviewPayoutRequests': 'Bekijk uitbetalingsaanvragen',
       'logout': 'Uitloggen',
       'yourWallet': 'Jouw wallet',
-      'availableViews': 'Beschikbare views',
+      'availableViews': 'Beschikbare ads',
       'estimatedPayout': 'Geschatte uitbetaling',
       'remainingToPayout': 'Nog nodig voor uitbetaling',
-      'viewsUnit': 'views',
+      'viewsUnit': 'ads',
       'usersOnline': '{count} gebruikers online',
       'leaderboardTitle': 'Leaderboard',
       'leaderboardSubtitle': 'Top views en geschatte inkomsten van spelers.',
@@ -705,7 +750,7 @@ class AppLocalizations {
       'leaderboardViews': '{count} views',
       'leaderboardIncome': 'inkomen',
       'estimateOnly':
-          'Alleen een schatting. 50 views ≈ €0,01 en de werkelijke opbrengst kan afwijken.',
+          'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
       'requestPayout': 'Uitbetaling aanvragen',
       'minPayout': 'Min. uitbetaling',
       'processingTime': 'Verwerkingstijd',
@@ -720,6 +765,12 @@ class AppLocalizations {
       'bankTransferTitle': 'Bankoverschrijving',
       'bankTransferSubtitle':
           'Voeg IBAN of rekeningnummer toe voor handmatige uitbetaling',
+      'walletAddress': 'walletadres',
+      'pasteWalletAddress': 'Plak je walletadres',
+      'enterWalletAddress': 'Voer je walletadres in.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Uitbetaling naar je BTC-walletadres',
+      'usdcSubtitle': 'Uitbetaling naar je USDC-walletadres',
       'viewFullHistory': 'Volledige geschiedenis bekijken',
       'inbox': 'Inbox',
       'markAllRead': 'Alles als gelezen markeren',
@@ -732,21 +783,21 @@ class AppLocalizations {
       'thanksForRating': 'Bedankt voor je beoordeling.',
       'requestPayoutTitle': 'Uitbetaling aanvragen',
       'payoutRules': 'Uitbetalingsregels',
-      'minimumPayoutIs': 'De minimale uitbetaling is {views} views.',
+      'minimumPayoutIs': 'De minimale uitbetaling is {views} ads.',
       'processingCanTake':
-          'Verwerking kan tot {days} dagen duren na goedkeuring door de admin.',
+          'Verwerking kan tot {days} uur duren na goedkeuring door de admin.',
       'everyRequestReviewed':
           'Elke aanvraag wordt door de admin beoordeeld voordat deze wordt uitbetaald.',
       'useBankAddIban':
           'Gebruik Bank voor handmatige overschrijving en voeg je IBAN of rekeningnummer toe.',
       'submitUsingBalance':
-          'Dien een uitbetalingsaanvraag in met je viewsaldo.',
+          'Dien een uitbetalingsaanvraag in met je adsaldo.',
       'estimatedEarningsNotGuaranteed':
-          'Alleen geschatte inkomsten. 50 afgeronde views ≈ €0,01 en dit is geen gegarandeerde uitbetalingsbelofte.',
+          'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.',
       'payoutCurrency': 'Uitbetalingsvaluta',
       'payoutMethod': 'Uitbetalingsmethode',
-      'viewsToRequest': 'Aan te vragen views',
-      'minimumViewsHelper': 'Minimaal 5.000 views',
+      'viewsToRequest': 'Aan te vragen ads',
+      'minimumViewsHelper': 'Minimaal 1.000 ads',
       'enterAmount': 'Voer een bedrag in.',
       'enterValidPositiveNumber': 'Voer een geldig positief getal in.',
       'accountHolderName': 'Naam rekeninghouder',
@@ -815,6 +866,18 @@ class AppLocalizations {
       'settingsSaved': 'Instellingen opgeslagen.',
       'privacy': 'Privacy',
       'appVersion': 'Appversie',
+      'deleteAccount': 'Account verwijderen',
+      'deleteAccountSubtitle':
+          'Verwijder je VideoMoney-account en wis je opgeslagen app-gegevens uit deze app.',
+      'deleteAccountButton': 'Account verwijderen',
+      'deleteAccountDeleting': 'Account wordt verwijderd...',
+      'deleteAccountConfirmTitle': 'Account verwijderen?',
+      'deleteAccountConfirmMessage':
+          'Hiermee verwijder je je VideoMoney-account en opgeslagen app-gegevens. Dit kan niet ongedaan worden gemaakt.',
+      'deleteAccountConfirmAction': 'Verwijderen',
+      'deleteAccountDeleted': 'Je account is verwijderd.',
+      'deleteAccountRecentLoginRequired':
+          'Log voor je veiligheid opnieuw in voordat je je account verwijdert.',
       'save': 'Opslaan',
       'saving': 'Opslaan...',
       'termsUsingTitle': 'VideoMoney gebruiken',
@@ -833,7 +896,7 @@ class AppLocalizations {
           'Geschatte inkomsten zijn alleen informatief en kunnen veranderen door platformprestaties, beleid, fraudebeperking en uitbetalingscontrole.',
       'termsViewsBullet3':
           'Dagelijkse bonusbeloningen zijn beperkt tot geldige activiteit en kunnen worden verwijderd bij misbruik.',
-      'termsPayoutsBullet1': 'De minimale uitbetaling blijft 5.000 views.',
+      'termsPayoutsBullet1': 'De minimale uitbetaling blijft 1.000 ads.',
       'termsPayoutsBullet2':
           'Alle uitbetalingsaanvragen vereisen handmatige goedkeuring door de admin en kunnen worden goedgekeurd, afgewezen of als betaald worden gemarkeerd.',
       'termsPayoutsBullet3':
@@ -902,7 +965,10 @@ class AppLocalizations {
       'wallet': 'वॉलेट',
       'profile': 'प्रोफ़ाइल',
       'rewardConfirmedViewsAdded': 'रिवॉर्ड की पुष्टि हो गई। व्यू जोड़े गए।',
+      'rewardConfirmedViewsAddedCount': '+{count} व्यू जोड़े गए।',
+      'bonusViewsAdded': '🎁 +{count} बोनस व्यू',
       'rewardedAdNotCompleted': 'रिवॉर्डेड विज्ञापन पूरा नहीं हुआ।',
+      'processingReward': 'आपका रिवॉर्ड प्रोसेस किया जा रहा है...',
       'watchVideo': 'वीडियो देखें',
       'loading': 'लोड हो रहा है...',
       'welcomeBackShort': 'फिर से स्वागत है,',
@@ -974,6 +1040,12 @@ class AppLocalizations {
       'bankTransferTitle': 'बैंक ट्रांसफ़र',
       'bankTransferSubtitle':
           'मैन्युअल भुगतान के लिए IBAN या बैंक खाता संख्या जोड़ें',
+      'walletAddress': 'वॉलेट पता',
+      'pasteWalletAddress': 'अपना वॉलेट पता पेस्ट करें',
+      'enterWalletAddress': 'अपना वॉलेट पता दर्ज करें।',
+      'bitcoinTitle': 'बिटकॉइन',
+      'bitcoinSubtitle': 'अपने BTC वॉलेट पते पर भुगतान',
+      'usdcSubtitle': 'अपने USDC वॉलेट पते पर भुगतान',
       'viewFullHistory': 'पूरा इतिहास देखें',
       'inbox': 'इनबॉक्स',
       'markAllRead': 'सब पढ़ा हुआ चिन्हित करें',
@@ -1000,7 +1072,7 @@ class AppLocalizations {
       'payoutCurrency': 'भुगतान मुद्रा',
       'payoutMethod': 'भुगतान तरीका',
       'viewsToRequest': 'अनुरोधित व्यू',
-      'minimumViewsHelper': 'न्यूनतम 5,000 व्यू',
+      'minimumViewsHelper': 'न्यूनतम 10,000 व्यू',
       'enterAmount': 'राशि दर्ज करें।',
       'enterValidPositiveNumber': 'मान्य सकारात्मक संख्या दर्ज करें।',
       'accountHolderName': 'खाताधारक का नाम',
@@ -1068,6 +1140,18 @@ class AppLocalizations {
       'settingsSaved': 'सेटिंग्स सहेजी गईं।',
       'privacy': 'गोपनीयता',
       'appVersion': 'ऐप संस्करण',
+      'deleteAccount': 'खाता हटाएँ',
+      'deleteAccountSubtitle':
+          'अपना VideoMoney खाता हटाएँ और इस ऐप से अपना सहेजा हुआ डेटा मिटाएँ।',
+      'deleteAccountButton': 'खाता हटाएँ',
+      'deleteAccountDeleting': 'खाता हटाया जा रहा है...',
+      'deleteAccountConfirmTitle': 'खाता हटाएँ?',
+      'deleteAccountConfirmMessage':
+          'यह आपके VideoMoney खाते और सहेजे गए ऐप डेटा को हटा देगा। इसे वापस नहीं लाया जा सकता।',
+      'deleteAccountConfirmAction': 'हटाएँ',
+      'deleteAccountDeleted': 'आपका खाता हटा दिया गया है।',
+      'deleteAccountRecentLoginRequired':
+          'सुरक्षा के लिए, अपना खाता हटाने से पहले फिर से लॉग इन करें।',
       'save': 'सहेजें',
       'saving': 'सहेजा जा रहा है...',
       'termsUsingTitle': 'VideoMoney का उपयोग',
@@ -1085,7 +1169,7 @@ class AppLocalizations {
           'अनुमानित कमाई केवल जानकारी के लिए है और प्लेटफ़ॉर्म प्रदर्शन, नीति, फ़्रॉड जाँच और भुगतान समीक्षा के अनुसार बदल सकती है।',
       'termsViewsBullet3':
           'दैनिक बोनस रिवॉर्ड केवल योग्य गतिविधि तक सीमित हैं और दुरुपयोग मिलने पर हटाए जा सकते हैं।',
-      'termsPayoutsBullet1': 'न्यूनतम भुगतान 5,000 व्यू ही रहेगा।',
+      'termsPayoutsBullet1': 'न्यूनतम भुगतान 10,000 व्यू ही रहेगा।',
       'termsPayoutsBullet2':
           'सभी भुगतान अनुरोधों के लिए मैन्युअल एडमिन स्वीकृति आवश्यक है और उन्हें स्वीकृत, अस्वीकृत या भुगतान-चिह्नित किया जा सकता है।',
       'termsPayoutsBullet3':
@@ -1156,8 +1240,11 @@ class AppLocalizations {
       'profile': 'Profil',
       'rewardConfirmedViewsAdded':
           'Belohnung bestätigt. Views wurden hinzugefügt.',
+      'rewardConfirmedViewsAddedCount': '+{count} Aufrufe hinzugefügt.',
+      'bonusViewsAdded': '🎁 +{count} Bonus-Aufrufe',
       'rewardedAdNotCompleted':
           'Die Rewarded-Anzeige wurde nicht abgeschlossen.',
+      'processingReward': 'Deine Belohnung wird verarbeitet...',
       'watchVideo': 'Video ansehen',
       'loading': 'Lädt...',
       'welcomeBackShort': 'Willkommen zurück,',
@@ -1234,6 +1321,12 @@ class AppLocalizations {
       'bankTransferTitle': 'Banküberweisung',
       'bankTransferSubtitle':
           'IBAN oder Kontonummer für manuelle Auszahlung hinzufügen',
+      'walletAddress': 'Wallet-Adresse',
+      'pasteWalletAddress': 'Füge deine Wallet-Adresse ein',
+      'enterWalletAddress': 'Gib deine Wallet-Adresse ein.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Auszahlung an deine BTC-Wallet-Adresse',
+      'usdcSubtitle': 'Auszahlung an deine USDC-Wallet-Adresse',
       'viewFullHistory': 'Gesamten Verlauf anzeigen',
       'inbox': 'Postfach',
       'markAllRead': 'Alles als gelesen markieren',
@@ -1260,7 +1353,7 @@ class AppLocalizations {
       'payoutCurrency': 'Auszahlungswährung',
       'payoutMethod': 'Auszahlungsmethode',
       'viewsToRequest': 'Anzufordernde Views',
-      'minimumViewsHelper': 'Mindestens 5.000 Views',
+      'minimumViewsHelper': 'Mindestens 10.000 Views',
       'enterAmount': 'Betrag eingeben.',
       'enterValidPositiveNumber':
           'Gib eine gültige positive Zahl ein.',
@@ -1336,6 +1429,18 @@ class AppLocalizations {
       'settingsSaved': 'Einstellungen gespeichert.',
       'privacy': 'Datenschutz',
       'appVersion': 'App-Version',
+      'deleteAccount': 'Konto löschen',
+      'deleteAccountSubtitle':
+          'Lösche dein VideoMoney-Konto und entferne deine gespeicherten App-Daten aus dieser App.',
+      'deleteAccountButton': 'Konto löschen',
+      'deleteAccountDeleting': 'Konto wird gelöscht...',
+      'deleteAccountConfirmTitle': 'Konto löschen?',
+      'deleteAccountConfirmMessage':
+          'Dadurch werden dein VideoMoney-Konto und gespeicherte App-Daten entfernt. Dies kann nicht rückgängig gemacht werden.',
+      'deleteAccountConfirmAction': 'Löschen',
+      'deleteAccountDeleted': 'Dein Konto wurde gelöscht.',
+      'deleteAccountRecentLoginRequired':
+          'Melde dich aus Sicherheitsgründen erneut an, bevor du dein Konto löschst.',
       'save': 'Speichern',
       'saving': 'Speichert...',
       'termsUsingTitle': 'Nutzung von VideoMoney',
@@ -1355,7 +1460,7 @@ class AppLocalizations {
       'termsViewsBullet3':
           'Tägliche Bonusbelohnungen sind auf berechtigte Aktivität begrenzt und können bei Missbrauch entfernt werden.',
       'termsPayoutsBullet1':
-          'Die Mindestauszahlung bleibt bei 5.000 Views.',
+          'Die Mindestauszahlung bleibt bei 10.000 Views.',
       'termsPayoutsBullet2':
           'Alle Auszahlungsanfragen benötigen eine manuelle Admin-Freigabe und können genehmigt, abgelehnt oder als bezahlt markiert werden.',
       'termsPayoutsBullet3':
@@ -1416,7 +1521,10 @@ class AppLocalizations {
       'wallet': 'Cartera',
       'profile': 'Perfil',
       'rewardConfirmedViewsAdded': 'Recompensa confirmada. Vistas añadidas.',
+      'rewardConfirmedViewsAddedCount': '+{count} vistas añadidas.',
+      'bonusViewsAdded': '🎁 +{count} vistas bonus',
       'rewardedAdNotCompleted': 'El anuncio recompensado no se completó.',
+      'processingReward': 'Procesando tu recompensa...',
       'watchVideo': 'Ver vídeo',
       'loading': 'Cargando...',
       'welcomeBackShort': 'Bienvenido de nuevo,',
@@ -1482,6 +1590,12 @@ class AppLocalizations {
       'revolutSubtitle': 'Pago rápido a la cartera en la moneda elegida',
       'bankTransferTitle': 'Transferencia bancaria',
       'bankTransferSubtitle': 'Añade un IBAN o número de cuenta bancaria para un pago manual',
+      'walletAddress': 'dirección de billetera',
+      'pasteWalletAddress': 'Pega tu dirección de billetera',
+      'enterWalletAddress': 'Introduce tu dirección de billetera.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Pago a tu dirección de billetera BTC',
+      'usdcSubtitle': 'Pago a tu dirección de billetera USDC',
       'viewFullHistory': 'Ver historial completo',
       'inbox': 'Bandeja de entrada',
       'markAllRead': 'Marcar todo como leído',
@@ -1502,7 +1616,7 @@ class AppLocalizations {
       'payoutCurrency': 'Moneda de pago',
       'payoutMethod': 'Método de pago',
       'viewsToRequest': 'Vistas a solicitar',
-      'minimumViewsHelper': 'Mínimo 5.000 vistas',
+      'minimumViewsHelper': 'Mínimo 10.000 vistas',
       'enterAmount': 'Introduce una cantidad.',
       'enterValidPositiveNumber': 'Introduce un número positivo válido.',
       'accountHolderName': 'Nombre del titular de la cuenta',
@@ -1566,6 +1680,18 @@ class AppLocalizations {
       'settingsSaved': 'Ajustes guardados.',
       'privacy': 'Privacidad',
       'appVersion': 'Versión de la app',
+      'deleteAccount': 'Eliminar cuenta',
+      'deleteAccountSubtitle':
+          'Elimina tu cuenta de VideoMoney y borra tus datos guardados de esta app.',
+      'deleteAccountButton': 'Eliminar cuenta',
+      'deleteAccountDeleting': 'Eliminando cuenta...',
+      'deleteAccountConfirmTitle': '¿Eliminar cuenta?',
+      'deleteAccountConfirmMessage':
+          'Esto eliminará tu cuenta de VideoMoney y los datos guardados de la app. Esta acción no se puede deshacer.',
+      'deleteAccountConfirmAction': 'Eliminar',
+      'deleteAccountDeleted': 'Tu cuenta ha sido eliminada.',
+      'deleteAccountRecentLoginRequired':
+          'Por seguridad, vuelve a iniciar sesión antes de eliminar tu cuenta.',
       'save': 'Guardar',
       'saving': 'Guardando...',
       'termsUsingTitle': 'Uso de VideoMoney',
@@ -1578,7 +1704,7 @@ class AppLocalizations {
       'termsViewsBullet1': 'Las vistas mostradas en la app son unidades promocionales de recompensa usadas dentro de VideoMoney.',
       'termsViewsBullet2': 'Las ganancias estimadas son solo informativas y pueden cambiar según el rendimiento de la plataforma, la política, las comprobaciones de fraude y la revisión de pagos.',
       'termsViewsBullet3': 'Las recompensas del bono diario están limitadas a la actividad elegible y pueden eliminarse si se detecta abuso.',
-      'termsPayoutsBullet1': 'El pago mínimo sigue siendo de 5.000 vistas.',
+      'termsPayoutsBullet1': 'El pago mínimo sigue siendo de 10.000 vistas.',
       'termsPayoutsBullet2': 'Todas las solicitudes de pago requieren aprobación manual del administrador y pueden aprobarse, rechazarse o marcarse como pagadas.',
       'termsPayoutsBullet3': 'Las solicitudes de pago rechazadas pueden reembolsarse al saldo del usuario cuando lo permita el flujo de trabajo del administrador.',
       'termsSupportBullet1': 'Ayuda y soporte, informes de errores, respuestas del administrador y notificaciones push pueden almacenarse en tu bandeja de entrada de la app.',
@@ -1634,7 +1760,10 @@ class AppLocalizations {
       'wallet': 'Portefeuille',
       'profile': 'Profil',
       'rewardConfirmedViewsAdded': 'Récompense confirmée. Vues ajoutées.',
+      'rewardConfirmedViewsAddedCount': '+{count} vues ajoutées.',
+      'bonusViewsAdded': '🎁 +{count} vues bonus',
       'rewardedAdNotCompleted': 'La publicité récompensée n\'a pas été terminée.',
+      'processingReward': 'Traitement de votre récompense...',
       'watchVideo': 'Regarder la vidéo',
       'loading': 'Chargement...',
       'welcomeBackShort': 'Bon retour,',
@@ -1700,6 +1829,12 @@ class AppLocalizations {
       'revolutSubtitle': 'Paiement rapide vers le portefeuille avec la devise choisie',
       'bankTransferTitle': 'Virement bancaire',
       'bankTransferSubtitle': 'Ajoutez un IBAN ou un numéro de compte bancaire pour un paiement manuel',
+      'walletAddress': 'adresse du portefeuille',
+      'pasteWalletAddress': 'Collez l’adresse de votre portefeuille',
+      'enterWalletAddress': 'Saisissez l’adresse de votre portefeuille.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Paiement vers votre adresse de portefeuille BTC',
+      'usdcSubtitle': 'Paiement vers votre adresse de portefeuille USDC',
       'viewFullHistory': 'Voir l\'historique complet',
       'inbox': 'Boîte de réception',
       'markAllRead': 'Tout marquer comme lu',
@@ -1720,7 +1855,7 @@ class AppLocalizations {
       'payoutCurrency': 'Devise du paiement',
       'payoutMethod': 'Mode de paiement',
       'viewsToRequest': 'Vues à demander',
-      'minimumViewsHelper': 'Minimum 5 000 vues',
+      'minimumViewsHelper': 'Minimum 10 000 vues',
       'enterAmount': 'Saisissez un montant.',
       'enterValidPositiveNumber': 'Saisissez un nombre positif valide.',
       'accountHolderName': 'Nom du titulaire du compte',
@@ -1784,6 +1919,18 @@ class AppLocalizations {
       'settingsSaved': 'Paramètres enregistrés.',
       'privacy': 'Confidentialité',
       'appVersion': 'Version de l\'application',
+      'deleteAccount': 'Supprimer le compte',
+      'deleteAccountSubtitle':
+          'Supprimez votre compte VideoMoney et effacez les données enregistrées de cette application.',
+      'deleteAccountButton': 'Supprimer le compte',
+      'deleteAccountDeleting': 'Suppression du compte...',
+      'deleteAccountConfirmTitle': 'Supprimer le compte ?',
+      'deleteAccountConfirmMessage':
+          'Cela supprimera votre compte VideoMoney et les données enregistrées de l’application. Cette action est irréversible.',
+      'deleteAccountConfirmAction': 'Supprimer',
+      'deleteAccountDeleted': 'Votre compte a été supprimé.',
+      'deleteAccountRecentLoginRequired':
+          'Pour votre sécurité, reconnectez-vous avant de supprimer votre compte.',
       'save': 'Enregistrer',
       'saving': 'Enregistrement...',
       'termsUsingTitle': 'Utilisation de VideoMoney',
@@ -1796,7 +1943,7 @@ class AppLocalizations {
       'termsViewsBullet1': 'Les vues affichées dans l\'application sont des unités promotionnelles de récompense utilisées dans VideoMoney.',
       'termsViewsBullet2': 'Les gains estimés sont fournis à titre informatif uniquement et peuvent changer en fonction des performances de la plateforme, de la politique, des contrôles anti-fraude et de l\'examen des paiements.',
       'termsViewsBullet3': 'Les récompenses du bonus quotidien sont limitées à l\'activité éligible et peuvent être supprimées si un abus est détecté.',
-      'termsPayoutsBullet1': 'Le paiement minimum reste de 5 000 vues.',
+      'termsPayoutsBullet1': 'Le paiement minimum reste de 10 000 vues.',
       'termsPayoutsBullet2': 'Toutes les demandes de paiement nécessitent une approbation manuelle de l\'administrateur et peuvent être approuvées, rejetées ou marquées comme payées.',
       'termsPayoutsBullet3': 'Les demandes de paiement rejetées peuvent être recréditées sur le solde de l\'utilisateur lorsque le flux de travail de l\'administrateur l\'autorise.',
       'termsSupportBullet1': 'L\'aide et le support, les rapports de bugs, les réponses de l\'administrateur et les notifications push peuvent être stockés dans votre boîte de réception intégrée.',
@@ -1852,7 +1999,10 @@ class AppLocalizations {
       'wallet': 'Кошелёк',
       'profile': 'Профиль',
       'rewardConfirmedViewsAdded': 'Награда подтверждена. Просмотры добавлены.',
+      'rewardConfirmedViewsAddedCount': '+{count} просмотров добавлено.',
+      'bonusViewsAdded': '🎁 +{count} бонусных просмотров',
       'rewardedAdNotCompleted': 'Реклама с вознаграждением не была завершена.',
+      'processingReward': 'Идёт обработка вашей награды...',
       'watchVideo': 'Смотреть видео',
       'loading': 'Загрузка...',
       'welcomeBackShort': 'С возвращением,',
@@ -1918,6 +2068,12 @@ class AppLocalizations {
       'revolutSubtitle': 'Быстрая выплата на кошелёк в выбранной валюте',
       'bankTransferTitle': 'Банковский перевод',
       'bankTransferSubtitle': 'Добавьте IBAN или номер банковского счёта для ручной выплаты',
+      'walletAddress': 'адрес кошелька',
+      'pasteWalletAddress': 'Вставьте адрес вашего кошелька',
+      'enterWalletAddress': 'Введите адрес вашего кошелька.',
+      'bitcoinTitle': 'Биткоин',
+      'bitcoinSubtitle': 'Выплата на ваш BTC-адрес кошелька',
+      'usdcSubtitle': 'Выплата на ваш USDC-адрес кошелька',
       'viewFullHistory': 'Посмотреть полную историю',
       'inbox': 'Входящие',
       'markAllRead': 'Отметить всё как прочитанное',
@@ -1938,7 +2094,7 @@ class AppLocalizations {
       'payoutCurrency': 'Валюта выплаты',
       'payoutMethod': 'Способ выплаты',
       'viewsToRequest': 'Просмотры для запроса',
-      'minimumViewsHelper': 'Минимум 5 000 просмотров',
+      'minimumViewsHelper': 'Минимум 10 000 просмотров',
       'enterAmount': 'Введите сумму.',
       'enterValidPositiveNumber': 'Введите корректное положительное число.',
       'accountHolderName': 'Имя владельца счёта',
@@ -2002,6 +2158,18 @@ class AppLocalizations {
       'settingsSaved': 'Настройки сохранены.',
       'privacy': 'Конфиденциальность',
       'appVersion': 'Версия приложения',
+      'deleteAccount': 'Удалить аккаунт',
+      'deleteAccountSubtitle':
+          'Удалите свой аккаунт VideoMoney и сохранённые данные приложения из этого приложения.',
+      'deleteAccountButton': 'Удалить аккаунт',
+      'deleteAccountDeleting': 'Аккаунт удаляется...',
+      'deleteAccountConfirmTitle': 'Удалить аккаунт?',
+      'deleteAccountConfirmMessage':
+          'Это удалит ваш аккаунт VideoMoney и сохранённые данные приложения. Это действие нельзя отменить.',
+      'deleteAccountConfirmAction': 'Удалить',
+      'deleteAccountDeleted': 'Ваш аккаунт удалён.',
+      'deleteAccountRecentLoginRequired':
+          'В целях безопасности войдите снова перед удалением аккаунта.',
       'save': 'Сохранить',
       'saving': 'Сохранение...',
       'termsUsingTitle': 'Использование VideoMoney',
@@ -2014,7 +2182,7 @@ class AppLocalizations {
       'termsViewsBullet1': 'Просмотры, показанные в приложении, являются промо-единицами вознаграждения, используемыми внутри VideoMoney.',
       'termsViewsBullet2': 'Оценочный доход носит исключительно информационный характер и может меняться в зависимости от производительности платформы, политики, проверок на мошенничество и проверки выплат.',
       'termsViewsBullet3': 'Награды ежедневного бонуса ограничены допустимой активностью и могут быть удалены при обнаружении злоупотреблений.',
-      'termsPayoutsBullet1': 'Минимальная выплата остаётся 5 000 просмотров.',
+      'termsPayoutsBullet1': 'Минимальная выплата остаётся 10 000 просмотров.',
       'termsPayoutsBullet2': 'Все запросы на выплату требуют ручного одобрения администратора и могут быть одобрены, отклонены или помечены как выплаченные.',
       'termsPayoutsBullet3': 'Отклонённые запросы на выплату могут быть возвращены на баланс пользователя, если это допускается рабочим процессом администратора.',
       'termsSupportBullet1': 'Помощь и поддержка, сообщения об ошибках, ответы администратора и push-уведомления могут храниться в вашем встроенном почтовом ящике.',
@@ -2070,7 +2238,10 @@ class AppLocalizations {
       'wallet': 'Πορτοφόλι',
       'profile': 'Προφίλ',
       'rewardConfirmedViewsAdded': 'Η ανταμοιβή επιβεβαιώθηκε. Οι προβολές προστέθηκαν.',
+      'rewardConfirmedViewsAddedCount': '+{count} προβολές προστέθηκαν.',
+      'bonusViewsAdded': '🎁 +{count} bonus προβολές',
       'rewardedAdNotCompleted': 'Η διαφήμιση με ανταμοιβή δεν ολοκληρώθηκε.',
+      'processingReward': 'Η ανταμοιβή σας επεξεργάζεται...',
       'watchVideo': 'Παρακολούθηση βίντεο',
       'loading': 'Φόρτωση...',
       'welcomeBackShort': 'Καλώς ήρθατε ξανά,',
@@ -2136,6 +2307,12 @@ class AppLocalizations {
       'revolutSubtitle': 'Γρήγορη πληρωμή στο πορτοφόλι με το επιλεγμένο νόμισμα',
       'bankTransferTitle': 'Τραπεζική μεταφορά',
       'bankTransferSubtitle': 'Προσθέστε IBAN ή αριθμό τραπεζικού λογαριασμού για χειροκίνητη πληρωμή',
+      'walletAddress': 'διεύθυνση πορτοφολιού',
+      'pasteWalletAddress': 'Επικολλήστε τη διεύθυνση του πορτοφολιού σας',
+      'enterWalletAddress': 'Εισαγάγετε τη διεύθυνση του πορτοφολιού σας.',
+      'bitcoinTitle': 'Bitcoin',
+      'bitcoinSubtitle': 'Πληρωμή στη διεύθυνση πορτοφολιού BTC',
+      'usdcSubtitle': 'Πληρωμή στη διεύθυνση πορτοφολιού USDC',
       'viewFullHistory': 'Προβολή πλήρους ιστορικού',
       'inbox': 'Εισερχόμενα',
       'markAllRead': 'Σήμανση όλων ως αναγνωσμένων',
@@ -2156,7 +2333,7 @@ class AppLocalizations {
       'payoutCurrency': 'Νόμισμα πληρωμής',
       'payoutMethod': 'Μέθοδος πληρωμής',
       'viewsToRequest': 'Προβολές προς αίτηση',
-      'minimumViewsHelper': 'Ελάχιστο 5.000 προβολές',
+      'minimumViewsHelper': 'Ελάχιστο 10.000 προβολές',
       'enterAmount': 'Εισαγάγετε ποσό.',
       'enterValidPositiveNumber': 'Εισαγάγετε έναν έγκυρο θετικό αριθμό.',
       'accountHolderName': 'Όνομα κατόχου λογαριασμού',
@@ -2220,6 +2397,18 @@ class AppLocalizations {
       'settingsSaved': 'Οι ρυθμίσεις αποθηκεύτηκαν.',
       'privacy': 'Απόρρητο',
       'appVersion': 'Έκδοση εφαρμογής',
+      'deleteAccount': 'Διαγραφή λογαριασμού',
+      'deleteAccountSubtitle':
+          'Διαγράψτε τον λογαριασμό σας στο VideoMoney και αφαιρέστε τα αποθηκευμένα δεδομένα της εφαρμογής από αυτήν την εφαρμογή.',
+      'deleteAccountButton': 'Διαγραφή λογαριασμού',
+      'deleteAccountDeleting': 'Ο λογαριασμός διαγράφεται...',
+      'deleteAccountConfirmTitle': 'Διαγραφή λογαριασμού;',
+      'deleteAccountConfirmMessage':
+          'Αυτό θα διαγράψει τον λογαριασμό σας στο VideoMoney και τα αποθηκευμένα δεδομένα της εφαρμογής. Η ενέργεια αυτή δεν αναιρείται.',
+      'deleteAccountConfirmAction': 'Διαγραφή',
+      'deleteAccountDeleted': 'Ο λογαριασμός σας διαγράφηκε.',
+      'deleteAccountRecentLoginRequired':
+          'Για ασφάλεια, συνδεθείτε ξανά πριν διαγράψετε τον λογαριασμό σας.',
       'save': 'Αποθήκευση',
       'saving': 'Αποθήκευση...',
       'termsUsingTitle': 'Χρήση του VideoMoney',
@@ -2232,7 +2421,7 @@ class AppLocalizations {
       'termsViewsBullet1': 'Οι προβολές που εμφανίζονται στην εφαρμογή είναι προωθητικές μονάδες ανταμοιβής που χρησιμοποιούνται μέσα στο VideoMoney.',
       'termsViewsBullet2': 'Τα εκτιμώμενα κέρδη είναι μόνο ενημερωτικά και μπορεί να αλλάξουν βάσει της απόδοσης της πλατφόρμας, της πολιτικής, των ελέγχων απάτης και του ελέγχου πληρωμών.',
       'termsViewsBullet3': 'Οι ανταμοιβές ημερήσιου μπόνους περιορίζονται σε επιλέξιμη δραστηριότητα και μπορούν να αφαιρεθούν αν εντοπιστεί κατάχρηση.',
-      'termsPayoutsBullet1': 'Η ελάχιστη πληρωμή παραμένει 5.000 προβολές.',
+      'termsPayoutsBullet1': 'Η ελάχιστη πληρωμή παραμένει 10.000 προβολές.',
       'termsPayoutsBullet2': 'Όλα τα αιτήματα πληρωμής απαιτούν χειροκίνητη έγκριση διαχειριστή και μπορούν να εγκριθούν, να απορριφθούν ή να σημειωθούν ως πληρωμένα.',
       'termsPayoutsBullet3': 'Τα απορριφθέντα αιτήματα πληρωμής μπορεί να επιστραφούν στο υπόλοιπο του χρήστη όταν αυτό επιτρέπεται από τη ροή εργασίας του διαχειριστή.',
       'termsSupportBullet1': 'Η Βοήθεια και υποστήριξη, οι αναφορές σφαλμάτων, οι απαντήσεις διαχειριστή και οι push ειδοποιήσεις μπορούν να αποθηκεύονται στα εισερχόμενα της εφαρμογής σας.',

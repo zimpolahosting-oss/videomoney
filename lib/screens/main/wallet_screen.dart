@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
-import '../../l10n/crypto_payout_text.dart';
 import '../../models/app_user.dart';
 import '../../models/leaderboard_entry.dart';
 import '../../models/payout_request.dart';
@@ -20,12 +19,16 @@ class WalletScreen extends StatelessWidget {
     final l10n = context.l10n;
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
+    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
+    const adsUnit = 'ads';
 
     if (user == null) {
       return Scaffold(
         body: Center(child: Text(l10n.noUserSessionFound)),
       );
     }
+
+    final processingUnit = isDutch ? 'uur' : 'hours';
 
     return Scaffold(
       body: SafeArea(
@@ -38,12 +41,12 @@ class WalletScreen extends StatelessWidget {
               stream: firestoreService.watchUser(user.uid),
               builder: (context, snapshot) {
                 final appUser = snapshot.data;
-                final currentViews = appUser?.views ?? 0;
+                final currentAds = appUser?.views ?? 0;
                 final estimatedEarnings =
-                    FirestoreService.estimateEarningsEuro(currentViews);
-                final remaining = currentViews >= FirestoreService.minimumPayoutCoins
+                    FirestoreService.estimateEarningsEuro(currentAds);
+                final remaining = currentAds >= FirestoreService.minimumPayoutCoins
                     ? 0
-                    : FirestoreService.minimumPayoutCoins - currentViews;
+                    : FirestoreService.minimumPayoutCoins - currentAds;
 
                 return WatermarkHeroCard(
                   height: 294,
@@ -75,13 +78,13 @@ class WalletScreen extends StatelessWidget {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
                           child: Text(
-                            l10n.availableViews,
+                            isDutch ? 'Beschikbare ads' : 'Available ads',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          NumberFormat.decimalPattern().format(currentViews),
+                          NumberFormat.decimalPattern().format(currentAds),
                           style:
                               Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.w800,
@@ -101,14 +104,16 @@ class WalletScreen extends StatelessWidget {
                             Expanded(
                               child: _SmallStat(
                                 label: l10n.remainingToPayout,
-                                value: '${NumberFormat.decimalPattern().format(remaining)} ${l10n.viewsUnit}',
+                                value: '${NumberFormat.decimalPattern().format(remaining)} $adsUnit',
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          l10n.estimateOnly,
+                          isDutch
+                              ? 'Alleen een schatting. 1 ad ≈ €0,001 en de werkelijke opbrengst kan afwijken.'
+                              : 'Estimate only. 1 ad ≈ €0.001 and actual earnings may vary.',
                           style: Theme.of(context).textTheme.bodyMedium,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -137,7 +142,7 @@ class WalletScreen extends StatelessWidget {
                         title: l10n.minPayout,
                         value: NumberFormat.decimalPattern()
                             .format(FirestoreService.minimumPayoutCoins),
-                        suffix: l10n.viewsUnit,
+                        suffix: adsUnit,
                       ),
                     ),
                     SizedBox(
@@ -146,7 +151,7 @@ class WalletScreen extends StatelessWidget {
                         icon: Icons.schedule_outlined,
                         title: l10n.processingTime,
                         value: '${FirestoreService.payoutProcessingDays}',
-                        suffix: 'days',
+                        suffix: processingUnit,
                       ),
                     ),
                     SizedBox(
@@ -190,9 +195,21 @@ class WalletScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _MethodTile(
+              icon: Icons.account_balance_outlined,
+              title: l10n.bankTransferTitle,
+              subtitle: l10n.bankTransferSubtitle,
+              onTap: () {
+                Navigator.of(context).pushNamed(
+                  AppRoutes.payoutRequest,
+                  arguments: 'bank',
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            _MethodTile(
               icon: Icons.currency_bitcoin_rounded,
-              title: CryptoPayoutText.bitcoinTitle(context),
-              subtitle: CryptoPayoutText.bitcoinSubtitle(context),
+              title: l10n.bitcoinTitle,
+              subtitle: l10n.bitcoinSubtitle,
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -203,8 +220,8 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.token_rounded,
-              title: CryptoPayoutText.usdcPolygonTitle(context),
-              subtitle: CryptoPayoutText.usdcPolygonSubtitle(context),
+              title: 'USDC',
+              subtitle: l10n.usdcSubtitle,
               onTap: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
@@ -254,7 +271,7 @@ class WalletScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${NumberFormat.decimalPattern().format(payout.viewsRequested)} ${l10n.viewsUnit}',
+                                    '${NumberFormat.decimalPattern().format(payout.viewsRequested)} $adsUnit',
                                     style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
@@ -271,15 +288,6 @@ class WalletScreen extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  if (payout.hasRecordedPaidAmount) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Paid amount: ${payout.paidAmountLabel}',
-                                      style: Theme.of(context).textTheme.bodyMedium,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
                                   const SizedBox(height: 4),
                                   Text(
                                     formattedDate,

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
+
 class ShortsAdBreakScreen extends StatefulWidget {
   const ShortsAdBreakScreen({
     super.key,
@@ -10,8 +12,6 @@ class ShortsAdBreakScreen extends StatefulWidget {
     required this.onStartAd,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
-    this.embeddedMode = false,
-    this.onCompleted,
   });
 
   final String providerName;
@@ -19,8 +19,6 @@ class ShortsAdBreakScreen extends StatefulWidget {
   final Future<bool> Function(BuildContext context) onStartAd;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
-  final bool embeddedMode;
-  final ValueChanged<bool>? onCompleted;
 
   @override
   State<ShortsAdBreakScreen> createState() => _ShortsAdBreakScreenState();
@@ -28,50 +26,35 @@ class ShortsAdBreakScreen extends StatefulWidget {
 
 class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
   late final DateTime _openedAt;
-  Timer? _countdownTimer;
-  int _secondsUntilAd = 0;
   bool _isStartingAd = false;
   bool _didAttemptAd = false;
   bool _allowClose = false;
-  String _statusText = 'Preparing your next ad break...';
+  String _statusText = '';
 
   @override
   void initState() {
     super.initState();
     _openedAt = DateTime.now();
-    _secondsUntilAd = widget.adStartDelay.inSeconds;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_runFlow());
-    });
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || _didAttemptAd) return;
-      final elapsed = DateTime.now().difference(_openedAt);
-      final remaining = widget.adStartDelay - elapsed;
-      final nextSeconds = remaining.inSeconds.clamp(0, widget.adStartDelay.inSeconds);
-      if (_secondsUntilAd == nextSeconds) return;
-      setState(() {
-        _secondsUntilAd = nextSeconds;
-      });
+      unawaited(widget.onPrepare());
     });
   }
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _runFlow() async {
-    await widget.onPrepare();
-    final remainingDelay = widget.adStartDelay - DateTime.now().difference(_openedAt);
-    if (remainingDelay > Duration.zero) {
-      await Future<void>.delayed(remainingDelay);
-    }
+  Future<void> _startAdFlow() async {
+    if (_isStartingAd) return;
     if (!mounted) return;
     setState(() {
       _didAttemptAd = true;
       _isStartingAd = true;
-      _statusText = 'Starting ad...';
+      _statusText =
+          Localizations.localeOf(context).languageCode.toLowerCase() == 'nl'
+          ? 'Advertentie wordt gestart...'
+          : 'Starting ad...';
     });
     final completed = await widget.onStartAd(context);
     final remainingMinimum =
@@ -81,91 +64,18 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     }
     if (!mounted) return;
     _allowClose = true;
-    if (widget.embeddedMode) {
-      widget.onCompleted?.call(completed);
-    } else {
-      Navigator.of(context).pop(completed);
-    }
+    Navigator.of(context).pop(completed);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final card = Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF11161B),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.ondemand_video_rounded,
-            size: 46,
-            color: Colors.white,
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Ad break',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _didAttemptAd
-                ? _statusText
-                : 'Ad starts in ${_secondsUntilAd.clamp(0, widget.adStartDelay.inSeconds)}s',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.white70,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          LinearProgressIndicator(
-            value: _didAttemptAd
-                ? null
-                : (DateTime.now().difference(_openedAt).inMilliseconds /
-                        widget.adStartDelay.inMilliseconds)
-                    .clamp(0, 1),
-            minHeight: 8,
-            backgroundColor: Colors.white12,
-            color: const Color(0xFF5BD0A5),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Current playback is paused before the ad starts. When the ad is finished, this page closes automatically and the app continues.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white60,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (_isStartingAd) ...[
-            const SizedBox(height: 18),
-            const CircularProgressIndicator(color: Color(0xFF5BD0A5)),
-          ],
-        ],
-      ),
-    );
-
-    if (widget.embeddedMode) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xD9030806),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Center(child: card),
-        ),
-      );
-    }
-
+    final isDutch = Localizations.localeOf(context).languageCode.toLowerCase() == 'nl';
+    final statusText = _statusText.isNotEmpty
+        ? _statusText
+        : (isDutch
+              ? 'Druk op de knop om je volgende advertentie te bekijken.'
+              : 'Tap the button to watch your next ad.');
     return WillPopScope(
       onWillPop: () async => _allowClose,
       child: Scaffold(
@@ -177,7 +87,110 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                card,
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF11161B),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.ondemand_video_rounded,
+                        size: 18,
+                        color: AppTheme.primarySoft,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Ad Ready',
+                        style: TextStyle(
+                          color: AppTheme.primarySoft,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.96, end: 1.04),
+                        duration: const Duration(milliseconds: 1100),
+                        curve: Curves.easeInOut,
+                        builder: (context, scale, child) {
+                          return Transform.scale(scale: scale, child: child);
+                        },
+                        onEnd: () {
+                          if (!mounted || _didAttemptAd) return;
+                          setState(() {});
+                        },
+                        child: Container(
+                          height: 84,
+                          width: 84,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.primary.withOpacity(0.12),
+                            border: Border.all(
+                              color: AppTheme.primary.withOpacity(0.30),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.redeem_rounded,
+                            size: 40,
+                            color: AppTheme.primarySoft,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        isDutch ? 'Kijk een advertentie om verder te gaan' : 'Watch ad to continue',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        statusText,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white70,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _isStartingAd ? null : _startAdFlow,
+                          icon: Icon(
+                            _isStartingAd
+                                ? Icons.hourglass_top_rounded
+                                : Icons.play_circle_fill_rounded,
+                          ),
+                          label: Text(
+                            _isStartingAd
+                                ? (isDutch ? 'Advertentie start...' : 'Starting ad...')
+                                : (isDutch ? 'Bekijk advertentie' : 'Watch ad now'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        isDutch
+                            ? 'Na 3 shorts start de advertentie alleen wanneer je op deze knop drukt. Als de advertentie volledig is afgerond, gaat de app automatisch verder.'
+                            : 'After 3 shorts, the ad only starts when you press this button. When the ad is fully completed, the app continues automatically.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white60,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (_isStartingAd) ...[
+                        const SizedBox(height: 18),
+                        const CircularProgressIndicator(color: Color(0xFF5BD0A5)),
+                      ],
+                    ],
+                  ),
+                ),
                 const Spacer(),
               ],
             ),
