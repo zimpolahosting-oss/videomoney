@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/payout_i18n.dart';
 
 enum _PayoutMethod { paypal, revolut, bank, btc, usdc }
 enum _PayoutCurrency { eur, gbp, usd }
@@ -69,9 +71,25 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final versionName = packageInfo.version.trim();
+      final buildNumber =
+          int.tryParse(packageInfo.buildNumber.trim()) ?? 0;
+      final appVersion = '$versionName+${packageInfo.buildNumber.trim()}';
+      if (!FirestoreService.isPayoutBuildAllowed(buildNumber)) {
+        throw Exception(
+          PayoutI18n.updateRequiredMessage(
+            context,
+            FirestoreService.minimumPayoutVersion,
+          ),
+        );
+      }
       await _firestoreService.createPayoutRequest(
         uid: user.uid,
         coinsRequested: int.parse(_viewsController.text.trim()),
+        appVersion: appVersion,
+        versionName: versionName,
+        buildNumber: buildNumber,
         payoutMethod: switch (_method) {
           _PayoutMethod.paypal => 'paypal',
           _PayoutMethod.revolut => 'revolut',
