@@ -90,9 +90,21 @@ class ShortsProgressService {
   static const String providerStartio = 'startio';
   static const String providerGravite = 'gravite';
   static const String providerAdmob = 'admob';
+  static const String providerUnity = 'unity';
   static const String providerAppodeal = 'appodeal';
   static const String providerMeta = 'meta';
   static const String providerMonetag = 'monetag';
+  static const List<String> _storageKeyPrefixes = [
+    'shorts_cycle_completed_',
+    'shorts_cycle_watch_ms_',
+    'shorts_bonus_progress_',
+    'shorts_gift_ready_',
+    'shorts_ad_break_progress_',
+    'shorts_pending_ad_break_',
+    'shorts_pending_ad_break_provider_',
+    'shorts_next_ad_break_provider_',
+    'shorts_pending_ad_break_attempted_',
+  ];
 
   String _completedKey(String uid) => 'shorts_cycle_completed_$uid';
   String _watchMsKey(String uid) => 'shorts_cycle_watch_ms_$uid';
@@ -204,6 +216,22 @@ class ShortsProgressService {
     return next;
   }
 
+  Future<void> clearAllStoredProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keysToRemove = prefs.getKeys().where((key) {
+      for (final prefix in _storageKeyPrefixes) {
+        if (key.startsWith(prefix)) {
+          return true;
+        }
+      }
+      return false;
+    }).toList(growable: false);
+
+    for (final key in keysToRemove) {
+      await prefs.remove(key);
+    }
+  }
+
   Future<void> _save(String uid, ShortsProgressSnapshot snapshot) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_completedKey(uid), snapshot.completedShortsInCycle);
@@ -245,9 +273,9 @@ class ShortsProgressService {
     if (value == providerMonetag) {
       return providerUnity;
     }
-    if (value == providerAppodeal ||
+    if (value == providerUnity ||
         value == providerGravite ||
-        value == providerUnity) {
+        value == providerAppodeal) {
       return value;
     }
     if (value == providerAdmob) {
