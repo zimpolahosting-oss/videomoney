@@ -69,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   int _cycleCompletedShorts = 0;
   int _cycleWatchMs = 0;
+  int _adBreakProgressShorts = 0;
   int _bonusProgressShorts = 0;
   bool _giftReady = false;
   int _pendingAdBreakShorts = 0;
@@ -649,11 +650,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _syncProgressFromSnapshot(ShortsProgressSnapshot snapshot) {
     _cycleCompletedShorts = snapshot.completedShortsInCycle;
     _cycleWatchMs = snapshot.watchMsInCycle;
+    _adBreakProgressShorts = snapshot.adBreakProgressShorts;
     _bonusProgressShorts = snapshot.bonusProgressShorts;
     _giftReady = snapshot.giftReady;
     _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
     _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
     _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
+  }
+
+  int get _shortsRewardCounter => _pendingAdBreakShorts > 0
+      ? ShortsProgressService.adBreakThresholdShorts
+      : _adBreakProgressShorts.clamp(
+          0,
+          ShortsProgressService.adBreakThresholdShorts,
+        );
+
+  bool get _isShortsRewardReady => _pendingAdBreakShorts > 0;
+
+  Future<void> _handleShortsRewardButtonPressed() async {
+    if (!_isShortsRewardReady) return;
+    await _presentAdBreakSheet();
   }
 
   Future<void> _countCurrentShortIfEligible({bool forceComplete = false}) async {
@@ -775,16 +791,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       setState(() {
         _cycleCompletedShorts = result.snapshot.completedShortsInCycle;
+        _adBreakProgressShorts = result.snapshot.adBreakProgressShorts;
         _bonusProgressShorts = 0;
         _giftReady = result.snapshot.giftReady;
         _pendingAdBreakShorts = result.snapshot.pendingAdBreakShorts;
         _pendingAdBreakProvider = result.snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = result.snapshot.pendingAdBreakAttempted;
       });
-
-      if (result.adBreakReached) {
-        await _presentAdBreakSheet();
-      }
 
       if (result.shortsThresholdReached) {
         await _resetShortCycle();
@@ -895,6 +908,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
       if (!mounted) return;
       setState(() {
+        _adBreakProgressShorts = snapshot.adBreakProgressShorts;
         _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
         _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
@@ -1231,19 +1245,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                             ),
-                            StreamBuilder<int>(
-                              stream: _onlineUsersCountStream,
-                              builder: (context, onlineSnapshot) {
-                                return _OverlayChip(
-                                  child: Text(
-                                    l10n.usersOnline(
-                                      NumberFormat.decimalPattern().format(
-                                        onlineSnapshot.data ?? 0,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                StreamBuilder<int>(
+                                  stream: _onlineUsersCountStream,
+                                  builder: (context, onlineSnapshot) {
+                                    return _OverlayChip(
+                                      child: Text(
+                                        l10n.usersOnline(
+                                          NumberFormat.decimalPattern().format(
+                                            onlineSnapshot.data ?? 0,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                );
-                              },
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _ShortsRewardButton(
+                                  current: _shortsRewardCounter,
+                                  total: ShortsProgressService.adBreakThresholdShorts,
+                                  isReady: _isShortsRewardReady,
+                                  onPressed: _handleShortsRewardButtonPressed,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1313,20 +1339,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                                 fontSize: 11,
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                _localizedHomeText('tap_after_three'),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
                                           ),
                                         ],
                                       ),
@@ -1651,6 +1663,77 @@ class _OverlayCard extends StatelessWidget {
         border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: child,
+    );
+  }
+}
+
+class _ShortsRewardButton extends StatelessWidget {
+  const _ShortsRewardButton({
+    required this.current,
+    required this.total,
+    required this.isReady,
+    required this.onPressed,
+  });
+
+  final int current;
+  final int total;
+  final bool isReady;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayCurrent = current.clamp(0, total);
+    final glowColor = isReady ? const Color(0xFFFFD84D) : const Color(0xFF1AE47A);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isReady ? onPressed : null,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: isReady
+                ? const Color(0xFF3A2C00).withOpacity(0.92)
+                : Colors.black.withOpacity(0.30),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isReady
+                  ? glowColor.withOpacity(0.95)
+                  : Colors.white.withOpacity(0.16),
+            ),
+            boxShadow: isReady
+                ? [
+                    BoxShadow(
+                      color: glowColor.withOpacity(0.45),
+                      blurRadius: 18,
+                      spreadRadius: -2,
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🎁',
+                style: TextStyle(
+                  fontSize: isReady ? 18 : 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$displayCurrent/$total',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
