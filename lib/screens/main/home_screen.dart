@@ -758,11 +758,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       percentThresholdMs,
       45000,
     ].reduce((a, b) => a < b ? a : b);
-    final requiredTrackedWatchMs = [
-      8000,
-      targetMs,
-      15000,
-    ].reduce((a, b) => a < b ? a : b);
+    final durationBasedTrackedWatchMs = (durationMs * 0.25).round();
+    final requiredTrackedWatchMs = durationBasedTrackedWatchMs < 3000
+        ? 3000
+        : durationBasedTrackedWatchMs > 8000
+        ? 8000
+        : durationBasedTrackedWatchMs;
 
     // Prevent counting if user just scrubbed to the end instantly:
     // require progression over time (player time must advance).
@@ -807,15 +808,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isProcessingCompletedShort = true;
     try {
-      try {
-        await _firestoreService.applyUserProgress(
-          uid: user.uid,
-          videosWatchedDelta: 1,
-        );
-      } catch (_) {
-        return;
-      }
-
       final result = await ShortsProgressService.instance.markShortCompleted(
         user.uid,
       );
@@ -830,6 +822,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _pendingAdBreakProvider = result.snapshot.pendingAdBreakProvider;
         _pendingAdBreakAttempted = result.snapshot.pendingAdBreakAttempted;
       });
+
+      unawaited(
+        _firestoreService.applyUserProgress(
+          uid: user.uid,
+          videosWatchedDelta: 1,
+        ).catchError((_) {}),
+      );
 
       if (result.shortsThresholdReached) {
         await _resetShortCycle();
@@ -943,6 +942,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           completed && (rewardResult?.videomoneyRewardGranted ?? false);
       if (rewardAccepted) {
         final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
+          user.uid,
+        );
+        if (!mounted) return;
+        setState(() {
+          _adBreakProgressShorts = snapshot.adBreakProgressShorts;
+          _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+          _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
+          _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
+        });
+      } else if (!completed || !rewardAccepted) {
+        final snapshot =
+            await ShortsProgressService.instance.advancePendingAdBreakProvider(
           user.uid,
         );
         if (!mounted) return;
