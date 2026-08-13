@@ -1288,31 +1288,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           ],
                                         ),
                                       ),
-                                      if (!widget.compactMode)
-                                        StreamBuilder<PagMatchmakingSignal?>(
-                                          stream: _pagMatchmakingService.watchFeaturedSignal(
-                                            excludeUid: user.uid,
-                                          ),
-                                          builder: (context, matchmakingSnapshot) {
-                                            final signal = matchmakingSnapshot.data;
-                                            if (signal == null) {
-                                              return const SizedBox.shrink();
-                                            }
-                                            return Flexible(
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 2,
-                                                  left: 8,
-                                                  right: 8,
-                                                ),
-                                                child: _MatchmakingPromptCard(
-                                                  gameName: signal.gameName,
-                                                  onTap: () => _openFeaturedMatch(signal),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
@@ -1357,6 +1332,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       ),
                                     ],
                                   ),
+                                  if (!widget.compactMode) ...[
+                                    const SizedBox(height: 8),
+                                    StreamBuilder<PagMatchmakingSignal?>(
+                                      stream: _pagMatchmakingService.watchFeaturedSignal(
+                                        excludeUid: user.uid,
+                                      ),
+                                      builder: (context, matchmakingSnapshot) {
+                                        final signal = matchmakingSnapshot.data;
+                                        if (signal == null) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return _MatchmakingPromptCard(
+                                          gameName: signal.gameName,
+                                          onTap: () => _openFeaturedMatch(signal),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                   const SizedBox(height: 8),
                                   _CompactProgressLine(
                                     title: l10n.progressToPayout,
