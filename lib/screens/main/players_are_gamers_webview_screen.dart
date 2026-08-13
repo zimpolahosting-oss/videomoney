@@ -89,6 +89,28 @@ class _PlayersAreGamersWebViewScreenState
     };
     return values[code] ?? values['en']!;
   }
+
+  String _localizedRewardSyncFailedMessage() {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    final values = {
+      'en': 'Ad finished, but +1 ad could not be added. Please try again.',
+      'nl': 'Advertentie klaar, maar +1 ad kon niet worden toegevoegd. Probeer opnieuw.',
+      'hi': 'Ad पूरा हुआ, लेकिन +1 ad नहीं जोड़ा जा सका। फिर से प्रयास करें।',
+      'de': 'Das Ad wurde beendet, aber +1 Ad konnte nicht hinzugefügt werden. Bitte erneut versuchen.',
+      'es': 'El ad terminó, pero no se pudo añadir +1 ad. Inténtalo de nuevo.',
+      'fr': 'L’ad est terminé, mais +1 ad n’a pas pu être ajouté. Réessayez.',
+      'ru': 'Ad завершён, но +1 ad не удалось добавить. Попробуйте ещё раз.',
+      'el': 'Το ad ολοκληρώθηκε, αλλά το +1 ad δεν μπόρεσε να προστεθεί. Δοκιμάστε ξανά.',
+      'pt': 'O ad terminou, mas não foi possível adicionar +1 ad. Tente novamente.',
+      'it': 'L’ad è terminato, ma non è stato possibile aggiungere +1 ad. Riprova.',
+      'tr': 'Ad tamamlandı ancak +1 ad eklenemedi. Lütfen tekrar deneyin.',
+      'ar': 'اكتمل الإعلان، لكن تعذر إضافة +1 ad. حاول مرة أخرى.',
+      'bn': 'Ad শেষ হয়েছে, কিন্তু +1 ad যোগ করা যায়নি। আবার চেষ্টা করুন।',
+      'ta': 'Ad முடிந்தது, ஆனால் +1 ad சேர்க்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+      'te': 'Ad పూర్తైంది, కానీ +1 ad జోడించలేకపోయాం. మళ్లీ ప్రయత్నించండి.',
+    };
+    return values[code] ?? values['en']!;
+  }
   bool _resultRewardInProgress = false;
   bool _sessionRecoveryAttempted = false;
   bool _initialTargetOpened = false;
@@ -518,13 +540,22 @@ class _PlayersAreGamersWebViewScreenState
           payload['gameId']?.toString().trim().isNotEmpty == true
               ? payload['gameId'].toString().trim()
               : 'unknown-game';
-      await widget.service.grantAdReward(
+      final rewardResult = await widget.service.grantAdReward(
         adId: 'pag-result-$gameId-$runId',
         pagCoins: 2,
         videomoneyViews: 1,
         videomoneyVideosWatched: 1,
         autoCreateIfMissing: true,
       );
+      if (!rewardResult.videomoneyRewardGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_localizedRewardSyncFailedMessage()),
+          ),
+        );
+        return;
+      }
       _processedResultRunIds.add(runId);
 
       if (!mounted) return;
