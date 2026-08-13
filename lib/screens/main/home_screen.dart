@@ -852,7 +852,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
     try {
-      final pendingProvider = _pendingAdBreakProvider;
+      final pendingProvider =
+          _pendingAdBreakProvider == ShortsProgressService.providerUnity
+              ? ShortsProgressService.providerMonetag
+              : _pendingAdBreakProvider;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
           pendingProvider == ShortsProgressService.providerAppodeal;
@@ -860,13 +863,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           pendingProvider == ShortsProgressService.providerGravite;
       final isUnityBreak =
           pendingProvider == ShortsProgressService.providerUnity;
+      final isMonetagBreak =
+          pendingProvider == ShortsProgressService.providerMonetag;
       final isRewardedTurn =
           isAdmobBreak ||
           isAppodealBreak ||
-          isUnityBreak ||
           isGraviteBreak;
       final shouldFallbackToMonetag =
-          isAdmobBreak || isAppodealBreak || isGraviteBreak || isUnityBreak;
+          isAdmobBreak || isAppodealBreak || isGraviteBreak;
       final completed =
           await Navigator.of(context).push<bool>(
             MaterialPageRoute<bool>(
@@ -959,6 +963,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ? _localizedHomeText('no_provider', provider: 'Appodeal')
                   : isGraviteBreak
                   ? _localizedHomeText('no_provider', provider: 'Gravite')
+                  : isMonetagBreak
+                  ? _localizedHomeText('no_provider', provider: 'Monetag')
                   : isUnityBreak
                   ? _localizedHomeText('no_provider', provider: 'Unity')
                   : _localizedHomeText('no_generic'),
@@ -999,7 +1005,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (provider == ShortsProgressService.providerAdmob) return 'AdMob';
     if (provider == ShortsProgressService.providerAppodeal) return 'Appodeal';
     if (provider == ShortsProgressService.providerGravite) return 'Gravite';
-    if (provider == ShortsProgressService.providerUnity) return 'Unity';
+    if (provider == ShortsProgressService.providerUnity) return 'Monetag';
     if (provider == ShortsProgressService.providerMonetag) return 'Monetag';
     return 'Ad';
   }
