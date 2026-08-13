@@ -505,103 +505,33 @@ class FirestoreService {
     final trimmedIban = iban.trim();
     final trimmedBankAccountNumber = bankAccountNumber.trim();
     final trimmedCryptoAddress = cryptoAddress.trim();
-    final legacyBankValue =
-        trimmedIban.isNotEmpty ? trimmedIban : trimmedBankAccountNumber;
-
-    await _firestore.runTransaction((transaction) async {
-      final userSnapshot = await transaction.get(userRef);
-      final userData = userSnapshot.data();
-
-      if (userData == null) {
-        throw Exception('User profile not found.');
-      }
-
-      final currentCoins = (userData['coins'] as num?)?.toInt() ?? 0;
-      if (!isPayoutBuildAllowed(buildNumber)) {
-        throw Exception(
-          'Update required. Payout is only available on $minimumPayoutVersion or higher.',
-        );
-      }
-      if (coinsRequested <= 0) {
-        throw Exception('Requested ads must be greater than zero.');
-      }
-      if (coinsRequested < minimumPayoutCoins) {
-        throw Exception(
-          'Minimum payout is $minimumPayoutCoins ads.',
-        );
-      }
-      if (trimmedAccountHolderName.isEmpty) {
-        throw Exception('Account holder name is required.');
-      }
-      if (!allowedPayoutMethods.contains(trimmedMethod)) {
-        throw Exception('Select a payout method.');
-      }
-      if (!allowedPayoutCurrencies.contains(trimmedCurrency)) {
-        throw Exception('Select a payout currency.');
-      }
-      if (trimmedMethod == 'paypal' && trimmedPayPalEmail.isEmpty) {
-        throw Exception('Enter a PayPal email.');
-      }
-      if (trimmedMethod == 'revolut' && trimmedRevolutUsername.isEmpty) {
-        throw Exception('Enter your Revolut username.');
-      }
-      if ((trimmedMethod == 'btc' || trimmedMethod == 'usdc') &&
-          trimmedCryptoAddress.isEmpty) {
-        throw Exception('Enter your crypto wallet address.');
-      }
-      if (currentCoins < coinsRequested) {
-        throw Exception('Not enough ads available.');
-      }
-
-      final userEmail = userData['email'] as String? ?? '';
-      final customName =
-          (userData['leaderboardDisplayName'] as String? ?? '').trim();
-      final currentVideosWatched =
-          (userData['videosWatched'] as num?)?.toInt() ?? 0;
-      final remainingViews = currentCoins - coinsRequested;
-
-      transaction.update(userRef, {
-        'coins': currentCoins - coinsRequested,
-      });
-      transaction.set(
-        _leaderboard.doc(uid),
-        _leaderboardPayload(
-          uid: uid,
-          email: userEmail,
-          customName: customName,
-          views: remainingViews,
-          videosWatched: currentVideosWatched,
-        ),
-        SetOptions(merge: true),
+    if (!isPayoutBuildAllowed(buildNumber)) {
+      throw Exception(
+        'Update required. Payout is only available on $minimumPayoutVersion or higher.',
       );
+    }
 
-      transaction.set(payoutRef, {
-        'userId': uid,
-        'userEmail': userEmail,
+    final callable = _functions.httpsCallable('vmCreatePayoutRequest');
+    try {
+      await callable.call(<String, dynamic>{
+        'uid': uid,
         'coinsRequested': coinsRequested,
+        'appVersion': appVersion.trim(),
+        'versionName': versionName.trim(),
+        'buildNumber': buildNumber,
         'payoutMethod': trimmedMethod,
-        'payoutCurrency': trimmedCurrency,
-        'status': 'pending',
         'payPalEmail': trimmedPayPalEmail,
-        'ibanOrBankAccount': trimmedMethod == 'revolut'
-            ? trimmedRevolutUsername
-            : legacyBankValue,
         'revolutUsername': trimmedRevolutUsername,
         'accountHolderName': trimmedAccountHolderName,
+        'payoutCurrency': trimmedCurrency,
         'bankName': trimmedBankName,
         'iban': trimmedIban,
         'bankAccountNumber': trimmedBankAccountNumber,
         'cryptoAddress': trimmedCryptoAddress,
-        'appVersion': appVersion.trim(),
-        'versionName': versionName.trim(),
-        'buildNumber': buildNumber,
-        'minimumRequiredVersion': minimumPayoutVersion,
-        'minimumRequiredBuildNumber': minimumPayoutBuildNumber,
-        'minimumPayoutCoins': minimumPayoutCoins,
-        'processingDays': payoutProcessingDays,
-        'createdAt': FieldValue.serverTimestamp(),
       });
-    });
+    } on FirebaseFunctionsException catch (error) {
+      throw Exception(error.message ?? 'Unable to create payout request.');
+    }
   }
 
   Stream<List<PayoutRequest>> watchAllPayoutRequests({

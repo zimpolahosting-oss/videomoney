@@ -24,6 +24,11 @@ const VM_SESSION_TTL_MS = 90 * 1000;
 const VM_SESSION_STALE_MS = 10 * 60 * 1000;
 const VM_REWARD_WINDOW_MS = 5 * 60 * 1000;
 const VM_REWARD_MAX_IN_WINDOW = 8;
+const VM_MINIMUM_PAYOUT_COINS = 1000;
+const VM_PAYOUT_PROCESSING_DAYS = 5;
+const VM_MINIMUM_PAYOUT_VERSION = "1.0.1+59";
+const VM_ALLOWED_PAYOUT_METHODS = new Set(["paypal", "revolut", "btc", "usdc"]);
+const VM_ALLOWED_PAYOUT_CURRENCIES = new Set(["EUR", "GBP", "USD", "BTC", "USDC"]);
 
 function uniqueTokens(users) {
   return [...new Set(users.flatMap((user) => user.fcmTokens || []).filter(Boolean))];
@@ -370,6 +375,15 @@ function sanitizeInteger(value, fallback = 0) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
   return Math.trunc(num);
+}
+
+function buildLeaderboardPublicName(email, customName) {
+  const trimmedCustomName = sanitizeString(customName);
+  if (trimmedCustomName) return trimmedCustomName;
+
+  const trimmedEmail = sanitizeString(email).toLowerCase();
+  if (!trimmedEmail.includes("@")) return "User";
+  return `${trimmedEmail.split("@")[0]}***`;
 }
 
 function generateSessionId() {
@@ -1116,4 +1130,126 @@ exports.vmApplyProgress = onCall(async (request) => {
   });
 
   return {ok: true};
+});
+
+exports.vmCreatePayoutRequest = onCall(async (request) => {
+  const {uid, email: authEmail} = requireAuth(request);
+  const buildNumber = sanitizeInteger(request.data?.buildNumber, 0);
+  const appVersion = sanitizeString(request.data?.appVersion);
+  const versionName = sanitizeString(request.data?.versionName);
+  const coinsRequested = sanitizeInteger(request.data?.coinsRequested, 0);
+  const payoutMethod = sanitizeString(request.data?.payoutMethod).toLowerCase();
+  const payPalEmail = sanitizeString(request.data?.payPalEmail);
+  const revolutUsername = sanitizeString(request.data?.revolutUsername);
+  const accountHolderName = sanitizeString(request.data?.accountHolderName);
+  const payoutCurrency = sanitizeString(request.data?.payoutCurrency).toUpperCase();
+  const bankName = sanitizeString(request.data?.bankName);
+  const iban = sanitizeString(request.data?.iban);
+  const bankAccountNumber = sanitizeString(request.data?.bankAccountNumber);
+  const cryptoAddress = sanitizeString(request.data?.cryptoAddress);
+
+  requiresMinimumBuild(buildNumber);
+
+  if (coinsRequested <= 0) {
+    throw new HttpsError("invalid-argument", "Requested ads must be greater than zero.");
+  }
+  if (coinsRequested < VM_MINIMUM_PAYOUT_COINS) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Minimum payout is ${VM_MINIMUM_PAYOUT_COINS} ads.`
+    );
+  }
+  if (!accountHolderName) {
+    throw new HttpsError("invalid-argument", "Account holder name is required.");
+  }
+  if (!VM_ALLOWED_PAYOUT_METHODS.has(payoutMethod)) {
+    throw new HttpsError("invalid-argument", "Select a payout method.");
+  }
+  if (!VM_ALLOWED_PAYOUT_CURRENCIES.has(payoutCurrency)) {
+    throw new HttpsError("invalid-argument", "Select a payout currency.");
+  }
+  if (payoutMethod === "paypal" && !payPalEmail) {
+    throw new HttpsError("invalid-argument", "Enter a PayPal email.");
+  }
+  if (payoutMethod === "revolut" && !revolutUsername) {
+    throw new HttpsError("invalid-argument", "Enter your Revolut username.");
+  }
+  if ((payoutMethod === "btc" || payoutMethod === "usdc") && !cryptoAddress) {
+    throw new HttpsError("invalid-argument", "Enter your crypto wallet address.");
+  }
+
+  const payoutRef = db.collection("payouts").doc();
+  const userRef = db.collection("users").doc(uid);
+  const leaderboardRef = db.collection("leaderboard").doc(uid);
+
+  await db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(userRef);
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User profile not found.");
+    }
+
+    const userData = userSnap.data() || {};
+    const currentCoins = sanitizeInteger(userData.coins, 0);
+    if (currentCoins < coinsRequested) {
+      throw new HttpsError("failed-precondition", "Not enough ads available.");
+    }
+
+    const userEmail = sanitizeString(userData.email || authEmail);
+    const customName = sanitizeString(userData.leaderboardDisplayName);
+    const currentVideosWatched = sanitizeInteger(userData.videosWatched, 0);
+    const remainingViews = currentCoins - coinsRequested;
+    const legacyBankValue = iban || bankAccountNumber;
+
+    tx.set(
+      userRef,
+      {
+        coins: remainingViews,
+      },
+      {merge: true}
+    );
+
+    tx.set(
+      leaderboardRef,
+      {
+        uid,
+        customName,
+        publicName: buildLeaderboardPublicName(userEmail, customName),
+        views: remainingViews,
+        videosWatched: currentVideosWatched,
+        estimatedEarnings: Number((remainingViews * 0.001).toFixed(6)),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+
+    tx.set(payoutRef, {
+      userId: uid,
+      userEmail,
+      coinsRequested,
+      payoutMethod,
+      payoutCurrency,
+      status: "pending",
+      payPalEmail,
+      ibanOrBankAccount: payoutMethod === "revolut" ? revolutUsername : legacyBankValue,
+      revolutUsername,
+      accountHolderName,
+      bankName,
+      iban,
+      bankAccountNumber,
+      cryptoAddress,
+      appVersion,
+      versionName,
+      buildNumber,
+      minimumRequiredVersion: VM_MINIMUM_PAYOUT_VERSION,
+      minimumRequiredBuildNumber: VM_MINIMUM_BUILD_NUMBER,
+      minimumPayoutCoins: VM_MINIMUM_PAYOUT_COINS,
+      processingDays: VM_PAYOUT_PROCESSING_DAYS,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    payoutId: payoutRef.id,
+  };
 });
