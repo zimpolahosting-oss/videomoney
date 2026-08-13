@@ -215,6 +215,22 @@ class ShortsProgressService {
     return next;
   }
 
+  Future<ShortsProgressSnapshot> advancePendingAdBreakProvider(String uid) async {
+    final snapshot = await load(uid);
+    if (snapshot.pendingAdBreakShorts == 0) return snapshot;
+
+    final currentProvider = _sanitizeProvider(
+      snapshot.pendingAdBreakProvider,
+      allowEmpty: false,
+    );
+    final next = snapshot.copyWith(
+      pendingAdBreakProvider: _alternateProvider(currentProvider),
+      pendingAdBreakAttempted: true,
+    );
+    await _save(uid, next);
+    return next;
+  }
+
   Future<void> clearAllStoredProgress() async {
     final prefs = await SharedPreferences.getInstance();
     final keysToRemove = prefs.getKeys().where((key) {
