@@ -10,6 +10,9 @@ class SupportTicket {
     required this.message,
     required this.status,
     required this.latestReply,
+    required this.appVersion,
+    required this.versionName,
+    required this.buildNumber,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -22,6 +25,9 @@ class SupportTicket {
   final String message;
   final String status;
   final String latestReply;
+  final String appVersion;
+  final String versionName;
+  final int buildNumber;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -38,6 +44,9 @@ class SupportTicket {
       message: data['message'] as String? ?? '',
       status: data['status'] as String? ?? 'pending',
       latestReply: data['latestReply'] as String? ?? '',
+      appVersion: data['appVersion'] as String? ?? '',
+      versionName: data['versionName'] as String? ?? '',
+      buildNumber: (data['buildNumber'] as num?)?.toInt() ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/app_rating.dart';
 import '../models/app_user.dart';
@@ -417,20 +417,16 @@ class FirestoreService {
     required String uid,
     int coinsReward = rewardCoinsPerVideo,
   }) async {
-    try {
-      final session = await SessionService.instance.ensureSession();
-      final callable = _functions.httpsCallable('vmApplyProgress');
-      await callable.call(<String, dynamic>{
-        'sessionId': session.sessionId,
-        'buildNumber': session.buildNumber,
-        'appVersion': session.appVersion,
-        'coinsDelta': coinsReward,
-        'videosWatchedDelta': 1,
-        'reason': 'rewarded_video',
-      });
-    } catch (error) {
-      debugPrint('[Videomoney][RewardUser] Reward rejected: $error');
-    }
+    final session = await SessionService.instance.ensureSession();
+    final callable = _functions.httpsCallable('vmApplyProgress');
+    await callable.call(<String, dynamic>{
+      'sessionId': session.sessionId,
+      'buildNumber': session.buildNumber,
+      'appVersion': session.appVersion,
+      'coinsDelta': coinsReward,
+      'videosWatchedDelta': 1,
+      'reason': 'rewarded_video',
+    });
   }
 
   Future<void> applyUserProgress({
@@ -439,20 +435,16 @@ class FirestoreService {
     int videosWatchedDelta = 0,
   }) async {
     if (viewsDelta == 0 && videosWatchedDelta == 0) return;
-    try {
-      final session = await SessionService.instance.ensureSession();
-      final callable = _functions.httpsCallable('vmApplyProgress');
-      await callable.call(<String, dynamic>{
-        'sessionId': session.sessionId,
-        'buildNumber': session.buildNumber,
-        'appVersion': session.appVersion,
-        'coinsDelta': viewsDelta,
-        'videosWatchedDelta': videosWatchedDelta,
-        'reason': 'progress',
-      });
-    } catch (error) {
-      debugPrint('[Videomoney][ApplyProgress] Progress rejected: $error');
-    }
+    final session = await SessionService.instance.ensureSession();
+    final callable = _functions.httpsCallable('vmApplyProgress');
+    await callable.call(<String, dynamic>{
+      'sessionId': session.sessionId,
+      'buildNumber': session.buildNumber,
+      'appVersion': session.appVersion,
+      'coinsDelta': viewsDelta,
+      'videosWatchedDelta': videosWatchedDelta,
+      'reason': 'progress',
+    });
   }
 
   Stream<List<PayoutRequest>> watchPayouts(String uid) {
@@ -816,6 +808,14 @@ class FirestoreService {
       throw Exception('Message cannot be empty.');
     }
 
+    final packageInfo = await PackageInfo.fromPlatform();
+    final versionName = packageInfo.version.trim();
+    final rawBuildNumber = packageInfo.buildNumber.trim();
+    final buildNumber = int.tryParse(rawBuildNumber) ?? 0;
+    final appVersion = rawBuildNumber.isEmpty
+        ? versionName
+        : '$versionName+$rawBuildNumber';
+
     await _supportTickets.add({
       'userId': uid,
       'email': email.trim(),
@@ -824,6 +824,9 @@ class FirestoreService {
       'message': trimmed,
       'status': 'pending',
       'latestReply': '',
+      'appVersion': appVersion,
+      'versionName': versionName,
+      'buildNumber': buildNumber,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

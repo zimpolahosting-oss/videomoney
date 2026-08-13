@@ -206,12 +206,18 @@ class PlayersAreGamersService {
   }) async {
     final hasVideomoneyReward =
         videomoneyViews != 0 || videomoneyVideosWatched != 0;
+    var videomoneyRewardGranted = false;
     if (hasVideomoneyReward) {
-      await _firestoreService.applyUserProgress(
-        uid: _currentUser.uid,
-        viewsDelta: videomoneyViews,
-        videosWatchedDelta: videomoneyVideosWatched,
-      );
+      try {
+        await _firestoreService.applyUserProgress(
+          uid: _currentUser.uid,
+          viewsDelta: videomoneyViews,
+          videosWatchedDelta: videomoneyVideosWatched,
+        );
+        videomoneyRewardGranted = true;
+      } catch (_) {
+        videomoneyRewardGranted = false;
+      }
     }
 
     var pagCoinsGranted = false;
@@ -228,9 +234,10 @@ class PlayersAreGamersService {
 
     return PlayersAreGamersAdRewardResult(
       pagCoinsGranted: pagCoinsGranted,
-      videomoneyRewardGranted: hasVideomoneyReward,
+      videomoneyRewardGranted: videomoneyRewardGranted,
     );
   }
+
 
   Future<Map<String, dynamic>> submitScore({
     required String gameId,
@@ -342,7 +349,7 @@ class PlayersAreGamersService {
   }
 
   Future<PlayersAreGamersAdRewardResult> grantReplayReward({
-    int videomoneyViews = 3,
+    int videomoneyViews = 1,
     int gameCoins = 2,
     required String adId,
   }) async {

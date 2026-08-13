@@ -144,6 +144,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return '$minimumVersion or higher';
   }
 
+  String _supportTicketVersionLabel(SupportTicket ticket) {
+    final appVersion = ticket.appVersion.trim();
+    if (appVersion.isNotEmpty) return appVersion;
+
+    if (ticket.buildNumber > 0) {
+      final versionName = ticket.versionName.trim();
+      return versionName.isEmpty
+          ? 'Build ${ticket.buildNumber}'
+          : '$versionName+${ticket.buildNumber}';
+    }
+
+    return 'Old version / not reported';
+  }
+
   Future<void> _setStatus(PayoutRequest payout, String status) async {
     try {
       await _firestoreService.updatePayoutStatus(
@@ -873,6 +887,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 8),
                   Text(
                     '${ticket.type.toUpperCase()} • ${ticket.email.isEmpty ? ticket.userId : ticket.email}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'App version: ${_supportTicketVersionLabel(ticket)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),

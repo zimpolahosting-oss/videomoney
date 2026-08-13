@@ -779,10 +779,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isProcessingCompletedShort = true;
     try {
-      await _firestoreService.applyUserProgress(
-        uid: user.uid,
-        videosWatchedDelta: 1,
-      );
+      try {
+        await _firestoreService.applyUserProgress(
+          uid: user.uid,
+          videosWatchedDelta: 1,
+        );
+      } catch (_) {
+        return;
+      }
 
       final result = await ShortsProgressService.instance.markShortCompleted(
         user.uid,
@@ -903,16 +907,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
       if (!mounted) return;
-      final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
-        user.uid,
-      );
-      if (!mounted) return;
-      setState(() {
-        _adBreakProgressShorts = snapshot.adBreakProgressShorts;
-        _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
-        _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
-        _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
-      });
+      final rewardAccepted =
+          completed && (rewardResult?.videomoneyRewardGranted ?? false);
+      if (rewardAccepted) {
+        final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
+          user.uid,
+        );
+        if (!mounted) return;
+        setState(() {
+          _adBreakProgressShorts = snapshot.adBreakProgressShorts;
+          _pendingAdBreakShorts = snapshot.pendingAdBreakShorts;
+          _pendingAdBreakProvider = snapshot.pendingAdBreakProvider;
+          _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
+        });
+      }
       if (!completed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -926,6 +934,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : isUnityBreak
                   ? _localizedHomeText('no_provider', provider: 'Unity')
                   : _localizedHomeText('no_generic'),
+            ),
+          ),
+        );
+      } else if (!rewardAccepted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _localizedHomeText('reward_sync_failed'),
             ),
           ),
         );
@@ -966,6 +982,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       'en': {
         'ad_counted': '+1 ad counted.',
         'tap_after_three': 'After 3 shorts, tap the ad button',
+        'reward_sync_failed': 'Reward sync failed. Please try again.',
         'no_provider': 'No $provider or Monetag ad available for this turn.',
         'no_generic':
             'No ad available right now. Continuing to the next short.',
