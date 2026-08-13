@@ -190,6 +190,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _reloadShortsProgressFromStorage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+
+    final progress = await ShortsProgressService.instance.load(user.uid);
+    if (!mounted) return;
+
+    setState(() {
+      _syncProgressFromSnapshot(progress);
+    });
+  }
+
   String _formatFeedError(Object error) {
     final text = error.toString();
     if (text.contains('Unable to load playlist feed (403)') ||
@@ -242,6 +254,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!becameActive && !recoveryRequested) return;
     if (widget.isActiveTab) {
       unawaited(_earningsService.preloadRewardedVideo());
+      unawaited(_reloadShortsProgressFromStorage());
       if (_playerSuspended) {
         unawaited(_loadCurrentVideoIntoWebView(force: true));
       } else {
@@ -267,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         if (widget.isActiveTab) {
           unawaited(_earningsService.preloadRewardedVideo());
+          unawaited(_reloadShortsProgressFromStorage());
         }
         if (_isShowingAdBreak) {
           unawaited(_pausePlayback());
