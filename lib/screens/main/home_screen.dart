@@ -589,6 +589,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (decoded is! Map<String, dynamic>) return;
 
       final type = decoded['type'] as String? ?? '';
+      final messageVideoId = decoded['videoId'] as String? ?? '';
+      final activeVideoId = _feed.isNotEmpty &&
+              _currentIndex >= 0 &&
+              _currentIndex < _feed.length
+          ? _feed[_currentIndex].videoId
+          : '';
+      if (messageVideoId.isNotEmpty &&
+          activeVideoId.isNotEmpty &&
+          messageVideoId != activeVideoId) {
+        return;
+      }
       switch (type) {
         case 'ready':
           _playerReady = true;
@@ -605,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           break;
         case 'ended':
           _playerStateCode = 0;
-          unawaited(_handleEndedShortPlayback());
+          unawaited(_handleEndedShortPlayback(expectedVideoId: messageVideoId));
           break;
         case 'error':
           final code = (decoded['error'] as num?)?.toInt();
@@ -642,7 +653,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _handleCompletedShort();
   }
 
-  Future<void> _handleEndedShortPlayback() async {
+  Future<void> _handleEndedShortPlayback({String? expectedVideoId}) async {
+    if (_feed.isEmpty) return;
+    final activeVideoId = _feed[_currentIndex].videoId;
+    if (expectedVideoId != null &&
+        expectedVideoId.isNotEmpty &&
+        expectedVideoId != activeVideoId) {
+      return;
+    }
     final shouldAdvance = _currentIndex < _feed.length - 1;
     await _countCurrentShortIfEligible(forceComplete: true);
     if (!mounted) return;
