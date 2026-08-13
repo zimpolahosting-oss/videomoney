@@ -10,6 +10,7 @@ class ShortsAdBreakScreen extends StatefulWidget {
     required this.providerName,
     required this.onPrepare,
     required this.onStartAd,
+    this.autoStart = false,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
   });
@@ -17,6 +18,7 @@ class ShortsAdBreakScreen extends StatefulWidget {
   final String providerName;
   final Future<void> Function() onPrepare;
   final Future<bool> Function(BuildContext context) onStartAd;
+  final bool autoStart;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
 
@@ -37,6 +39,9 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     _openedAt = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(widget.onPrepare());
+      if (widget.autoStart) {
+        unawaited(_startAdFlowAfterDelay());
+      }
     });
   }
 
@@ -206,11 +211,21 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     Navigator.of(context).pop(completed);
   }
 
+  Future<void> _startAdFlowAfterDelay() async {
+    if (widget.adStartDelay > Duration.zero) {
+      await Future<void>.delayed(widget.adStartDelay);
+    }
+    if (!mounted || _didAttemptAd || _isStartingAd) return;
+    await _startAdFlow();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final statusText = _statusText.isNotEmpty
         ? _statusText
+        : widget.autoStart
+        ? _tr('startingAd')
         : _tr('tapNextAd');
     return WillPopScope(
       onWillPop: () async => _allowClose,
@@ -294,21 +309,23 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isStartingAd ? null : _startAdFlow,
-                          icon: Icon(
-                            _isStartingAd
-                                ? Icons.hourglass_top_rounded
-                                : Icons.play_circle_fill_rounded,
-                          ),
-                          label: Text(
-                            _isStartingAd ? _tr('startingAd') : _tr('watchNow'),
+                      if (!widget.autoStart) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _isStartingAd ? null : _startAdFlow,
+                            icon: Icon(
+                              _isStartingAd
+                                  ? Icons.hourglass_top_rounded
+                                  : Icons.play_circle_fill_rounded,
+                            ),
+                            label: Text(
+                              _isStartingAd ? _tr('startingAd') : _tr('watchNow'),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 18),
+                        const SizedBox(height: 18),
+                      ],
                       Text(
                         _tr('afterThreeShorts'),
                         style: theme.textTheme.bodyMedium?.copyWith(

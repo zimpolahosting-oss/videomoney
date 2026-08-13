@@ -876,6 +876,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               fullscreenDialog: false,
               builder: (pageContext) => ShortsAdBreakScreen(
                 providerName: _providerLabelForAdBreak(pendingProvider),
+                autoStart: true,
+                adStartDelay: const Duration(milliseconds: 250),
                 onPrepare: _pausePlayback,
                 onStartAd: (_) async {
                   if (isRewardedTurn) {
