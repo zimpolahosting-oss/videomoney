@@ -7,7 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/payout_i18n.dart';
 
-enum _PayoutMethod { paypal, revolut, bank, btc, usdc }
+enum _PayoutMethod { paypal, revolut, btc, usdc }
 enum _PayoutCurrency { eur, gbp, usd }
 
 class PayoutRequestScreen extends StatefulWidget {
@@ -25,9 +25,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   final _payPalController = TextEditingController();
   final _revolutController = TextEditingController();
   final _accountHolderController = TextEditingController();
-  final _bankNameController = TextEditingController();
-  final _ibanController = TextEditingController();
-  final _bankAccountNumberController = TextEditingController();
   final _cryptoAddressController = TextEditingController();
   final _firestoreService = FirestoreService();
 
@@ -41,7 +38,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     final initial = (widget.initialMethod ?? '').toLowerCase();
     _method = switch (initial) {
       'revolut' => _PayoutMethod.revolut,
-      'bank' => _PayoutMethod.bank,
       'btc' => _PayoutMethod.btc,
       'usdc' => _PayoutMethod.usdc,
       _ => _PayoutMethod.paypal,
@@ -54,9 +50,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
     _payPalController.dispose();
     _revolutController.dispose();
     _accountHolderController.dispose();
-    _bankNameController.dispose();
-    _ibanController.dispose();
-    _bankAccountNumberController.dispose();
     _cryptoAddressController.dispose();
     super.dispose();
   }
@@ -93,7 +86,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
         payoutMethod: switch (_method) {
           _PayoutMethod.paypal => 'paypal',
           _PayoutMethod.revolut => 'revolut',
-          _PayoutMethod.bank => 'bank',
           _PayoutMethod.btc => 'btc',
           _PayoutMethod.usdc => 'usdc',
         },
@@ -106,10 +98,9 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
           _PayoutMethod.usdc => 'USDC',
           _ => _currency.name.toUpperCase(),
         },
-        bankName: _method == _PayoutMethod.bank ? _bankNameController.text : '',
-        iban: _method == _PayoutMethod.bank ? _ibanController.text : '',
-        bankAccountNumber:
-            _method == _PayoutMethod.bank ? _bankAccountNumberController.text : '',
+        bankName: '',
+        iban: '',
+        bankAccountNumber: '',
         cryptoAddress:
             (_method == _PayoutMethod.btc || _method == _PayoutMethod.usdc)
                 ? _cryptoAddressController.text
@@ -177,10 +168,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                       icon: Icons.verified_user_outlined,
                       text: l10n.everyRequestReviewed,
                     ),
-                    _RuleLine(
-                      icon: Icons.account_balance_outlined,
-                      text: l10n.useBankAddIban,
-                    ),
                   ],
                 ),
               ),
@@ -213,11 +200,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                       value: _PayoutMethod.revolut,
                       icon: Icon(Icons.account_balance_wallet_outlined),
                       label: Text('Revolut'),
-                    ),
-                    ButtonSegment(
-                      value: _PayoutMethod.bank,
-                      icon: Icon(Icons.account_balance_outlined),
-                      label: Text('Bank'),
                     ),
                     ButtonSegment(
                       value: _PayoutMethod.btc,
@@ -357,44 +339,6 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) {
                       return l10n.enterRevolutUsername;
-                    }
-                    return null;
-                  },
-                ),
-              ] else if (_method == _PayoutMethod.bank) ...[
-                TextFormField(
-                  controller: _bankNameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.bankName,
-                  ),
-                  validator: (value) {
-                    final trimmed = value?.trim() ?? '';
-                    if (trimmed.isEmpty) {
-                      return l10n.enterBankName;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _ibanController,
-                  decoration: InputDecoration(
-                    labelText: l10n.iban,
-                    helperText: l10n.ibanOptional,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _bankAccountNumberController,
-                  decoration: InputDecoration(
-                    labelText: l10n.bankAccountNumber,
-                    helperText: l10n.bankRequiredIfNoIban,
-                  ),
-                  validator: (value) {
-                    final iban = _ibanController.text.trim();
-                    final accountNumber = value?.trim() ?? '';
-                    if (iban.isEmpty && accountNumber.isEmpty) {
-                      return l10n.enterIbanOrBank;
                     }
                     return null;
                   },

@@ -34,7 +34,6 @@ class FirestoreService {
   static const Set<String> allowedPayoutMethods = {
     'paypal',
     'revolut',
-    'bank',
     'btc',
     'usdc',
   };
@@ -584,14 +583,6 @@ class FirestoreService {
       }
       if (trimmedMethod == 'revolut' && trimmedRevolutUsername.isEmpty) {
         throw Exception('Enter your Revolut username.');
-      }
-      if (trimmedMethod == 'bank') {
-        if (trimmedBankName.isEmpty) {
-          throw Exception('Enter your bank name.');
-        }
-        if (trimmedIban.isEmpty && trimmedBankAccountNumber.isEmpty) {
-          throw Exception('Enter an IBAN or bank account number.');
-        }
       }
       if ((trimmedMethod == 'btc' || trimmedMethod == 'usdc') &&
           trimmedCryptoAddress.isEmpty) {

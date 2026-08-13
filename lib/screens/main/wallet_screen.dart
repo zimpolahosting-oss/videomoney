@@ -9,6 +9,7 @@ import '../../models/leaderboard_entry.dart';
 import '../../models/payout_request.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/payout_i18n.dart';
 import '../../widgets/watermark_hero_card.dart';
 
 class WalletScreen extends StatelessWidget {
@@ -194,18 +195,6 @@ class WalletScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _MethodTile(
-              icon: Icons.account_balance_outlined,
-              title: l10n.bankTransferTitle,
-              subtitle: l10n.bankTransferSubtitle,
-              onTap: () {
-                Navigator.of(context).pushNamed(
-                  AppRoutes.payoutRequest,
-                  arguments: 'bank',
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            _MethodTile(
               icon: Icons.currency_bitcoin_rounded,
               title: l10n.bitcoinTitle,
               subtitle: l10n.bitcoinSubtitle,
@@ -292,6 +281,22 @@ class WalletScreen extends StatelessWidget {
                                     formattedDate,
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
+                                  if (payout.status.toLowerCase() == 'rejected' &&
+                                      (payout.rejectReasonCode.trim().isNotEmpty ||
+                                          payout.rejectReasonNote.trim().isNotEmpty)) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${PayoutI18n.rejectReasonLabel(context)}: ${PayoutI18n.localizedRejectReason(
+                                        context,
+                                        code: payout.rejectReasonCode.trim(),
+                                        minimumVersion: payout.minimumRequiredVersion,
+                                        note: payout.rejectReasonNote,
+                                      )}',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
