@@ -63,6 +63,36 @@ class FirestoreService {
   final FirebaseFunctions _functions =
       FirebaseFunctions.instanceFor(region: 'europe-west1');
 
+  Future<void> _callVmApplyProgress({
+    required int coinsDelta,
+    required int videosWatchedDelta,
+    required String reason,
+  }) async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final session = await SessionService.instance.ensureSession();
+      final callable = _functions.httpsCallable('vmApplyProgress');
+      try {
+        await callable.call(<String, dynamic>{
+          'sessionId': session.sessionId,
+          'buildNumber': session.buildNumber,
+          'appVersion': session.appVersion,
+          'coinsDelta': coinsDelta,
+          'videosWatchedDelta': videosWatchedDelta,
+          'reason': reason,
+        });
+        return;
+      } on FirebaseFunctionsException catch (error) {
+        final shouldRefreshSession =
+            error.code == 'failed-precondition' ||
+            error.code == 'unauthenticated';
+        if (!shouldRefreshSession || attempt == 1) {
+          rethrow;
+        }
+        await SessionService.instance.clearSession();
+      }
+    }
+  }
+
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
 
@@ -417,16 +447,11 @@ class FirestoreService {
     required String uid,
     int coinsReward = rewardCoinsPerVideo,
   }) async {
-    final session = await SessionService.instance.ensureSession();
-    final callable = _functions.httpsCallable('vmApplyProgress');
-    await callable.call(<String, dynamic>{
-      'sessionId': session.sessionId,
-      'buildNumber': session.buildNumber,
-      'appVersion': session.appVersion,
-      'coinsDelta': coinsReward,
-      'videosWatchedDelta': 1,
-      'reason': 'rewarded_video',
-    });
+    await _callVmApplyProgress(
+      coinsDelta: coinsReward,
+      videosWatchedDelta: 1,
+      reason: 'rewarded_video',
+    );
   }
 
   Future<void> applyUserProgress({
@@ -435,16 +460,11 @@ class FirestoreService {
     int videosWatchedDelta = 0,
   }) async {
     if (viewsDelta == 0 && videosWatchedDelta == 0) return;
-    final session = await SessionService.instance.ensureSession();
-    final callable = _functions.httpsCallable('vmApplyProgress');
-    await callable.call(<String, dynamic>{
-      'sessionId': session.sessionId,
-      'buildNumber': session.buildNumber,
-      'appVersion': session.appVersion,
-      'coinsDelta': viewsDelta,
-      'videosWatchedDelta': videosWatchedDelta,
-      'reason': 'progress',
-    });
+    await _callVmApplyProgress(
+      coinsDelta: viewsDelta,
+      videosWatchedDelta: videosWatchedDelta,
+      reason: 'progress',
+    );
   }
 
   Stream<List<PayoutRequest>> watchPayouts(String uid) {
