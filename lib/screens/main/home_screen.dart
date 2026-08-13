@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
+  String? _completionNavigationInFlightForVideoId;
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
   late final WebViewController _webViewController;
@@ -283,7 +284,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _showVideoAtIndex(int index) async {
     if (index < 0 || index >= _feed.length || index == _currentIndex) return;
+    final nextVideoId = _feed[index].videoId;
     setState(() => _currentIndex = index);
+    if (_completionNavigationInFlightForVideoId != nextVideoId) {
+      _completionNavigationInFlightForVideoId = null;
+    }
     _lastCountedPlayerTimeSeconds = 0;
     _countEligibleByWatchThreshold = false;
     if (widget.isActiveTab) {
@@ -668,12 +673,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         expectedVideoId != activeVideoId) {
       return;
     }
-    final shouldAdvance = _currentIndex < _feed.length - 1;
     await _countCurrentShortIfEligible(forceComplete: true);
     if (!mounted) return;
-    if (shouldAdvance) {
-      await _goToNextVideo();
-    }
+    await _advanceAfterCompletedVideo(activeVideoId);
   }
 
   Future<void> _openCurrentVideoExternally() async {
@@ -729,7 +731,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (positionMs >= targetMs) {
       if (_countEligibleByWatchThreshold) return;
       _countEligibleByWatchThreshold = true;
+      final completedVideoId = item.videoId;
       await _countCurrentShortIfEligible(forceComplete: true);
+      if (!mounted) return;
+      await _advanceAfterCompletedVideo(completedVideoId);
+    }
+  }
+
+  Future<void> _advanceAfterCompletedVideo(String completedVideoId) async {
+    if (_feed.isEmpty || completedVideoId.isEmpty) return;
+    if (_completionNavigationInFlightForVideoId == completedVideoId) return;
+
+    final activeVideoId = _feed[_currentIndex].videoId;
+    if (activeVideoId != completedVideoId) return;
+    if (_currentIndex >= _feed.length - 1) return;
+
+    _completionNavigationInFlightForVideoId = completedVideoId;
+    try {
+      await _goToNextVideo();
+    } finally {
+      if (_feed.isNotEmpty && _feed[_currentIndex].videoId != completedVideoId) {
+        _completionNavigationInFlightForVideoId = null;
+      }
     }
   }
 
