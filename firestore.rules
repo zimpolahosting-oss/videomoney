@@ -25,15 +25,13 @@ service cloud.firestore {
         isOwner(userId)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.isAdmin == resource.data.isAdmin
+        // Clients may never increase coins (ads) to prevent farming on old APKs.
+        && (!request.resource.data.keys().hasAny(['coins']) || request.resource.data.coins <= resource.data.coins)
+        // Clients may not change videosWatched directly (server-side only).
+        && (!request.resource.data.keys().hasAny(['videosWatched']) || request.resource.data.videosWatched == resource.data.videosWatched)
         && request.resource.data.diff(resource.data).changedKeys().hasOnly([
           'email',
           'leaderboardDisplayName',
-          'coins',
-          'videosWatched',
-          'dailyProgressDate',
-          'dailyVideosWatched',
-          'dailyBonusAwarded',
-          'dailyBonusAwardedAt',
           'rewardBalanceResetApplied',
           'appVerified',
           'fcmTokens',

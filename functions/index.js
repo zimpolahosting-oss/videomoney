@@ -5,6 +5,7 @@ const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {defineSecret} = require("firebase-functions/params");
+const crypto = require("crypto");
 
 admin.initializeApp();
 setGlobalOptions({region: "europe-west1"});
@@ -17,6 +18,12 @@ const PLAYERS_ARE_GAMERS_BASE_URLS = [
   "http://34.144.184.237:3000/api/integration",
 ];
 const PLAYERS_ARE_GAMERS_PUBLIC_URL = "https://playersaregamers.nl";
+
+const VM_MINIMUM_BUILD_NUMBER = 59;
+const VM_SESSION_TTL_MS = 90 * 1000;
+const VM_SESSION_STALE_MS = 10 * 60 * 1000;
+const VM_REWARD_WINDOW_MS = 5 * 60 * 1000;
+const VM_REWARD_MAX_IN_WINDOW = 8;
 
 function uniqueTokens(users) {
   return [...new Set(users.flatMap((user) => user.fcmTokens || []).filter(Boolean))];
@@ -357,6 +364,67 @@ function requireAuth(request) {
 
 function sanitizeString(value) {
   return String(value || "").trim();
+}
+
+function sanitizeInteger(value, fallback = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.trunc(num);
+}
+
+function generateSessionId() {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function requiresMinimumBuild(buildNumber) {
+  if (!Number.isFinite(buildNumber)) {
+    throw new HttpsError("invalid-argument", "buildNumber must be a number.");
+  }
+  if (buildNumber < VM_MINIMUM_BUILD_NUMBER) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Update required. Build ${VM_MINIMUM_BUILD_NUMBER}+ is required.`
+    );
+  }
+}
+
+async function ensureSingleSession(uid, sessionId) {
+  const userRef = db.collection("users").doc(uid);
+  const now = Date.now();
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const data = snap.data() || {};
+    const storedSessionId = sanitizeString(data.activeSessionId);
+    const updatedAt = data.activeSessionUpdatedAt?.toMillis
+      ? data.activeSessionUpdatedAt.toMillis()
+      : 0;
+
+    if (
+      storedSessionId &&
+      storedSessionId !== sessionId &&
+      updatedAt &&
+      now - updatedAt < VM_SESSION_TTL_MS
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Account is active on another device. Sign out there first."
+      );
+    }
+
+    tx.set(
+      userRef,
+      {
+        activeSessionId: sessionId,
+        activeSessionUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+    return {storedSessionId};
+  });
+  return result;
 }
 
 function sanitizePagUsername(value) {
@@ -909,3 +977,143 @@ exports.pagPurchaseCoins = onCall(
     return payload;
   }
 );
+
+exports.vmClaimSession = onCall(async (request) => {
+  const {uid} = requireAuth(request);
+  const buildNumber = sanitizeInteger(request.data?.buildNumber, 0);
+  const appVersion = sanitizeString(request.data?.appVersion);
+
+  requiresMinimumBuild(buildNumber);
+
+  const sessionId = generateSessionId();
+  await ensureSingleSession(uid, sessionId);
+
+  const userRef = db.collection("users").doc(uid);
+  await userRef.set(
+    {
+      activeBuildNumber: buildNumber,
+      activeAppVersion: appVersion,
+      activeSessionId: sessionId,
+      activeSessionUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    {merge: true}
+  );
+
+  return {
+    sessionId,
+    minimumBuildNumber: VM_MINIMUM_BUILD_NUMBER,
+  };
+});
+
+exports.vmApplyProgress = onCall(async (request) => {
+  const {uid} = requireAuth(request);
+  const sessionId = sanitizeString(request.data?.sessionId);
+  const buildNumber = sanitizeInteger(request.data?.buildNumber, 0);
+  const appVersion = sanitizeString(request.data?.appVersion);
+  const coinsDelta = sanitizeInteger(request.data?.coinsDelta, 0);
+  const videosWatchedDelta = sanitizeInteger(request.data?.videosWatchedDelta, 0);
+  const reason = sanitizeString(request.data?.reason || "progress");
+
+  if (!sessionId) {
+    throw new HttpsError("invalid-argument", "sessionId is required.");
+  }
+  requiresMinimumBuild(buildNumber);
+
+  if (coinsDelta < 0 || videosWatchedDelta < 0) {
+    throw new HttpsError(
+      "invalid-argument",
+      "coinsDelta/videosWatchedDelta must be >= 0."
+    );
+  }
+  if (coinsDelta > 3 || videosWatchedDelta > 3) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Delta too large."
+    );
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const leaderboardRef = db.collection("leaderboard").doc(uid);
+  const now = Date.now();
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const data = snap.data() || {};
+
+    const storedSessionId = sanitizeString(data.activeSessionId);
+    const updatedAtMs = data.activeSessionUpdatedAt?.toMillis
+      ? data.activeSessionUpdatedAt.toMillis()
+      : 0;
+    if (!storedSessionId || storedSessionId !== sessionId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Session invalid. Please reopen the app."
+      );
+    }
+    if (updatedAtMs && now - updatedAtMs > VM_SESSION_STALE_MS) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Session expired. Please reopen the app."
+      );
+    }
+
+    // Rate-limit coin rewards to stop farms.
+    const windowStartMs = data.rewardWindowStartAt?.toMillis
+      ? data.rewardWindowStartAt.toMillis()
+      : 0;
+    const windowCount = sanitizeInteger(data.rewardWindowCount, 0);
+    const inSameWindow = windowStartMs && now - windowStartMs < VM_REWARD_WINDOW_MS;
+    const nextWindowStart = inSameWindow ? windowStartMs : now;
+    const nextWindowCount = inSameWindow
+      ? windowCount + (coinsDelta > 0 ? 1 : 0)
+      : (coinsDelta > 0 ? 1 : 0);
+
+    if (coinsDelta > 0 && nextWindowCount > VM_REWARD_MAX_IN_WINDOW) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many rewards too fast. Slow down."
+      );
+    }
+
+    const currentCoins = sanitizeInteger(data.coins, 0);
+    const currentVideos = sanitizeInteger(data.videosWatched, 0);
+    const nextCoins = currentCoins + coinsDelta;
+    const nextVideos = currentVideos + videosWatchedDelta;
+
+    const updates = {
+      activeBuildNumber: buildNumber,
+      activeAppVersion: appVersion,
+      activeSessionId: sessionId,
+      activeSessionUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      rewardWindowStartAt: admin.firestore.Timestamp.fromMillis(nextWindowStart),
+      rewardWindowCount: nextWindowCount,
+      lastRewardReason: reason,
+      lastRewardAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (coinsDelta !== 0) updates.coins = admin.firestore.FieldValue.increment(coinsDelta);
+    if (videosWatchedDelta !== 0) updates.videosWatched = admin.firestore.FieldValue.increment(videosWatchedDelta);
+
+    tx.set(userRef, updates, {merge: true});
+
+    // Keep leaderboard in sync (best-effort).
+    const email = sanitizeString(data.email);
+    const customName = sanitizeString(data.leaderboardDisplayName);
+    const publicName = customName || (email ? `${email.split("@")[0]}***` : "User");
+    tx.set(
+      leaderboardRef,
+      {
+        uid,
+        customName,
+        publicName,
+        views: nextCoins,
+        videosWatched: nextVideos,
+        estimatedEarnings: Number((nextCoins * 0.001).toFixed(6)),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+  });
+
+  return {ok: true};
+});

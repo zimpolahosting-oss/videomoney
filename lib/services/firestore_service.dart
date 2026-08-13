@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/app_rating.dart';
 import '../models/app_user.dart';
@@ -7,6 +9,7 @@ import '../models/inbox_message.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/payout_request.dart';
 import '../models/support_ticket.dart';
+import 'session_service.dart';
 
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
@@ -57,6 +60,8 @@ class FirestoreService {
   };
 
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
@@ -412,56 +417,20 @@ class FirestoreService {
     required String uid,
     int coinsReward = rewardCoinsPerVideo,
   }) async {
-    final todayKey = formatLocalDateKey(DateTime.now());
-    final userRef = _users.doc(uid);
-
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(userRef);
-      final data = snapshot.data();
-      if (data == null) {
-        throw Exception('User profile not found.');
-      }
-
-      final existingKey = data['dailyProgressDate'] as String? ?? '';
-      final wasSameDay = existingKey == todayKey;
-      final previousDailyCount =
-          (data['dailyVideosWatched'] as num?)?.toInt() ?? 0;
-      final previousBonusAwarded = data['dailyBonusAwarded'] as bool? ?? false;
-
-      final baseDailyCount = wasSameDay ? previousDailyCount : 0;
-      final baseBonusAwarded = wasSameDay ? previousBonusAwarded : false;
-
-      final newDailyCount = baseDailyCount + 1;
-      final bonusTriggered = !baseBonusAwarded &&
-          newDailyCount >= FirestoreService.dailyBonusTargetVideos;
-      final newViews = ((data['coins'] as num?)?.toInt() ?? 0) +
-          coinsReward +
-          (bonusTriggered ? FirestoreService.dailyBonusViews : 0);
-      final newVideosWatched =
-          ((data['videosWatched'] as num?)?.toInt() ?? 0) + 1;
-
-      transaction.update(userRef, {
-        'coins': FieldValue.increment(
-          coinsReward + (bonusTriggered ? FirestoreService.dailyBonusViews : 0),
-        ),
-        'videosWatched': FieldValue.increment(1),
-        'dailyProgressDate': todayKey,
-        'dailyVideosWatched': newDailyCount,
-        'dailyBonusAwarded': bonusTriggered ? true : baseBonusAwarded,
-        if (bonusTriggered) 'dailyBonusAwardedAt': FieldValue.serverTimestamp(),
+    try {
+      final session = await SessionService.instance.ensureSession();
+      final callable = _functions.httpsCallable('vmApplyProgress');
+      await callable.call(<String, dynamic>{
+        'sessionId': session.sessionId,
+        'buildNumber': session.buildNumber,
+        'appVersion': session.appVersion,
+        'coinsDelta': coinsReward,
+        'videosWatchedDelta': 1,
+        'reason': 'rewarded_video',
       });
-      transaction.set(
-        _leaderboard.doc(uid),
-        _leaderboardPayload(
-          uid: uid,
-          email: data['email'] as String? ?? '',
-          customName: data['leaderboardDisplayName'] as String? ?? '',
-          views: newViews,
-          videosWatched: newVideosWatched,
-        ),
-        SetOptions(merge: true),
-      );
-    });
+    } catch (error) {
+      debugPrint('[Videomoney][RewardUser] Reward rejected: $error');
+    }
   }
 
   Future<void> applyUserProgress({
@@ -470,40 +439,20 @@ class FirestoreService {
     int videosWatchedDelta = 0,
   }) async {
     if (viewsDelta == 0 && videosWatchedDelta == 0) return;
-
-    final userRef = _users.doc(uid);
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(userRef);
-      final data = snapshot.data();
-      if (data == null) {
-        throw Exception('User profile not found.');
-      }
-
-      final currentViews = (data['coins'] as num?)?.toInt() ?? 0;
-      final currentVideos = (data['videosWatched'] as num?)?.toInt() ?? 0;
-      final nextViews = currentViews + viewsDelta;
-      final nextVideos = currentVideos + videosWatchedDelta;
-
-      final updates = <String, dynamic>{};
-      if (viewsDelta != 0) {
-        updates['coins'] = FieldValue.increment(viewsDelta);
-      }
-      if (videosWatchedDelta != 0) {
-        updates['videosWatched'] = FieldValue.increment(videosWatchedDelta);
-      }
-      transaction.update(userRef, updates);
-      transaction.set(
-        _leaderboard.doc(uid),
-        _leaderboardPayload(
-          uid: uid,
-          email: data['email'] as String? ?? '',
-          customName: data['leaderboardDisplayName'] as String? ?? '',
-          views: nextViews,
-          videosWatched: nextVideos,
-        ),
-        SetOptions(merge: true),
-      );
-    });
+    try {
+      final session = await SessionService.instance.ensureSession();
+      final callable = _functions.httpsCallable('vmApplyProgress');
+      await callable.call(<String, dynamic>{
+        'sessionId': session.sessionId,
+        'buildNumber': session.buildNumber,
+        'appVersion': session.appVersion,
+        'coinsDelta': viewsDelta,
+        'videosWatchedDelta': videosWatchedDelta,
+        'reason': 'progress',
+      });
+    } catch (error) {
+      debugPrint('[Videomoney][ApplyProgress] Progress rejected: $error');
+    }
   }
 
   Stream<List<PayoutRequest>> watchPayouts(String uid) {
