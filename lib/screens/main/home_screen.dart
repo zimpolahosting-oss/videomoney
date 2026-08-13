@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
+  int _currentVideoTrackedWatchMs = 0;
   int _playerStateCode = -1;
   int? _playbackErrorCode;
   double _playerCurrentTimeSeconds = 0;
@@ -304,6 +305,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_completionNavigationInFlightForVideoId != nextVideoId) {
       _completionNavigationInFlightForVideoId = null;
     }
+    _lastTrackedPositionMs = 0;
+    _currentVideoTrackedWatchMs = 0;
     _lastCountedPlayerTimeSeconds = 0;
     _countEligibleByWatchThreshold = false;
     if (widget.isActiveTab) {
@@ -357,6 +360,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     _playerSuspended = false;
     _lastTrackedPositionMs = 0;
+    _currentVideoTrackedWatchMs = 0;
     _playerStateCode = -1;
     _playbackErrorCode = null;
     _playerCurrentTimeSeconds = 0;
@@ -722,6 +726,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final durationMs = (_playerDurationSeconds * 1000).round();
     if (durationMs <= 0) return;
 
+    final deltaMs = positionMs - _lastTrackedPositionMs;
+    if (deltaMs > 0 && deltaMs <= 2200) {
+      _currentVideoTrackedWatchMs += deltaMs;
+    }
     _lastTrackedPositionMs = positionMs;
     unawaited(_maybeCountShortByWatchThreshold());
 
@@ -750,6 +758,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       percentThresholdMs,
       45000,
     ].reduce((a, b) => a < b ? a : b);
+    final requiredTrackedWatchMs = [
+      8000,
+      targetMs,
+      15000,
+    ].reduce((a, b) => a < b ? a : b);
 
     // Prevent counting if user just scrubbed to the end instantly:
     // require progression over time (player time must advance).
@@ -758,7 +771,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     _lastCountedPlayerTimeSeconds = _playerCurrentTimeSeconds;
 
-    if (positionMs >= targetMs) {
+    if (positionMs >= targetMs &&
+        _currentVideoTrackedWatchMs >= requiredTrackedWatchMs) {
       if (_countEligibleByWatchThreshold) return;
       _countEligibleByWatchThreshold = true;
       final completedVideoId = item.videoId;
