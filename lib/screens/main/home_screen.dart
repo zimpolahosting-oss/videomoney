@@ -78,6 +78,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int? _playbackErrorCode;
   double _playerCurrentTimeSeconds = 0;
   double _playerDurationSeconds = 0;
+  double _lastCountedPlayerTimeSeconds = 0;
+  bool _countEligibleByWatchThreshold = false;
   Offset? _swipeStartPosition;
   bool _swipeGestureConsumed = false;
   bool _playerReady = false;
@@ -282,6 +284,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _showVideoAtIndex(int index) async {
     if (index < 0 || index >= _feed.length || index == _currentIndex) return;
     setState(() => _currentIndex = index);
+    _lastCountedPlayerTimeSeconds = 0;
+    _countEligibleByWatchThreshold = false;
     if (widget.isActiveTab) {
       await _loadCurrentVideoIntoWebView(force: true);
     } else {
@@ -337,6 +341,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _playbackErrorCode = null;
     _playerCurrentTimeSeconds = 0;
     _playerDurationSeconds = 0;
+    _lastCountedPlayerTimeSeconds = 0;
+    _countEligibleByWatchThreshold = false;
     _playerReady = false;
 
     final videoId = _feed[_currentIndex].videoId;
@@ -613,6 +619,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               (decoded['currentTime'] as num?)?.toDouble() ?? _playerCurrentTimeSeconds;
           _playerDurationSeconds =
               (decoded['duration'] as num?)?.toDouble() ?? _playerDurationSeconds;
+          unawaited(_maybeCountShortByWatchThreshold());
           break;
         case 'ended':
           _playerStateCode = 0;
@@ -684,7 +691,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (durationMs <= 0) return;
 
     _lastTrackedPositionMs = positionMs;
+    unawaited(_maybeCountShortByWatchThreshold());
 
+  }
+
+  Future<void> _maybeCountShortByWatchThreshold() async {
+    if (!mounted || _feed.isEmpty || _isRewardHandling || !_playerReady) return;
+    if (_isProcessingCompletedShort) return;
+    if (_playerStateCode != 1 && _playerStateCode != 3) return;
+    if (_playerDurationSeconds <= 0) return;
+
+    final item = _feed[_currentIndex];
+    if (_countedShortIds.contains(item.id)) return;
+
+    // Anti-scam + user-friendly:
+    // - do NOT count on quick swipes
+    // - do count if user watched enough, even if YouTube doesn't emit ENDED reliably.
+    final durationMs = (_playerDurationSeconds * 1000).round();
+    final positionMs = (_playerCurrentTimeSeconds * 1000).round();
+    if (durationMs <= 0 || positionMs <= 0) return;
+
+    // Require either ~85% watched OR at least 45s (whichever is smaller), but never below 20s.
+    final percentThresholdMs = (durationMs * 0.85).round();
+    final targetMs = [
+      20000,
+      percentThresholdMs,
+      45000,
+    ].reduce((a, b) => a < b ? a : b);
+
+    // Prevent counting if user just scrubbed to the end instantly:
+    // require progression over time (player time must advance).
+    if (_playerCurrentTimeSeconds <= _lastCountedPlayerTimeSeconds) {
+      return;
+    }
+    _lastCountedPlayerTimeSeconds = _playerCurrentTimeSeconds;
+
+    if (positionMs >= targetMs) {
+      if (_countEligibleByWatchThreshold) return;
+      _countEligibleByWatchThreshold = true;
+      await _countCurrentShortIfEligible(forceComplete: true);
+    }
   }
 
   Future<void> _handleCompletedShort() async {
