@@ -29,6 +29,7 @@ const VM_PAYOUT_PROCESSING_DAYS = 5;
 const VM_MINIMUM_PAYOUT_VERSION = "1.0.1+59";
 const VM_ALLOWED_PAYOUT_METHODS = new Set(["paypal", "revolut", "btc", "usdc"]);
 const VM_ALLOWED_PAYOUT_CURRENCIES = new Set(["EUR", "GBP", "USD", "BTC", "USDC"]);
+const VM_AD_TRANSFER_DAILY_LIMIT = 2000;
 
 function uniqueTokens(users) {
   return [...new Set(users.flatMap((user) => user.fcmTokens || []).filter(Boolean))];
@@ -377,6 +378,13 @@ function sanitizeInteger(value, fallback = 0) {
   return Math.trunc(num);
 }
 
+function utcDayKey(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getUTCDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function buildLeaderboardPublicName(email, customName) {
   const trimmedCustomName = sanitizeString(customName);
   if (trimmedCustomName) return trimmedCustomName;
@@ -403,6 +411,60 @@ function requiresMinimumBuild(buildNumber) {
       `Update required. Build ${VM_MINIMUM_BUILD_NUMBER}+ is required.`
     );
   }
+}
+
+async function requireAdminAuth(request) {
+  const auth = requireAuth(request);
+  const userSnap = await db.collection("users").doc(auth.uid).get();
+  const isAdmin = userSnap.exists && userSnap.data()?.isAdmin === true;
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+  return auth;
+}
+
+async function ensureAdsTransferEnabled() {
+  const configSnap = await db.collection("appConfig").doc("features").get();
+  const enabled = configSnap.exists && configSnap.data()?.adsTransferEnabled === true;
+  if (!enabled) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Ads transfer is currently disabled."
+    );
+  }
+}
+
+async function findUserByEmail(email) {
+  const normalized = sanitizeString(email);
+  if (!normalized) return null;
+  const candidates = [...new Set([normalized, normalized.toLowerCase()])];
+  for (const candidate of candidates) {
+    const snap = await db
+      .collection("users")
+      .where("email", "==", candidate)
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      const doc = snap.docs[0];
+      return {
+        uid: doc.id,
+        ...doc.data(),
+      };
+    }
+  }
+  return null;
+}
+
+function buildLeaderboardPayload({uid, email, customName, views, videosWatched}) {
+  return {
+    uid,
+    customName,
+    publicName: buildLeaderboardPublicName(email, customName),
+    views,
+    videosWatched,
+    estimatedEarnings: Number((views * 0.001).toFixed(6)),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
 }
 
 async function ensureSingleSession(uid, sessionId) {
@@ -1252,4 +1314,291 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
     ok: true,
     payoutId: payoutRef.id,
   };
+});
+
+exports.vmCreateAdsTransfer = onCall(async (request) => {
+  const {uid, email: authEmail} = requireAuth(request);
+  await ensureAdsTransferEnabled();
+
+  const buildNumber = sanitizeInteger(request.data?.buildNumber, VM_MINIMUM_BUILD_NUMBER);
+  const appVersion = sanitizeString(request.data?.appVersion);
+  const recipientEmail = sanitizeString(request.data?.recipientEmail).toLowerCase();
+  const amountAds = sanitizeInteger(request.data?.amountAds, 0);
+  requiresMinimumBuild(buildNumber);
+
+  if (!recipientEmail || !recipientEmail.includes("@")) {
+    throw new HttpsError("invalid-argument", "Enter a valid recipient email.");
+  }
+  if (amountAds <= 0) {
+    throw new HttpsError("invalid-argument", "Enter a valid ads amount.");
+  }
+  if (amountAds > VM_AD_TRANSFER_DAILY_LIMIT) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Daily transfer limit is ${VM_AD_TRANSFER_DAILY_LIMIT} ads.`
+    );
+  }
+
+  const recipient = await findUserByEmail(recipientEmail);
+  if (!recipient || !recipient.uid) {
+    throw new HttpsError("not-found", "Recipient account not found.");
+  }
+  if (recipient.uid === uid) {
+    throw new HttpsError("failed-precondition", "You cannot send ads to yourself.");
+  }
+
+  const senderRef = db.collection("users").doc(uid);
+  const recipientRef = db.collection("users").doc(recipient.uid);
+  const senderLeaderboardRef = db.collection("leaderboard").doc(uid);
+  const transferRef = db.collection("adTransfers").doc();
+  const recipientInboxRef = db.collection("inboxMessages").doc();
+  const todayKey = utcDayKey();
+
+  await db.runTransaction(async (tx) => {
+    const senderSnap = await tx.get(senderRef);
+    const recipientSnap = await tx.get(recipientRef);
+
+    if (!senderSnap.exists) {
+      throw new HttpsError("not-found", "Sender account not found.");
+    }
+    if (!recipientSnap.exists) {
+      throw new HttpsError("not-found", "Recipient account not found.");
+    }
+
+    const senderData = senderSnap.data() || {};
+    const recipientData = recipientSnap.data() || {};
+    const senderCoins = sanitizeInteger(senderData.coins, 0);
+    if (senderCoins < amountAds) {
+      throw new HttpsError("failed-precondition", "Not enough ads available.");
+    }
+
+    const senderSentDayKey = sanitizeString(senderData.adsTransferSentDayKey);
+    const senderSentToday = senderSentDayKey === todayKey
+      ? sanitizeInteger(senderData.adsTransferSentToday, 0)
+      : 0;
+    if (senderSentToday + amountAds > VM_AD_TRANSFER_DAILY_LIMIT) {
+      throw new HttpsError(
+        "failed-precondition",
+        `You can send max ${VM_AD_TRANSFER_DAILY_LIMIT} ads per day.`
+      );
+    }
+
+    const senderEmail = sanitizeString(senderData.email || authEmail).toLowerCase();
+    const senderCustomName = sanitizeString(senderData.leaderboardDisplayName);
+    const senderVideosWatched = sanitizeInteger(senderData.videosWatched, 0);
+    const recipientStoredEmail = sanitizeString(recipientData.email || recipientEmail).toLowerCase();
+
+    tx.set(
+      senderRef,
+      {
+        coins: senderCoins - amountAds,
+        adsTransferSentDayKey: todayKey,
+        adsTransferSentToday: senderSentToday + amountAds,
+      },
+      {merge: true}
+    );
+    tx.set(
+      senderLeaderboardRef,
+      buildLeaderboardPayload({
+        uid,
+        email: senderEmail,
+        customName: senderCustomName,
+        views: senderCoins - amountAds,
+        videosWatched: senderVideosWatched,
+      }),
+      {merge: true}
+    );
+
+    tx.set(transferRef, {
+      senderUid: uid,
+      senderEmail,
+      recipientUid: recipient.uid,
+      recipientEmail: recipientStoredEmail,
+      amountAds,
+      status: "pending",
+      participants: [uid, recipient.uid],
+      senderBuildNumber: buildNumber,
+      senderAppVersion: appVersion,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    tx.set(recipientInboxRef, {
+      userId: recipient.uid,
+      title: "Ads transfer request",
+      message: `${senderEmail} wants to send you ${amountAds} ads. Open Wallet to accept or reject.`,
+      type: "transfer",
+      read: false,
+      transferId: transferRef.id,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    transferId: transferRef.id,
+  };
+});
+
+exports.vmAcceptAdsTransfer = onCall(async (request) => {
+  const {uid} = requireAuth(request);
+  const transferId = sanitizeString(request.data?.transferId);
+  if (!transferId) {
+    throw new HttpsError("invalid-argument", "Missing transfer id.");
+  }
+
+  const transferRef = db.collection("adTransfers").doc(transferId);
+  const senderInboxRef = db.collection("inboxMessages").doc();
+
+  await db.runTransaction(async (tx) => {
+    const transferSnap = await tx.get(transferRef);
+    if (!transferSnap.exists) {
+      throw new HttpsError("not-found", "Transfer not found.");
+    }
+
+    const transfer = transferSnap.data() || {};
+    const status = sanitizeString(transfer.status).toLowerCase();
+    const recipientUid = sanitizeString(transfer.recipientUid);
+    if (recipientUid !== uid) {
+      throw new HttpsError("permission-denied", "Only the recipient can accept.");
+    }
+    if (status !== "pending") {
+      throw new HttpsError("failed-precondition", "Transfer is no longer pending.");
+    }
+
+    const amountAds = sanitizeInteger(transfer.amountAds, 0);
+    const recipientRef = db.collection("users").doc(recipientUid);
+    const recipientLeaderboardRef = db.collection("leaderboard").doc(recipientUid);
+    const recipientSnap = await tx.get(recipientRef);
+    if (!recipientSnap.exists) {
+      throw new HttpsError("not-found", "Recipient account not found.");
+    }
+
+    const recipientData = recipientSnap.data() || {};
+    const recipientCoins = sanitizeInteger(recipientData.coins, 0);
+    const recipientVideosWatched = sanitizeInteger(recipientData.videosWatched, 0);
+    const recipientEmail = sanitizeString(recipientData.email || transfer.recipientEmail).toLowerCase();
+    const recipientCustomName = sanitizeString(recipientData.leaderboardDisplayName);
+
+    tx.set(
+      recipientRef,
+      {
+        coins: recipientCoins + amountAds,
+      },
+      {merge: true}
+    );
+    tx.set(
+      recipientLeaderboardRef,
+      buildLeaderboardPayload({
+        uid: recipientUid,
+        email: recipientEmail,
+        customName: recipientCustomName,
+        views: recipientCoins + amountAds,
+        videosWatched: recipientVideosWatched,
+      }),
+      {merge: true}
+    );
+    tx.set(
+      transferRef,
+      {
+        status: "accepted",
+        acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+    tx.set(senderInboxRef, {
+      userId: sanitizeString(transfer.senderUid),
+      title: "Ads transfer accepted",
+      message: `${sanitizeString(transfer.recipientEmail)} accepted your ${amountAds} ads transfer.`,
+      type: "transfer",
+      read: false,
+      transferId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {ok: true};
+});
+
+exports.vmRejectAdsTransfer = onCall(async (request) => {
+  const {uid} = requireAuth(request);
+  const transferId = sanitizeString(request.data?.transferId);
+  if (!transferId) {
+    throw new HttpsError("invalid-argument", "Missing transfer id.");
+  }
+
+  const transferRef = db.collection("adTransfers").doc(transferId);
+  const senderInboxRef = db.collection("inboxMessages").doc();
+
+  await db.runTransaction(async (tx) => {
+    const transferSnap = await tx.get(transferRef);
+    if (!transferSnap.exists) {
+      throw new HttpsError("not-found", "Transfer not found.");
+    }
+
+    const transfer = transferSnap.data() || {};
+    const status = sanitizeString(transfer.status).toLowerCase();
+    const recipientUid = sanitizeString(transfer.recipientUid);
+    if (recipientUid !== uid) {
+      throw new HttpsError("permission-denied", "Only the recipient can reject.");
+    }
+    if (status !== "pending") {
+      throw new HttpsError("failed-precondition", "Transfer is no longer pending.");
+    }
+
+    const amountAds = sanitizeInteger(transfer.amountAds, 0);
+    const senderUid = sanitizeString(transfer.senderUid);
+    const senderRef = db.collection("users").doc(senderUid);
+    const senderLeaderboardRef = db.collection("leaderboard").doc(senderUid);
+    const senderSnap = await tx.get(senderRef);
+    if (!senderSnap.exists) {
+      throw new HttpsError("not-found", "Sender account not found.");
+    }
+
+    const senderData = senderSnap.data() || {};
+    const senderCoins = sanitizeInteger(senderData.coins, 0);
+    const senderVideosWatched = sanitizeInteger(senderData.videosWatched, 0);
+    const senderEmail = sanitizeString(senderData.email || transfer.senderEmail).toLowerCase();
+    const senderCustomName = sanitizeString(senderData.leaderboardDisplayName);
+
+    tx.set(
+      senderRef,
+      {
+        coins: senderCoins + amountAds,
+      },
+      {merge: true}
+    );
+    tx.set(
+      senderLeaderboardRef,
+      buildLeaderboardPayload({
+        uid: senderUid,
+        email: senderEmail,
+        customName: senderCustomName,
+        views: senderCoins + amountAds,
+        videosWatched: senderVideosWatched,
+      }),
+      {merge: true}
+    );
+    tx.set(
+      transferRef,
+      {
+        status: "rejected",
+        rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+    tx.set(senderInboxRef, {
+      userId: senderUid,
+      title: "Ads transfer rejected",
+      message: `${sanitizeString(transfer.recipientEmail)} rejected your ${amountAds} ads transfer.`,
+      type: "transfer",
+      read: false,
+      transferId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {ok: true};
 });

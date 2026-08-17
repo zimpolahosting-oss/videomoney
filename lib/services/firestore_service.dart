@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../models/ad_transfer.dart';
 import '../models/app_rating.dart';
 import '../models/app_user.dart';
 import '../models/inbox_message.dart';
@@ -24,6 +25,7 @@ class FirestoreService {
   static const double estimatedEuroPerAd = 0.001;
   static const int minimumPayoutBuildNumber = 59;
   static const String minimumPayoutVersion = '1.0.1+59';
+  static const int maxAdsTransferPerDay = 2000;
   static const int presenceHeartbeatSeconds = 30;
   static const int presenceTtlSeconds = 90;
   static const String rewardBalanceResetAppliedField =
@@ -101,6 +103,12 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _supportTickets =>
       _firestore.collection('supportTickets');
+
+  CollectionReference<Map<String, dynamic>> get _adTransfers =>
+      _firestore.collection('adTransfers');
+
+  CollectionReference<Map<String, dynamic>> get _appConfig =>
+      _firestore.collection('appConfig');
 
   CollectionReference<Map<String, dynamic>> get _inboxMessages =>
       _firestore.collection('inboxMessages');
@@ -531,6 +539,90 @@ class FirestoreService {
       });
     } on FirebaseFunctionsException catch (error) {
       throw Exception(error.message ?? 'Unable to create payout request.');
+    }
+  }
+
+  Stream<bool> watchAdsTransferEnabled() {
+    return _appConfig.doc('features').snapshots().map((doc) {
+      final data = doc.data() ?? const <String, dynamic>{};
+      return data['adsTransferEnabled'] as bool? ?? false;
+    });
+  }
+
+  Future<void> setAdsTransferEnabled(bool enabled) async {
+    await _appConfig.doc('features').set({
+      'adsTransferEnabled': enabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Stream<List<AdTransfer>> watchUserAdTransfers(String uid) {
+    return _adTransfers
+        .where('participants', arrayContains: uid.trim())
+        .snapshots()
+        .map((snapshot) {
+      final transfers =
+          snapshot.docs.map(AdTransfer.fromDoc).toList(growable: false);
+      transfers.sort((a, b) {
+        final aMillis = a.createdAt?.millisecondsSinceEpoch ?? 0;
+        final bMillis = b.createdAt?.millisecondsSinceEpoch ?? 0;
+        return bMillis.compareTo(aMillis);
+      });
+      return transfers;
+    });
+  }
+
+  Stream<List<AdTransfer>> watchAllAdTransfers({int limit = 200}) {
+    return _adTransfers
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map(AdTransfer.fromDoc).toList(growable: false),
+        );
+  }
+
+  Future<void> createAdsTransfer({
+    required String recipientEmail,
+    required int amountAds,
+  }) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final buildNumber = int.tryParse(packageInfo.buildNumber.trim()) ?? 0;
+    final callable = _functions.httpsCallable('vmCreateAdsTransfer');
+    try {
+      await callable.call(<String, dynamic>{
+        'recipientEmail': recipientEmail.trim(),
+        'amountAds': amountAds,
+        'buildNumber': buildNumber,
+        'appVersion': packageInfo.buildNumber.trim().isEmpty
+            ? packageInfo.version.trim()
+            : '${packageInfo.version.trim()}+${packageInfo.buildNumber.trim()}',
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw Exception(error.message ?? 'Unable to create ads transfer.');
+    }
+  }
+
+  Future<void> acceptAdsTransfer(String transferId) async {
+    final callable = _functions.httpsCallable('vmAcceptAdsTransfer');
+    try {
+      await callable.call(<String, dynamic>{
+        'transferId': transferId.trim(),
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw Exception(error.message ?? 'Unable to accept transfer.');
+    }
+  }
+
+  Future<void> rejectAdsTransfer(String transferId) async {
+    final callable = _functions.httpsCallable('vmRejectAdsTransfer');
+    try {
+      await callable.call(<String, dynamic>{
+        'transferId': transferId.trim(),
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw Exception(error.message ?? 'Unable to reject transfer.');
     }
   }
 

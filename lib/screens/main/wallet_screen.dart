@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../app_routes.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/ad_transfer.dart';
 import '../../models/app_user.dart';
 import '../../models/leaderboard_entry.dart';
 import '../../models/payout_request.dart';
@@ -214,6 +215,17 @@ class WalletScreen extends StatelessWidget {
                 Navigator.of(context).pushNamed(
                   AppRoutes.payoutRequest,
                   arguments: 'usdc',
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<AppUser?>(
+              stream: firestoreService.watchUser(user.uid),
+              builder: (context, userSnapshot) {
+                return _AdsTransferSection(
+                  firestoreService: firestoreService,
+                  firebaseUser: user,
+                  appUser: userSnapshot.data,
                 );
               },
             ),
@@ -436,6 +448,358 @@ class WalletScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AdsTransferSection extends StatelessWidget {
+  const _AdsTransferSection({
+    required this.firestoreService,
+    required this.firebaseUser,
+    required this.appUser,
+  });
+
+  final FirestoreService firestoreService;
+  final User firebaseUser;
+  final AppUser? appUser;
+
+  Future<void> _showTransferDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _SendAdsDialog(
+        firestoreService: firestoreService,
+        currentAds: appUser?.views ?? 0,
+      ),
+    );
+  }
+
+  Future<void> _handleTransferAction(
+    BuildContext context, {
+    required bool accept,
+    required AdTransfer transfer,
+  }) async {
+    try {
+      if (accept) {
+        await firestoreService.acceptAdsTransfer(transfer.id);
+      } else {
+        await firestoreService.rejectAdsTransfer(transfer.id);
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            accept ? 'Ads transfer accepted.' : 'Ads transfer rejected.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: firestoreService.watchAdsTransferEnabled(),
+      builder: (context, enabledSnapshot) {
+        final enabled = enabledSnapshot.data ?? false;
+        return StreamBuilder<List<AdTransfer>>(
+          stream: firestoreService.watchUserAdTransfers(firebaseUser.uid),
+          builder: (context, transferSnapshot) {
+            final transfers = transferSnapshot.data ?? const <AdTransfer>[];
+            final incomingPending = transfers
+                .where(
+                  (transfer) =>
+                      transfer.isPending && transfer.isRecipient(firebaseUser.uid),
+                )
+                .toList(growable: false);
+            final recentTransfers = transfers.take(4).toList(growable: false);
+
+            if (!enabled && transfers.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionTitle(title: 'Share your ads'),
+                const SizedBox(height: 6),
+                Text(
+                  'Send ads to family or friends by email. Max ${FirestoreService.maxAdsTransferPerDay} ads per day. Selling ads is forbidden and may lead to a ban.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                if (enabled)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _showTransferDialog(context),
+                      icon: const Icon(Icons.send_rounded),
+                      label: const Text('Share ads with friends'),
+                    ),
+                  )
+                else
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Ads transfer is currently disabled by admin.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
+                if (incomingPending.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Pending requests',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  ...incomingPending.map(
+                    (transfer) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${NumberFormat.decimalPattern().format(transfer.amountAds)} ads from ${transfer.senderEmail}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            transfer.createdAt == null
+                                ? 'Waiting for timestamp'
+                                : DateFormat.yMMMd().add_jm().format(transfer.createdAt!),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _handleTransferAction(
+                                    context,
+                                    accept: false,
+                                    transfer: transfer,
+                                  ),
+                                  child: const Text('Reject'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: () => _handleTransferAction(
+                                    context,
+                                    accept: true,
+                                    transfer: transfer,
+                                  ),
+                                  child: const Text('Accept'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                if (recentTransfers.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'Transfer overview',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  ...recentTransfers.map(
+                    (transfer) {
+                      final isSender = transfer.isSender(firebaseUser.uid);
+                      final counterpartyEmail = isSender
+                          ? transfer.recipientEmail
+                          : transfer.senderEmail;
+                      final direction = isSender ? 'To' : 'From';
+                      final color = switch (transfer.status.toLowerCase()) {
+                        'accepted' => AppTheme.primary,
+                        'rejected' => const Color(0xFFFF7B7B),
+                        _ => AppTheme.coin,
+                      };
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          color: Theme.of(context).colorScheme.surface,
+                          border: Border.all(color: AppTheme.outline.withOpacity(0.55)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$direction $counterpartyEmail',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${NumberFormat.decimalPattern().format(transfer.amountAds)} ads',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    transfer.createdAt == null
+                                        ? 'Waiting for timestamp'
+                                        : DateFormat.yMMMd().add_jm().format(transfer.createdAt!),
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: color.withOpacity(0.28)),
+                              ),
+                              child: Text(
+                                transfer.status.toUpperCase(),
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _SendAdsDialog extends StatefulWidget {
+  const _SendAdsDialog({
+    required this.firestoreService,
+    required this.currentAds,
+  });
+
+  final FirestoreService firestoreService;
+  final int currentAds;
+
+  @override
+  State<_SendAdsDialog> createState() => _SendAdsDialogState();
+}
+
+class _SendAdsDialogState extends State<_SendAdsDialog> {
+  final _emailController = TextEditingController();
+  final _amountController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final amount = int.tryParse(_amountController.text.trim()) ?? 0;
+    if (email.isEmpty || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email and ads amount.')),
+      );
+      return;
+    }
+    if (amount > widget.currentAds) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You do not have enough ads to send.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.firestoreService.createAdsTransfer(
+        recipientEmail: email,
+        amountAds: amount,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ads transfer request sent.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Share ads with friends'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Friend email',
+                hintText: 'friend@email.com',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Ads amount',
+                hintText: 'Max ${FirestoreService.maxAdsTransferPerDay} per day',
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Only use this to help family or friends. Selling ads is forbidden and may lead to a ban.',
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: Text(_isSubmitting ? 'Sending...' : 'Send'),
+        ),
+      ],
     );
   }
 }

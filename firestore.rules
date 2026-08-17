@@ -111,6 +111,19 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(userId);
     }
 
+    match /adTransfers/{transferId} {
+      allow read: if isAdmin() || (
+        isSignedIn()
+        && request.auth.uid in resource.data.participants
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /appConfig/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /adminNotifications/{notificationId} {
       allow read, write: if isAdmin();
     }

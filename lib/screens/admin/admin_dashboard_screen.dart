@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/ad_transfer.dart';
 import '../../models/app_rating.dart';
 import '../../models/app_user.dart';
 import '../../models/inbox_message.dart';
@@ -34,6 +35,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String? _selectedNotificationUserId;
   String _notificationUserSearchQuery = '';
   bool _isSendingNotification = false;
+  bool _isUpdatingAdsTransferToggle = false;
 
   @override
   void dispose() {
@@ -1425,6 +1427,205 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildTransfersTab() {
+    return StreamBuilder<bool>(
+      stream: _firestoreService.watchAdsTransferEnabled(),
+      builder: (context, enabledSnapshot) {
+        final enabled = enabledSnapshot.data ?? false;
+        return StreamBuilder<List<AdTransfer>>(
+          stream: _firestoreService.watchAllAdTransfers(limit: 200),
+          builder: (context, transferSnapshot) {
+            final transfers = transferSnapshot.data ?? const <AdTransfer>[];
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ads transfer feature',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Users can send ads to existing accounts by email. Selling ads is forbidden and may lead to a ban.',
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                enabled ? 'Transfers enabled' : 'Transfers disabled',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            Switch.adaptive(
+                              value: enabled,
+                              onChanged: _isUpdatingAdsTransferToggle
+                                  ? null
+                                  : (value) async {
+                                      setState(() {
+                                        _isUpdatingAdsTransferToggle = true;
+                                      });
+                                      try {
+                                        await _firestoreService.setAdsTransferEnabled(value);
+                                      } catch (error) {
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              error.toString().replaceFirst('Exception: ', ''),
+                                            ),
+                                          ),
+                                        );
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isUpdatingAdsTransferToggle = false;
+                                          });
+                                        }
+                                      }
+                                    },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Daily limit: ${FirestoreService.maxAdsTransferPerDay} ads per sender.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (transfers.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text('No transfers yet.'),
+                    ),
+                  )
+                else
+                  ...transfers.map((transfer) {
+                    final statusColor = switch (transfer.status.toLowerCase()) {
+                      'accepted' => AppTheme.primary,
+                      'rejected' => const Color(0xFFFF7B7B),
+                      _ => AppTheme.coin,
+                    };
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${NumberFormat.decimalPattern().format(transfer.amountAds)} ads',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'From: ${transfer.senderEmail}',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'To: ${transfer.recipientEmail}',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Created: ${_formatDateTime(transfer.createdAt)}',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                      if (transfer.acceptedAt != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Accepted: ${_formatDateTime(transfer.acceptedAt)}',
+                                          style: Theme.of(context).textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                      if (transfer.rejectedAt != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Rejected: ${_formatDateTime(transfer.rejectedAt)}',
+                                          style: Theme.of(context).textTheme.bodyMedium,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: statusColor.withOpacity(0.28),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    transfer.status.toUpperCase(),
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () => _copyText('Sender email', transfer.senderEmail),
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  label: const Text('Copy sender'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _copyText('Recipient email', transfer.recipientEmail),
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  label: const Text('Copy recipient'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -1448,7 +1649,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
 
         return DefaultTabController(
-          length: 6,
+          length: 7,
           child: Scaffold(
             appBar: AppBar(
               title: const Text('Admin Dashboard'),
@@ -1461,6 +1662,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Tab(text: 'Inbox'),
                   Tab(text: 'Ratings'),
                   Tab(text: 'Users'),
+                  Tab(text: 'Transfers'),
                 ],
               ),
             ),
@@ -1473,6 +1675,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildInboxTab(),
                   _buildRatingsTab(),
                   _buildUsersTab(),
+                  _buildTransfersTab(),
                 ],
               ),
             ),

@@ -65,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _watchTimer;
   Timer? _playlistRefreshTimer;
   Timer? _adBreakPauseEnforcer;
+  Timer? _playerLoadGuardTimer;
   List<ShortVideoItem> _feed = const [];
   int _currentIndex = 0;
   int _cycleCompletedShorts = 0;
@@ -94,6 +95,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _playerSuspended = false;
   DateTime _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
   String? _feedError;
+  String? _playerRecoveryVideoId;
+  int _playerRecoveryAttempts = 0;
   int? _sessionStartIndex;
   final Random _random = Random();
 
@@ -272,6 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _watchTimer?.cancel();
     _playlistRefreshTimer?.cancel();
     _adBreakPauseEnforcer?.cancel();
+    _playerLoadGuardTimer?.cancel();
     super.dispose();
   }
 
@@ -309,6 +313,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _currentVideoTrackedWatchMs = 0;
     _lastCountedPlayerTimeSeconds = 0;
     _countEligibleByWatchThreshold = false;
+    _playerRecoveryVideoId = nextVideoId;
+    _playerRecoveryAttempts = 0;
     if (widget.isActiveTab) {
       await _loadCurrentVideoIntoWebView(force: true);
     } else {
@@ -336,8 +342,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _onSwipePointerMove(PointerMoveEvent event) {
     if (_swipeGestureConsumed || _swipeStartPosition == null) return;
     final delta = event.position - _swipeStartPosition!;
-    if (delta.dy.abs() < 110) return;
-    if (delta.dy.abs() < delta.dx.abs() * 1.25) return;
+    if (delta.dy.abs() < 145) return;
+    if (delta.dy.abs() < delta.dx.abs() * 2.0) return;
 
     _swipeGestureConsumed = true;
     if (delta.dy < 0) {
@@ -368,13 +374,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _lastCountedPlayerTimeSeconds = 0;
     _countEligibleByWatchThreshold = false;
     _playerReady = false;
+    _playerLoadGuardTimer?.cancel();
 
     final videoId = _feed[_currentIndex].videoId;
+    if (_playerRecoveryVideoId != videoId) {
+      _playerRecoveryVideoId = videoId;
+      _playerRecoveryAttempts = 0;
+    }
     final html = _buildYouTubeEmbedHtml(videoId);
     await _webViewController.loadHtmlString(html, baseUrl: _appBaseUrl);
+    _armPlayerLoadGuard(videoId);
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _armPlayerLoadGuard(String videoId) {
+    _playerLoadGuardTimer?.cancel();
+    _playerLoadGuardTimer = Timer(const Duration(seconds: 8), () {
+      if (!mounted ||
+          _feed.isEmpty ||
+          _isShowingAdBreak ||
+          !widget.isActiveTab ||
+          _playerSuspended) {
+        return;
+      }
+      final activeVideoId = _feed[_currentIndex].videoId;
+      if (activeVideoId != videoId) return;
+      if (_playerStateCode == 1 || _playerStateCode == 3) return;
+      if (_playerCurrentTimeSeconds > 0.5) return;
+
+      if (_playerRecoveryAttempts < 1) {
+        _playerRecoveryAttempts += 1;
+        unawaited(_loadCurrentVideoIntoWebView(force: true));
+      } else {
+        _playbackErrorCode ??= 153;
+        unawaited(_goToNextVideo());
+      }
+    });
   }
 
   Future<void> _pausePlayback() async {
@@ -480,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="referrer" content="origin-when-cross-origin">
     <style>
       html, body {
         margin: 0;
@@ -636,6 +673,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           break;
         case 'state':
           _playerStateCode = (decoded['state'] as num?)?.toInt() ?? -1;
+          if (_playerStateCode == 1 || _playerStateCode == 3) {
+            _playerLoadGuardTimer?.cancel();
+          }
           break;
         case 'tick':
           _playerStateCode = (decoded['playerState'] as num?)?.toInt() ?? _playerStateCode;
@@ -643,14 +683,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               (decoded['currentTime'] as num?)?.toDouble() ?? _playerCurrentTimeSeconds;
           _playerDurationSeconds =
               (decoded['duration'] as num?)?.toDouble() ?? _playerDurationSeconds;
+          if (_playerCurrentTimeSeconds > 0.5 || _playerStateCode == 1 || _playerStateCode == 3) {
+            _playerLoadGuardTimer?.cancel();
+          }
           unawaited(_maybeCountShortByWatchThreshold());
           break;
         case 'ended':
           _playerStateCode = 0;
+          _playerLoadGuardTimer?.cancel();
           unawaited(_handleEndedShortPlayback(expectedVideoId: messageVideoId));
           break;
         case 'error':
           final code = (decoded['error'] as num?)?.toInt();
+          _playerLoadGuardTimer?.cancel();
           if (!mounted) return;
           setState(() {
             _playbackErrorCode = code;
@@ -718,6 +763,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  Future<void> _openAndroidSystemWebViewUpdate() async {
+    final uri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=com.google.android.webview',
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openYouTubeUpdate() async {
+    final uri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=com.google.android.youtube',
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Future<void> _trackWatchTime() async {
     if (!mounted || _feed.isEmpty || _isRewardHandling || !_playerReady) return;
     if (_playerStateCode != 1 && _playerStateCode != 3) return;
@@ -751,8 +810,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final positionMs = (_playerCurrentTimeSeconds * 1000).round();
     if (durationMs <= 0 || positionMs <= 0) return;
 
-    // Require either ~85% watched OR at least 45s (whichever is smaller), but never below 20s.
-    final percentThresholdMs = (durationMs * 0.85).round();
+    // Require either ~90% watched OR at least 45s (whichever is smaller), but never below 20s.
+    final percentThresholdMs = (durationMs * 0.90).round();
     final targetMs = [
       20000,
       percentThresholdMs,
@@ -849,11 +908,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!_isShowingAdBreak) return;
       unawaited(_pausePlayback());
     });
-    _resumeAfterOverlay = widget.isActiveTab && (_playerStateCode == 1 || _playerStateCode == 3);
+    _resumeAfterOverlay = widget.isActiveTab;
     try {
       final pendingProvider =
-          _pendingAdBreakProvider == ShortsProgressService.providerUnity
-              ? ShortsProgressService.providerMonetag
+          (_pendingAdBreakProvider == ShortsProgressService.providerUnity ||
+                  _pendingAdBreakProvider == ShortsProgressService.providerMonetag)
+              ? ShortsProgressService.providerAdmob
               : _pendingAdBreakProvider;
       final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
       final isAppodealBreak =
@@ -1005,11 +1065,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _adBreakPauseEnforcer?.cancel();
       _adBreakPauseEnforcer = null;
       _isShowingAdBreak = false;
-      if (_resumeAfterOverlay) {
-        _resumeAfterOverlay = false;
-        if (!_disableAdsForTesting) {
-          unawaited(_restorePlaybackAfterAdBreak());
-        }
+      final shouldRestorePlayback = _resumeAfterOverlay && !_disableAdsForTesting;
+      _resumeAfterOverlay = false;
+      if (shouldRestorePlayback) {
+        unawaited(_restorePlaybackAfterAdBreak());
       }
     }
   }
@@ -1018,7 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (provider == ShortsProgressService.providerAdmob) return 'AdMob';
     if (provider == ShortsProgressService.providerAppodeal) return 'Appodeal';
     if (provider == ShortsProgressService.providerGravite) return 'Gravite';
-    if (provider == ShortsProgressService.providerUnity) return 'Monetag';
+    if (provider == ShortsProgressService.providerUnity) return 'AdMob';
     if (provider == ShortsProgressService.providerMonetag) return 'Monetag';
     return 'Ad';
   }
@@ -1030,94 +1089,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         'ad_counted': '+1 ad counted.',
         'tap_after_three': 'After 3 shorts, tap the ad button',
         'reward_sync_failed': 'Reward sync failed. Please try again.',
-        'no_provider': 'No $provider or Monetag ad available for this turn.',
+        'no_provider': 'No $provider ad available for this turn.',
         'no_generic':
             'No ad available right now. Continuing to the next short.',
       },
       'nl': {
         'ad_counted': '+1 ad geteld.',
         'tap_after_three': 'Na 3 shorts druk je op de ad-knop',
-        'no_provider':
-            'Geen $provider- of Monetag-ad beschikbaar voor deze beurt.',
+        'no_provider': 'Geen $provider-ad beschikbaar voor deze beurt.',
         'no_generic':
             'Geen advertentie beschikbaar. De volgende short gaat verder.',
       },
       'hi': {
         'ad_counted': '+1 ad गिना गया।',
         'tap_after_three': '3 shorts के na ad button दबाएँ',
-        'no_provider': 'इस beurt के लिए $provider या Monetag ad उपलब्ध नहीं है।',
+        'no_provider': 'इस beurt के लिए $provider ad उपलब्ध नहीं है।',
         'no_generic': 'अभी कोई ad उपलब्ध नहीं है। अगला short जारी रहेगा।',
       },
       'de': {
         'ad_counted': '+1 Ad gezählt.',
         'tap_after_three': 'Nach 3 Shorts auf die Ad-Schaltfläche tippen',
-        'no_provider': 'Kein $provider- oder Monetag-Ad für diese Runde verfügbar.',
+        'no_provider': 'Kein $provider-Ad für diese Runde verfügbar.',
         'no_generic': 'Zurzeit kein Ad verfügbar. Nächstes Short läuft weiter.',
       },
       'es': {
         'ad_counted': '+1 ad contado.',
         'tap_after_three': 'Después de 3 shorts, pulsa el botón del ad',
-        'no_provider': 'No hay ad de $provider o Monetag disponible en este turno.',
+        'no_provider': 'No hay ad de $provider disponible en este turno.',
         'no_generic': 'No hay ad disponible ahora. Continuando con el siguiente short.',
       },
       'fr': {
         'ad_counted': '+1 ad compté.',
         'tap_after_three': 'Après 3 shorts, appuyez sur le bouton ad',
-        'no_provider': 'Aucun ad $provider ou Monetag disponible pour ce tour.',
+        'no_provider': 'Aucun ad $provider disponible pour ce tour.',
         'no_generic': 'Aucun ad disponible pour le moment. Passage au short suivant.',
       },
       'ru': {
         'ad_counted': '+1 ad засчитан.',
         'tap_after_three': 'После 3 shorts нажмите кнопку ad',
-        'no_provider': 'Нет доступного ad $provider или Monetag для этого раунда.',
+        'no_provider': 'Нет доступного ad $provider для этого раунда.',
         'no_generic': 'Сейчас нет доступного ad. Переход к следующему short.',
       },
       'el': {
         'ad_counted': '+1 ad μετρήθηκε.',
         'tap_after_three': 'Μετά από 3 shorts πάτησε το κουμπί ad',
-        'no_provider': 'Δεν υπάρχει διαθέσιμο ad $provider ή Monetag για αυτή τη σειρά.',
+        'no_provider': 'Δεν υπάρχει διαθέσιμο ad $provider για αυτή τη σειρά.',
         'no_generic': 'Δεν υπάρχει διαθέσιμο ad τώρα. Συνεχίζει το επόμενο short.',
       },
       'pt': {
         'ad_counted': '+1 ad contado.',
         'tap_after_three': 'Após 3 shorts, toque no botão do ad',
-        'no_provider': 'Nenhum ad $provider ou Monetag disponível para esta ronda.',
+        'no_provider': 'Nenhum ad $provider disponível para esta ronda.',
         'no_generic': 'Nenhum ad disponível agora. A continuar para o próximo short.',
       },
       'it': {
         'ad_counted': '+1 ad conteggiato.',
         'tap_after_three': 'Dopo 3 shorts, tocca il pulsante ad',
-        'no_provider': 'Nessun ad $provider o Monetag disponibile per questo turno.',
+        'no_provider': 'Nessun ad $provider disponibile per questo turno.',
         'no_generic': 'Nessun ad disponibile ora. Si continua con il prossimo short.',
       },
       'tr': {
         'ad_counted': '+1 ad sayıldı.',
         'tap_after_three': '3 shortstan sonra ad düğmesine bas',
-        'no_provider': 'Bu tur için $provider veya Monetag ad mevcut değil.',
+        'no_provider': 'Bu tur için $provider ad mevcut değil.',
         'no_generic': 'Şu anda ad yok. Sonraki short ile devam ediliyor.',
       },
       'ar': {
         'ad_counted': 'تم احتساب +1 ad.',
         'tap_after_three': 'بعد 3 shorts اضغط زر ad',
-        'no_provider': 'لا يوجد ad من $provider أو Monetag لهذه الجولة.',
+        'no_provider': 'لا يوجد ad من $provider لهذه الجولة.',
         'no_generic': 'لا يوجد ad متاح الآن. سيتم المتابعة إلى short التالي.',
       },
       'bn': {
         'ad_counted': '+1 ad গণনা হয়েছে।',
         'tap_after_three': '3 shorts-এর পরে ad বাটন চাপুন',
-        'no_provider': 'এই রাউন্ডে $provider বা Monetag ad নেই।',
+        'no_provider': 'এই রাউন্ডে $provider ad নেই।',
         'no_generic': 'এখন কোনো ad নেই। পরের short চলবে।',
       },
       'ta': {
         'ad_counted': '+1 ad எண்ணப்பட்டது.',
         'tap_after_three': '3 shorts பிறகு ad பட்டனை அழுத்தவும்',
-        'no_provider': 'இந்த முறைக்கு $provider அல்லது Monetag ad இல்லை.',
+        'no_provider': 'இந்த முறைக்கு $provider ad இல்லை.',
         'no_generic': 'இப்போது ad இல்லை. அடுத்த short தொடரும்.',
       },
       'te': {
         'ad_counted': '+1 ad లెక్కించబడింది.',
         'tap_after_three': '3 shorts తర్వాత ad బటన్ నొక్కండి',
-        'no_provider': 'ఈ టర్న్‌కు $provider లేదా Monetag ad అందుబాటులో లేదు.',
+        'no_provider': 'ఈ టర్న్‌కు $provider ad అందుబాటులో లేదు.',
         'no_generic': 'ఇప్పుడు ad లేదు. తదుపరి short కొనసాగుతుంది.',
       },
     };
@@ -1274,6 +1332,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         onPressed: _openCurrentVideoExternally,
                                         child: const Text('Open in YouTube'),
                                       ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _openAndroidSystemWebViewUpdate,
+                                      child: const Text('Update WebView'),
+                                    ),
+                                    TextButton(
+                                      onPressed: _openYouTubeUpdate,
+                                      child: const Text('Update YouTube'),
                                     ),
                                   ],
                                 ),

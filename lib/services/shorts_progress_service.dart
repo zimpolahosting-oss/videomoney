@@ -273,8 +273,8 @@ class ShortsProgressService {
     return switch (provider) {
       providerAdmob => providerAppodeal,
       providerAppodeal => providerGravite,
-      providerGravite => providerMonetag,
-      providerUnity => providerMonetag,
+      providerGravite => providerAdmob,
+      providerUnity => providerAdmob,
       providerMonetag => providerAdmob,
       _ => providerAdmob,
     };
@@ -286,7 +286,7 @@ class ShortsProgressService {
       return allowEmpty ? '' : providerAdmob;
     }
     if (value == providerMonetag || value == providerUnity) {
-      return providerMonetag;
+      return providerAdmob;
     }
     if (
         value == providerGravite ||

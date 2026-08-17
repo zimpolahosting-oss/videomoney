@@ -48,7 +48,6 @@ class RewardedAdService {
     _RewardedNetwork.admob,
     _RewardedNetwork.appodeal,
     _RewardedNetwork.gravite,
-    _RewardedNetwork.unity,
   ];
 
   RewardedAd? _rewardedAd;
