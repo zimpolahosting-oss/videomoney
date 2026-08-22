@@ -219,9 +219,13 @@ class ShortsProgressService {
   Future<ShortsProgressSnapshot> advancePendingAdBreakProvider(String uid) async {
     final snapshot = await load(uid);
     if (snapshot.pendingAdBreakShorts == 0) return snapshot;
+    final currentProvider = _sanitizeProvider(
+      snapshot.pendingAdBreakProvider,
+      allowEmpty: false,
+    );
 
     final next = snapshot.copyWith(
-      pendingAdBreakProvider: providerAdmob,
+      pendingAdBreakProvider: _alternateProvider(currentProvider),
       pendingAdBreakAttempted: true,
     );
     await _save(uid, next);
@@ -267,13 +271,23 @@ class ShortsProgressService {
   }
 
   String _alternateProvider(String provider) {
-    return providerAdmob;
+    return switch (provider) {
+      providerAdmob => providerAppodeal,
+      providerAppodeal => providerGravite,
+      providerGravite => providerAdmob,
+      _ => providerAdmob,
+    };
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
     final value = (provider ?? '').trim();
     if (value.isEmpty) {
       return allowEmpty ? '' : providerAdmob;
+    }
+    if (value == providerAdmob ||
+        value == providerAppodeal ||
+        value == providerGravite) {
+      return value;
     }
     return providerAdmob;
   }

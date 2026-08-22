@@ -13,7 +13,7 @@ class ShortsAdBreakScreen extends StatefulWidget {
     this.autoStart = false,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
-    this.adFlowTimeout = const Duration(seconds: 35),
+    this.adFlowTimeout = const Duration(seconds: 95),
   });
 
   final String providerName;

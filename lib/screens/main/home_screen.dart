@@ -241,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _currentIndex = 0;
         }
       });
-      if (widget.isActiveTab) {
+      if (widget.isActiveTab && !_isShowingAdBreak) {
         await _loadCurrentVideoIntoWebView(force: true);
       } else {
         _playerSuspended = true;
@@ -259,6 +259,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (widget.isActiveTab) {
       unawaited(_earningsService.preloadRewardedVideo());
       unawaited(_reloadShortsProgressFromStorage());
+      if (_isShowingAdBreak) {
+        unawaited(_suspendPlayback(unloadPlayer: true));
+        return;
+      }
       if (_playerSuspended) {
         unawaited(_loadCurrentVideoIntoWebView(force: true));
       } else {
@@ -360,6 +364,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadCurrentVideoIntoWebView({bool force = false}) async {
     if (_feed.isEmpty) return;
+    if (_isShowingAdBreak) {
+      _playerSuspended = true;
+      return;
+    }
     if (!widget.isActiveTab && !force) {
       _playerSuspended = true;
       return;
