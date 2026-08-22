@@ -150,8 +150,11 @@ class ShortsProgressService {
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
     final providerForBreak = shouldStartNewAdBreak
-        ? snapshot.nextAdBreakProvider
-        : snapshot.pendingAdBreakProvider;
+        ? providerAdmob
+        : _sanitizeProvider(
+            snapshot.pendingAdBreakProvider,
+            allowEmpty: false,
+          );
     final next = snapshot.copyWith(
       completedShortsInCycle: nextCompletedShorts,
       bonusProgressShorts: nextBonusProgress,
@@ -164,9 +167,7 @@ class ShortsProgressService {
     final nextWithPending = next.copyWith(
       pendingAdBreakShorts: nextPendingAdBreakShorts,
       pendingAdBreakProvider: providerForBreak,
-      nextAdBreakProvider: shouldStartNewAdBreak
-          ? _alternateProvider(snapshot.nextAdBreakProvider)
-          : snapshot.nextAdBreakProvider,
+      nextAdBreakProvider: providerAdmob,
       pendingAdBreakAttempted:
           shouldStartNewAdBreak ? false : snapshot.pendingAdBreakAttempted,
     );
@@ -219,12 +220,8 @@ class ShortsProgressService {
     final snapshot = await load(uid);
     if (snapshot.pendingAdBreakShorts == 0) return snapshot;
 
-    final currentProvider = _sanitizeProvider(
-      snapshot.pendingAdBreakProvider,
-      allowEmpty: false,
-    );
     final next = snapshot.copyWith(
-      pendingAdBreakProvider: _alternateProvider(currentProvider),
+      pendingAdBreakProvider: providerAdmob,
       pendingAdBreakAttempted: true,
     );
     await _save(uid, next);
@@ -270,31 +267,13 @@ class ShortsProgressService {
   }
 
   String _alternateProvider(String provider) {
-    return switch (provider) {
-      providerAdmob => providerAppodeal,
-      providerAppodeal => providerGravite,
-      providerGravite => providerAdmob,
-      providerUnity => providerAdmob,
-      providerMonetag => providerAdmob,
-      _ => providerAdmob,
-    };
+    return providerAdmob;
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
     final value = (provider ?? '').trim();
     if (value.isEmpty) {
       return allowEmpty ? '' : providerAdmob;
-    }
-    if (value == providerMonetag || value == providerUnity) {
-      return providerAdmob;
-    }
-    if (
-        value == providerGravite ||
-        value == providerAppodeal) {
-      return value;
-    }
-    if (value == providerAdmob) {
-      return providerAdmob;
     }
     return providerAdmob;
   }

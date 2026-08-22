@@ -44,7 +44,7 @@ class RewardedAdService {
       'No ad available right now. Please try again in a moment.';
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
-  static const List<_RewardedNetwork> _rotationOrder = [
+  static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.admob,
     _RewardedNetwork.appodeal,
     _RewardedNetwork.gravite,
@@ -68,7 +68,6 @@ class RewardedAdService {
   bool _isShowing = false;
   bool _isNativeRewardEarned = false;
   bool _methodHandlerRegistered = false;
-  int _lastServedRewardedIndex = -1;
   Timer? _nativeFlowTimeout;
   bool _activeNativeNetworkShown = false;
 
@@ -104,10 +103,13 @@ class RewardedAdService {
           _isLoading = false;
           _logLoaded(_RewardedNetwork.admob);
         },
-        onAdFailedToLoad: (_) {
+        onAdFailedToLoad: (error) {
           _rewardedAd = null;
           _isLoading = false;
-          _logUnavailable(_RewardedNetwork.admob);
+          _logUnavailable(
+            _RewardedNetwork.admob,
+            details: 'load failed: ${error.code} ${error.message}',
+          );
         },
       ),
     );
@@ -179,9 +181,11 @@ class RewardedAdService {
     var rewardEarned = false;
     _rewardedAd = null;
     _isShowing = true;
-    _logShown(_RewardedNetwork.admob);
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        _logShown(_RewardedNetwork.admob);
+      },
       onAdDismissedFullScreenContent: (ad) async {
         await _resetAndLoadNextAd(ad);
         if (!completer.isCompleted) {
@@ -189,7 +193,10 @@ class RewardedAdService {
         }
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
-        _logUnavailable(_RewardedNetwork.admob);
+        _logUnavailable(
+          _RewardedNetwork.admob,
+          details: 'show failed: ${error.code} ${error.message}',
+        );
         onAdStatus?.call(adUnavailableMessage);
         await _resetAndLoadNextAd(ad);
         if (!completer.isCompleted) {
@@ -248,16 +255,18 @@ class RewardedAdService {
   }) async {
     await _refreshNativeRewardedAvailability();
     if (preferredProvider == RewardedAdProvider.admob) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
-      return _isRewardedReady(_RewardedNetwork.admob)
-          ? _RewardedNetwork.admob
-          : null;
+      return _selectFirstReadyWithRetry(const [
+        _RewardedNetwork.admob,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.gravite,
+      ]);
     }
     if (preferredProvider == RewardedAdProvider.appodeal) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.appodeal);
-      return _isRewardedReady(_RewardedNetwork.appodeal)
-          ? _RewardedNetwork.appodeal
-          : null;
+      return _selectFirstReadyWithRetry(const [
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.gravite,
+        _RewardedNetwork.admob,
+      ]);
     }
     if (preferredProvider == RewardedAdProvider.unity) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.unity);
@@ -266,46 +275,39 @@ class RewardedAdService {
           : null;
     }
     if (preferredProvider == RewardedAdProvider.gravite) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.gravite);
-      return _isRewardedReady(_RewardedNetwork.gravite)
-          ? _RewardedNetwork.gravite
-          : null;
+      return _selectFirstReadyWithRetry(const [
+        _RewardedNetwork.gravite,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.admob,
+      ]);
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
-      await _givePreferredNetworkOneMoreChance(_RewardedNetwork.admob);
-      return _isRewardedReady(_RewardedNetwork.admob)
-          ? _RewardedNetwork.admob
-          : null;
+      return _selectFirstReadyWithRetry(const [
+        _RewardedNetwork.admob,
+        _RewardedNetwork.appodeal,
+        _RewardedNetwork.gravite,
+      ]);
     }
-    for (var offset = 1; offset <= _rotationOrder.length; offset++) {
-      final index = (_lastServedRewardedIndex + offset) % _rotationOrder.length;
-      final network = _rotationOrder[index];
+    return _selectFirstReadyWithRetry(_priorityOrder);
+  }
+
+  Future<_RewardedNetwork?> _selectFirstReadyWithRetry(
+    List<_RewardedNetwork> order,
+  ) async {
+    for (final network in order) {
       if (_isRewardedReady(network)) {
-        _lastServedRewardedIndex = index;
         debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)}.');
         return network;
       }
     }
-    if (_isRewardedReady(_RewardedNetwork.admob)) {
-      debugPrint('[Ads][rewarded] selected ${_labelForNetwork(_RewardedNetwork.admob)}.');
-      return _RewardedNetwork.admob;
+    for (final network in order) {
+      await _givePreferredNetworkOneMoreChance(network);
+      if (_isRewardedReady(network)) {
+        debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)} after retry.');
+        return network;
+      }
     }
     return null;
-  }
-
-  Future<_RewardedNetwork?> _selectReadyWithFallback({
-    required _RewardedNetwork primary,
-    _RewardedNetwork? fallback,
-  }) async {
-    await _givePreferredNetworkOneMoreChance(primary);
-    if (_isRewardedReady(primary)) {
-      return primary;
-    }
-    if (fallback == null) {
-      return null;
-    }
-    await _givePreferredNetworkOneMoreChance(fallback);
-    return _isRewardedReady(fallback) ? fallback : null;
   }
 
   Future<void> _givePreferredNetworkOneMoreChance(
@@ -656,17 +658,10 @@ class RewardedAdService {
     debugPrint('[Ads][rewarded] ${_labelForNetwork(network)} shown.');
   }
 
-  void _logUnavailable(_RewardedNetwork network) {
-    debugPrint('[Ads][rewarded] ${_labelForNetwork(network)} unavailable.');
-  }
-
-  _RewardedNetwork? _firstReady(List<_RewardedNetwork> order) {
-    for (final network in order) {
-      if (_isRewardedReady(network)) {
-        debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)}.');
-        return network;
-      }
-    }
-    return null;
+  void _logUnavailable(_RewardedNetwork network, {String? details}) {
+    final suffix = details == null || details.isEmpty ? '' : ' ($details)';
+    debugPrint(
+      '[Ads][rewarded] ${_labelForNetwork(network)} unavailable$suffix.',
+    );
   }
 }
