@@ -471,10 +471,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _restorePlaybackAfterAdBreak() async {
-    if (!mounted || !widget.isActiveTab || _isShowingAdBreak || _playerSuspended) {
+    if (!mounted || !widget.isActiveTab || _isShowingAdBreak) {
       return;
     }
 
+    _playerSuspended = false;
     _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
     if (!_playerReady) {
@@ -489,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     await _resumePlaybackIfNeeded();
     Future<void>.delayed(const Duration(milliseconds: 1200), () {
-      if (!mounted || _isShowingAdBreak || _playerSuspended) return;
+      if (!mounted || _isShowingAdBreak) return;
       if (_playerStateCode != 1) {
         unawaited(_loadCurrentVideoIntoWebView(force: true));
         Future<void>.delayed(const Duration(milliseconds: 900), () {
