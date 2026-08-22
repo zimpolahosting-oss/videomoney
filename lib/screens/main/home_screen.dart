@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           unawaited(_reloadShortsProgressFromStorage());
         }
         if (_isShowingAdBreak) {
-          unawaited(_pausePlayback());
+          unawaited(_suspendPlayback(unloadPlayer: true));
         } else {
           unawaited(_resumePlaybackIfNeeded());
         }
@@ -903,10 +903,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isShowingAdBreak = true;
     _blockPlaybackResume(const Duration(minutes: 2));
+    unawaited(_suspendPlayback(unloadPlayer: true));
     _adBreakPauseEnforcer?.cancel();
     _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
       if (!_isShowingAdBreak) return;
-      unawaited(_pausePlayback());
+      unawaited(_suspendPlayback(unloadPlayer: true));
     });
     _resumeAfterOverlay = widget.isActiveTab;
     try {
@@ -938,7 +939,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 providerName: _providerLabelForAdBreak(pendingProvider),
                 autoStart: true,
                 adStartDelay: const Duration(milliseconds: 250),
-                onPrepare: _pausePlayback,
+                onPrepare: () => _suspendPlayback(unloadPlayer: true),
                 onStartAd: (_) async {
                   if (isRewardedTurn) {
                     var rewardedCompleted =
