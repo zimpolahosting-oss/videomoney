@@ -44,6 +44,7 @@ class RewardedAdService {
       'No ad available right now. Please try again in a moment.';
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
+  static const Duration _networkCooldownDuration = Duration(minutes: 10);
   static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.admob,
     _RewardedNetwork.appodeal,
@@ -60,6 +61,7 @@ class RewardedAdService {
     _RewardedNetwork.meta: false,
     _RewardedNetwork.startio: false,
   };
+  final Map<_RewardedNetwork, DateTime> _networkCooldownUntil = {};
   Completer<bool>? _nativeShowCompleter;
   FutureOr<void> Function()? _nativeRewardCallback;
   void Function(String message)? _nativeStatusCallback;
@@ -209,6 +211,7 @@ class RewardedAdService {
           final details = beforeShow
               ? 'timeout before show'
               : 'timeout after show';
+          _markNetworkCoolingOff(_RewardedNetwork.admob, details);
           _logUnavailable(_RewardedNetwork.admob, details: details);
           onAdStatus?.call(adUnavailableMessage);
           completeAdMobFlow(rewardEarned);
@@ -228,6 +231,10 @@ class RewardedAdService {
         completeAdMobFlow(rewardEarned);
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
+        _markNetworkCoolingOff(
+          _RewardedNetwork.admob,
+          'show failed: ${error.code} ${error.message}',
+        );
         _logUnavailable(
           _RewardedNetwork.admob,
           details: 'show failed: ${error.code} ${error.message}',
@@ -387,6 +394,9 @@ class RewardedAdService {
   }
 
   bool _isRewardedReady(_RewardedNetwork network) {
+    if (_isNetworkCoolingDown(network)) {
+      return false;
+    }
     if (network == _RewardedNetwork.admob) {
       return _rewardedAd != null;
     }
@@ -433,6 +443,7 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onGraviteRewardedVideoError':
+        _markNetworkCoolingOff(_RewardedNetwork.gravite, 'native error');
         _updateNativeAvailability(_RewardedNetwork.gravite, false);
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
@@ -455,6 +466,7 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onRewardedVideoShowFailed':
+        _markNetworkCoolingOff(_RewardedNetwork.appodeal, 'native show failed');
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -475,6 +487,7 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onUnityRewardedVideoShowFailed':
+        _markNetworkCoolingOff(_RewardedNetwork.unity, 'native show failed');
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -492,6 +505,7 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onAppnextRewardedVideoError':
+        _markNetworkCoolingOff(_RewardedNetwork.appnext, 'native error');
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -522,6 +536,10 @@ class RewardedAdService {
           if (code != null && code.isNotEmpty) 'code=$code',
           if (error != null && error.isNotEmpty) error,
         ].join(' | ');
+        _markNetworkCoolingOff(
+          _RewardedNetwork.meta,
+          details.isEmpty ? 'native error' : details,
+        );
         _nativeStatusCallback?.call(
           details.isEmpty ? adUnavailableMessage : 'Meta failed: $details',
         );
@@ -546,6 +564,7 @@ class RewardedAdService {
         _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
         break;
       case 'onStartioRewardedVideoError':
+        _markNetworkCoolingOff(_RewardedNetwork.startio, 'native error');
         _nativeStatusCallback?.call(adUnavailableMessage);
         _completeNativeRewardedFlow(false, reloadNextAd: true);
         break;
@@ -658,6 +677,24 @@ class RewardedAdService {
     } else {
       _logUnavailable(network);
     }
+  }
+
+  bool _isNetworkCoolingDown(_RewardedNetwork network) {
+    final until = _networkCooldownUntil[network];
+    if (until == null) return false;
+    if (DateTime.now().isAfter(until)) {
+      _networkCooldownUntil.remove(network);
+      return false;
+    }
+    return true;
+  }
+
+  void _markNetworkCoolingOff(_RewardedNetwork network, String reason) {
+    _networkCooldownUntil[network] = DateTime.now().add(_networkCooldownDuration);
+    debugPrint(
+      '[Ads][rewarded] ${_labelForNetwork(network)} cooldown for '
+      '${_networkCooldownDuration.inMinutes}m: $reason',
+    );
   }
 
   String _labelForNetwork(_RewardedNetwork network) {
