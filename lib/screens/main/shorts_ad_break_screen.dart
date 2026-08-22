@@ -13,6 +13,7 @@ class ShortsAdBreakScreen extends StatefulWidget {
     this.autoStart = false,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
+    this.adFlowTimeout = const Duration(seconds: 35),
   });
 
   final String providerName;
@@ -21,6 +22,7 @@ class ShortsAdBreakScreen extends StatefulWidget {
   final bool autoStart;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
+  final Duration adFlowTimeout;
 
   @override
   State<ShortsAdBreakScreen> createState() => _ShortsAdBreakScreenState();
@@ -57,6 +59,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
         'adReady': 'Ad ready',
         'tapNextAd': 'Tap the button to watch your next ad.',
         'startingAd': 'Starting ad...',
+        'timeoutStarting': 'The ad is taking too long to load. Please try again.',
         'continueTitle': 'Watch ad to continue',
         'watchNow': 'Watch ad now',
         'afterThreeShorts':
@@ -66,6 +69,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
         'adReady': 'Ad klaar',
         'tapNextAd': 'Druk op de knop om je volgende advertentie te bekijken.',
         'startingAd': 'Advertentie wordt gestart...',
+        'timeoutStarting': 'De advertentie duurt te lang met laden. Probeer opnieuw.',
         'continueTitle': 'Kijk een advertentie om verder te gaan',
         'watchNow': 'Bekijk advertentie',
         'afterThreeShorts':
@@ -200,7 +204,20 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
       _isStartingAd = true;
       _statusText = _tr('startingAd');
     });
-    final completed = await widget.onStartAd(context);
+    bool completed = false;
+    try {
+      completed = await widget.onStartAd(context).timeout(
+        widget.adFlowTimeout,
+        onTimeout: () => false,
+      );
+    } catch (_) {
+      completed = false;
+    }
+    if (!completed && mounted) {
+      setState(() {
+        _statusText = _tr('timeoutStarting');
+      });
+    }
     final remainingMinimum =
         widget.minimumVisibleDuration - DateTime.now().difference(_openedAt);
     if (remainingMinimum > Duration.zero) {

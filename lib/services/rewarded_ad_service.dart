@@ -179,18 +179,53 @@ class RewardedAdService {
 
     final completer = Completer<bool>();
     var rewardEarned = false;
+    var adShown = false;
+    Timer? adMobFlowTimeout;
     _rewardedAd = null;
     _isShowing = true;
 
+    void completeAdMobFlow(
+      bool result, {
+      bool reloadNextAd = true,
+    }) {
+      adMobFlowTimeout?.cancel();
+      adMobFlowTimeout = null;
+      if (reloadNextAd) {
+        unawaited(_resetAndLoadNextAd(ad));
+      } else {
+        _isShowing = false;
+      }
+      if (!completer.isCompleted) {
+        completer.complete(result);
+      }
+    }
+
+    void armAdMobTimeout({required bool beforeShow}) {
+      adMobFlowTimeout?.cancel();
+      adMobFlowTimeout = Timer(
+        beforeShow ? const Duration(seconds: 12) : const Duration(seconds: 75),
+        () {
+          if (completer.isCompleted) return;
+          final details = beforeShow
+              ? 'timeout before show'
+              : 'timeout after show';
+          _logUnavailable(_RewardedNetwork.admob, details: details);
+          onAdStatus?.call(adUnavailableMessage);
+          completeAdMobFlow(rewardEarned);
+        },
+      );
+    }
+
+    armAdMobTimeout(beforeShow: true);
+
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
+        adShown = true;
         _logShown(_RewardedNetwork.admob);
+        armAdMobTimeout(beforeShow: false);
       },
       onAdDismissedFullScreenContent: (ad) async {
-        await _resetAndLoadNextAd(ad);
-        if (!completer.isCompleted) {
-          completer.complete(rewardEarned);
-        }
+        completeAdMobFlow(rewardEarned);
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
         _logUnavailable(
@@ -198,10 +233,7 @@ class RewardedAdService {
           details: 'show failed: ${error.code} ${error.message}',
         );
         onAdStatus?.call(adUnavailableMessage);
-        await _resetAndLoadNextAd(ad);
-        if (!completer.isCompleted) {
-          completer.complete(false);
-        }
+        completeAdMobFlow(false);
       },
     );
 
@@ -216,6 +248,10 @@ class RewardedAdService {
         }
       },
     );
+
+    if (!adShown) {
+      armAdMobTimeout(beforeShow: true);
+    }
 
     return completer.future;
   }
