@@ -21,6 +21,7 @@ class FirestoreService {
   static const int dailyBonusTargetVideos = 20;
   static const int dailyBonusViews = 0;
   static const int minimumPayoutCoins = 1000;
+  static const int minimumAdRoulettePayoutAds = 1000;
   static const int payoutProcessingDays = 5;
   static const double estimatedEuroPerAd = 0.001;
   static const int minimumPayoutBuildNumber = 59;
@@ -69,6 +70,7 @@ class FirestoreService {
     required int coinsDelta,
     required int videosWatchedDelta,
     required String reason,
+    String balanceSource = 'videomoney',
   }) async {
     for (var attempt = 0; attempt < 2; attempt++) {
       final session = await SessionService.instance.ensureSession();
@@ -81,6 +83,7 @@ class FirestoreService {
           'coinsDelta': coinsDelta,
           'videosWatchedDelta': videosWatchedDelta,
           'reason': reason,
+          'balanceSource': balanceSource.trim(),
         });
         return;
       } on FirebaseFunctionsException catch (error) {
@@ -187,6 +190,9 @@ class FirestoreService {
     if (!data.containsKey('leaderboardDisplayName')) {
       updates['leaderboardDisplayName'] = '';
     }
+    if (!data.containsKey('adRouletteAds')) {
+      updates['adRouletteAds'] = 0;
+    }
 
     return updates;
   }
@@ -220,6 +226,7 @@ class FirestoreService {
       'email': user.email ?? '',
       'leaderboardDisplayName': '',
       'coins': 0,
+      'adRouletteAds': 0,
       'videosWatched': 0,
       'dailyProgressDate': todayKey,
       'dailyVideosWatched': 0,
@@ -270,6 +277,7 @@ class FirestoreService {
             'email': email,
             'leaderboardDisplayName': '',
             'coins': 0,
+            'adRouletteAds': 0,
             'videosWatched': 0,
             'dailyProgressDate': todayKey,
             'dailyVideosWatched': 0,
@@ -472,6 +480,18 @@ class FirestoreService {
       coinsDelta: viewsDelta,
       videosWatchedDelta: videosWatchedDelta,
       reason: 'progress',
+    );
+  }
+
+  Future<void> rewardAdRouletteAd({
+    required String uid,
+    int adsReward = rewardCoinsPerVideo,
+  }) async {
+    await _callVmApplyProgress(
+      coinsDelta: adsReward,
+      videosWatchedDelta: 0,
+      reason: 'adroulette_rewarded_video',
+      balanceSource: 'adroulette',
     );
   }
 

@@ -221,6 +221,96 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 16),
             StreamBuilder<AppUser?>(
               stream: firestoreService.watchUser(user.uid),
+              builder: (context, snapshot) {
+                final appUser = snapshot.data;
+                final currentAdrouletteAds = appUser?.adRouletteAds ?? 0;
+                final remaining = currentAdrouletteAds >=
+                        FirestoreService.minimumAdRoulettePayoutAds
+                    ? 0
+                    : FirestoreService.minimumAdRoulettePayoutAds -
+                        currentAdrouletteAds;
+                final progress = (currentAdrouletteAds /
+                        FirestoreService.minimumAdRoulettePayoutAds)
+                    .clamp(0.0, 1.0);
+                return Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: const Color(0xFF3A2C00).withOpacity(0.92),
+                    border: Border.all(
+                      color: const Color(0xFFE6C54A).withOpacity(0.55),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Adroulette Ads',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This yellow balance is separate from your normal VideoMoney ads. No value estimate is shown here.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        NumberFormat.decimalPattern().format(currentAdrouletteAds),
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: const Color(0xFFFFE082),
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 12,
+                          backgroundColor: Colors.white12,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFE6C54A),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        remaining == 0
+                            ? 'Ready for payout at 1000 Adroulette ads.'
+                            : '$remaining Adroulette ads remaining to reach 1000.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(
+                              AppRoutes.payoutRequest,
+                              arguments: {
+                                'balanceSource': 'adroulette',
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.casino_rounded),
+                          label: const Text('Request Adroulette payout'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<AppUser?>(
+              stream: firestoreService.watchUser(user.uid),
               builder: (context, userSnapshot) {
                 return _AdsTransferSection(
                   firestoreService: firestoreService,

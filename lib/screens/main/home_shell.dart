@@ -10,6 +10,7 @@ import '../../services/firestore_service.dart';
 import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
 import '../../theme/app_theme.dart';
+import 'adroulette_screen.dart';
 import 'games_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -348,11 +349,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               recoveryToken: _homeTabRecoveryToken,
             )
           : const _HomeStartupPlaceholder(),
-      1 || 2 || 3 => _readyTabs.contains(index)
+      1 || 2 || 3 || 4 => _readyTabs.contains(index)
           ? switch (index) {
               1 => const GamesScreen(),
-              2 => const WalletScreen(),
-              3 => const ProfileScreen(),
+              2 => const AdrouletteScreen(),
+              3 => const WalletScreen(),
+              4 => const ProfileScreen(),
               _ => const SizedBox.shrink(),
             }
           : _TabStartupPlaceholder(index: index),
@@ -386,8 +388,9 @@ class _TabStartupPlaceholder extends StatelessWidget {
     final l10n = context.l10n;
     final label = switch (index) {
       1 => 'Games',
-      2 => l10n.wallet,
-      3 => l10n.profile,
+      2 => 'Adroulette',
+      3 => l10n.wallet,
+      4 => l10n.profile,
       _ => l10n.loading,
     };
     return Scaffold(

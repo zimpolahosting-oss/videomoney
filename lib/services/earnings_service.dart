@@ -44,4 +44,18 @@ class EarningsService {
       provider: provider,
     );
   }
+
+  Future<bool> watchAdRouletteAd({
+    required String uid,
+    required ValueChanged<String> onAdStatus,
+    RewardedAdProvider provider = RewardedAdProvider.auto,
+  }) {
+    return _rewardedAdService.showRewardedAd(
+      onUserEarnedReward: () async {
+        await _firestoreService.rewardAdRouletteAd(uid: uid);
+      },
+      onAdStatus: onAdStatus,
+      provider: provider,
+    );
+  }
 }
