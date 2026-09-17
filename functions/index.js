@@ -1089,12 +1089,17 @@ exports.vmApplyProgress = onCall(async (request) => {
   const coinsDelta = sanitizeInteger(request.data?.coinsDelta, 0);
   const videosWatchedDelta = sanitizeInteger(request.data?.videosWatchedDelta, 0);
   const reason = sanitizeString(request.data?.reason || "progress");
+  const balanceSource =
+    sanitizeString(request.data?.balanceSource).toLowerCase() || "videomoney";
 
   if (!sessionId) {
     throw new HttpsError("invalid-argument", "sessionId is required.");
   }
   requiresMinimumBuild(buildNumber);
 
+  if (balanceSource !== "videomoney" && balanceSource !== "adroulette") {
+    throw new HttpsError("invalid-argument", "Invalid balance source.");
+  }
   if (coinsDelta < 0 || videosWatchedDelta < 0) {
     throw new HttpsError(
       "invalid-argument",
@@ -1133,7 +1138,6 @@ exports.vmApplyProgress = onCall(async (request) => {
       );
     }
 
-    // Rate-limit coin rewards to stop farms.
     const windowStartMs = data.rewardWindowStartAt?.toMillis
       ? data.rewardWindowStartAt.toMillis()
       : 0;
@@ -1152,8 +1156,14 @@ exports.vmApplyProgress = onCall(async (request) => {
     }
 
     const currentCoins = sanitizeInteger(data.coins, 0);
+    const currentAdRouletteAds = sanitizeInteger(data.adRouletteAds, 0);
     const currentVideos = sanitizeInteger(data.videosWatched, 0);
-    const nextCoins = currentCoins + coinsDelta;
+    const nextCoins =
+      balanceSource === "videomoney" ? currentCoins + coinsDelta : currentCoins;
+    const nextAdRouletteAds =
+      balanceSource === "adroulette"
+        ? currentAdRouletteAds + coinsDelta
+        : currentAdRouletteAds;
     const nextVideos = currentVideos + videosWatchedDelta;
 
     const updates = {
@@ -1167,28 +1177,36 @@ exports.vmApplyProgress = onCall(async (request) => {
       lastRewardAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    if (coinsDelta !== 0) updates.coins = admin.firestore.FieldValue.increment(coinsDelta);
-    if (videosWatchedDelta !== 0) updates.videosWatched = admin.firestore.FieldValue.increment(videosWatchedDelta);
+    if (coinsDelta !== 0 && balanceSource === "videomoney") {
+      updates.coins = admin.firestore.FieldValue.increment(coinsDelta);
+    }
+    if (coinsDelta !== 0 && balanceSource === "adroulette") {
+      updates.adRouletteAds = admin.firestore.FieldValue.increment(coinsDelta);
+    }
+    if (videosWatchedDelta !== 0) {
+      updates.videosWatched = admin.firestore.FieldValue.increment(videosWatchedDelta);
+    }
 
     tx.set(userRef, updates, {merge: true});
 
-    // Keep leaderboard in sync (best-effort).
     const email = sanitizeString(data.email);
     const customName = sanitizeString(data.leaderboardDisplayName);
     const publicName = customName || (email ? `${email.split("@")[0]}***` : "User");
-    tx.set(
-      leaderboardRef,
-      {
-        uid,
-        customName,
-        publicName,
-        views: nextCoins,
-        videosWatched: nextVideos,
-        estimatedEarnings: Number((nextCoins * 0.001).toFixed(6)),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      {merge: true}
-    );
+    if (balanceSource === "videomoney") {
+      tx.set(
+        leaderboardRef,
+        {
+          uid,
+          customName,
+          publicName,
+          views: nextCoins,
+          videosWatched: nextVideos,
+          estimatedEarnings: Number((nextCoins * 0.001).toFixed(6)),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+    }
   });
 
   return {ok: true};
@@ -1200,6 +1218,8 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
   const appVersion = sanitizeString(request.data?.appVersion);
   const versionName = sanitizeString(request.data?.versionName);
   const coinsRequested = sanitizeInteger(request.data?.coinsRequested, 0);
+  const balanceSource =
+    sanitizeString(request.data?.balanceSource).toLowerCase() || "videomoney";
   const payoutMethod = sanitizeString(request.data?.payoutMethod).toLowerCase();
   const payPalEmail = sanitizeString(request.data?.payPalEmail);
   const revolutUsername = sanitizeString(request.data?.revolutUsername);
@@ -1211,6 +1231,9 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
   const cryptoAddress = sanitizeString(request.data?.cryptoAddress);
 
   requiresMinimumBuild(buildNumber);
+  if (balanceSource !== "videomoney" && balanceSource !== "adroulette") {
+    throw new HttpsError("invalid-argument", "Invalid balance source.");
+  }
 
   if (coinsRequested <= 0) {
     throw new HttpsError("invalid-argument", "Requested ads must be greater than zero.");
@@ -1252,7 +1275,10 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
 
     const userData = userSnap.data() || {};
     const currentCoins = sanitizeInteger(userData.coins, 0);
-    if (currentCoins < coinsRequested) {
+    const currentAdRouletteAds = sanitizeInteger(userData.adRouletteAds, 0);
+    const currentBalance =
+      balanceSource === "adroulette" ? currentAdRouletteAds : currentCoins;
+    if (currentBalance < coinsRequested) {
       throw new HttpsError("failed-precondition", "Not enough ads available.");
     }
 
@@ -1260,29 +1286,40 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
     const customName = sanitizeString(userData.leaderboardDisplayName);
     const currentVideosWatched = sanitizeInteger(userData.videosWatched, 0);
     const remainingViews = currentCoins - coinsRequested;
+    const remainingAdRouletteAds = currentAdRouletteAds - coinsRequested;
     const legacyBankValue = iban || bankAccountNumber;
 
-    tx.set(
-      userRef,
-      {
-        coins: remainingViews,
-      },
-      {merge: true}
-    );
+    if (balanceSource === "adroulette") {
+      tx.set(
+        userRef,
+        {
+          adRouletteAds: remainingAdRouletteAds,
+        },
+        {merge: true}
+      );
+    } else {
+      tx.set(
+        userRef,
+        {
+          coins: remainingViews,
+        },
+        {merge: true}
+      );
 
-    tx.set(
-      leaderboardRef,
-      {
-        uid,
-        customName,
-        publicName: buildLeaderboardPublicName(userEmail, customName),
-        views: remainingViews,
-        videosWatched: currentVideosWatched,
-        estimatedEarnings: Number((remainingViews * 0.001).toFixed(6)),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      {merge: true}
-    );
+      tx.set(
+        leaderboardRef,
+        {
+          uid,
+          customName,
+          publicName: buildLeaderboardPublicName(userEmail, customName),
+          views: remainingViews,
+          videosWatched: currentVideosWatched,
+          estimatedEarnings: Number((remainingViews * 0.001).toFixed(6)),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+    }
 
     tx.set(payoutRef, {
       userId: uid,
@@ -1290,6 +1327,7 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
       coinsRequested,
       payoutMethod,
       payoutCurrency,
+      balanceSource,
       status: "pending",
       payPalEmail,
       ibanOrBankAccount: payoutMethod === "revolut" ? revolutUsername : legacyBankValue,
