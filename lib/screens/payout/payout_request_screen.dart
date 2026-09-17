@@ -11,9 +11,14 @@ enum _PayoutMethod { paypal, revolut, btc, usdc }
 enum _PayoutCurrency { eur, gbp, usd }
 
 class PayoutRequestScreen extends StatefulWidget {
-  const PayoutRequestScreen({super.key, this.initialMethod});
+  const PayoutRequestScreen({
+    super.key,
+    this.initialMethod,
+    this.balanceSource = 'videomoney',
+  });
 
   final String? initialMethod;
+  final String balanceSource;
 
   @override
   State<PayoutRequestScreen> createState() => _PayoutRequestScreenState();
