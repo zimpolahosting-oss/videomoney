@@ -31,6 +31,7 @@ class PayoutRequest {
     required this.minimumRequiredBuildNumber,
     required this.rejectReasonCode,
     required this.rejectReasonNote,
+    required this.balanceSource,
   });
 
   final String id;
@@ -64,11 +65,13 @@ class PayoutRequest {
   final int minimumRequiredBuildNumber;
   final String rejectReasonCode;
   final String rejectReasonNote;
+  final String balanceSource;
 
   int get viewsRequested => coinsRequested;
   bool get isBankTransfer => payoutMethod == 'bank';
   String get normalizedCurrency => payoutCurrency.isEmpty ? 'EUR' : payoutCurrency;
   bool get hasRecordedPaidAmount => paidAmountLabel.trim().isNotEmpty;
+  bool get isAdRoulette => balanceSource == 'adroulette';
 
   String get payoutMethodLabel {
     switch (payoutMethod) {
@@ -177,6 +180,8 @@ class PayoutRequest {
           (data['minimumRequiredBuildNumber'] as num?)?.toInt() ?? 0,
       rejectReasonCode: data['rejectReasonCode'] as String? ?? '',
       rejectReasonNote: data['rejectReasonNote'] as String? ?? '',
+      balanceSource:
+          (data['balanceSource'] as String? ?? 'videomoney').trim().toLowerCase(),
     );
   }
 

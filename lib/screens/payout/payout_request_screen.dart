@@ -32,6 +32,9 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
   late _PayoutMethod _method;
   _PayoutCurrency _currency = _PayoutCurrency.eur;
 
+  bool get _isAdRoulette =>
+      widget.balanceSource.trim().toLowerCase() == 'adroulette';
+
   @override
   void initState() {
     super.initState();
@@ -105,6 +108,7 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
             (_method == _PayoutMethod.btc || _method == _PayoutMethod.usdc)
                 ? _cryptoAddressController.text
                 : '',
+        balanceSource: _isAdRoulette ? 'adroulette' : 'videomoney',
       );
 
       if (!mounted) return;
@@ -173,12 +177,14 @@ class _PayoutRequestScreenState extends State<PayoutRequestScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                l10n.submitUsingBalance,
+                _isAdRoulette ? 'Submit using your Adroulette balance.' : l10n.submitUsingBalance,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.estimatedEarningsNotGuaranteed,
+                _isAdRoulette
+                    ? 'Adroulette ads are counted separately from your normal VideoMoney ads.'
+                    : l10n.estimatedEarningsNotGuaranteed,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),

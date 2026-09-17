@@ -85,11 +85,20 @@ class AppRoutes {
           settings: settings,
         );
       case AppRoutes.payoutRequest:
-        final initialMethod = settings.arguments is String
-            ? settings.arguments as String
-            : null;
+        final args = settings.arguments;
+        final initialMethod = args is String
+            ? args
+            : args is Map
+                ? args['initialMethod'] as String?
+                : null;
+        final balanceSource = args is Map
+            ? (args['balanceSource'] as String? ?? 'videomoney')
+            : 'videomoney';
         return MaterialPageRoute<void>(
-          builder: (_) => PayoutRequestScreen(initialMethod: initialMethod),
+          builder: (_) => PayoutRequestScreen(
+            initialMethod: initialMethod,
+            balanceSource: balanceSource,
+          ),
           settings: settings,
         );
       default:

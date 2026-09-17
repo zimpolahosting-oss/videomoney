@@ -79,6 +79,13 @@ class PayoutHistoryScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
+                            payout.isAdRoulette
+                                ? 'Adroulette payout'
+                                : 'VideoMoney payout',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
                             l10n.currencyLabel(payout.normalizedCurrency),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
