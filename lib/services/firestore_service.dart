@@ -521,6 +521,7 @@ class FirestoreService {
     required String iban,
     required String bankAccountNumber,
     required String cryptoAddress,
+    String balanceSource = 'videomoney',
   }) async {
     final userRef = _users.doc(uid);
     final payoutRef = _payouts.doc();
