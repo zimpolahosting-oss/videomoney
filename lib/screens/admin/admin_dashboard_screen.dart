@@ -743,6 +743,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
+                        payout.isAdRoulette
+                            ? 'Source: Adroulette'
+                            : 'Source: VideoMoney',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
                         '${payout.payoutMethodLabel} • ${payout.normalizedCurrency}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
