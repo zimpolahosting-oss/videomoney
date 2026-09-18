@@ -814,6 +814,10 @@ class FirestoreService {
         final userId = payoutData['userId'] as String? ?? '';
         final coinsRequested =
             (payoutData['coinsRequested'] as num?)?.toInt() ?? 0;
+        final balanceSource =
+            (payoutData['balanceSource'] as String? ?? 'videomoney')
+                .trim()
+                .toLowerCase();
         if (userId.isNotEmpty && coinsRequested > 0) {
           final userRef = _users.doc(userId);
           final userSnapshot = await transaction.get(userRef);
@@ -825,23 +829,31 @@ class FirestoreService {
           final customName =
               (userData['leaderboardDisplayName'] as String? ?? '').trim();
           final currentViews = (userData['coins'] as num?)?.toInt() ?? 0;
+          final currentAdRouletteAds =
+              (userData['adRouletteAds'] as num?)?.toInt() ?? 0;
           final videosWatched =
               (userData['videosWatched'] as num?)?.toInt() ?? 0;
 
-          transaction.update(userRef, {
-            'coins': FieldValue.increment(coinsRequested),
-          });
-          transaction.set(
-            _leaderboard.doc(userId),
-            _leaderboardPayload(
-              uid: userId,
-              email: email,
-              customName: customName,
-              views: currentViews + coinsRequested,
-              videosWatched: videosWatched,
-            ),
-            SetOptions(merge: true),
-          );
+          if (balanceSource == 'adroulette') {
+            transaction.update(userRef, {
+              'adRouletteAds': FieldValue.increment(coinsRequested),
+            });
+          } else {
+            transaction.update(userRef, {
+              'coins': FieldValue.increment(coinsRequested),
+            });
+            transaction.set(
+              _leaderboard.doc(userId),
+              _leaderboardPayload(
+                uid: userId,
+                email: email,
+                customName: customName,
+                views: currentViews + coinsRequested,
+                videosWatched: videosWatched,
+              ),
+              SetOptions(merge: true),
+            );
+          }
           updates['refundApplied'] = true;
           updates['refundedAt'] = FieldValue.serverTimestamp();
         }
