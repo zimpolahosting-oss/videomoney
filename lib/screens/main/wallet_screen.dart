@@ -169,7 +169,12 @@ class WalletScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            _SectionTitle(title: l10n.payoutMethods),
+            _SectionTitle(title: 'VideoMoney payout methods'),
+            const SizedBox(height: 6),
+            Text(
+              'These payout method buttons use your normal VideoMoney ads balance.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 10),
             _MethodTile(
               icon: Icons.payments_outlined,
@@ -254,6 +259,13 @@ class WalletScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'This yellow balance is separate from your normal VideoMoney ads. No value estimate is shown here.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Use the yellow button below for Adroulette payouts. The payout method buttons above are only for your normal VideoMoney balance.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.white70,
                             ),
