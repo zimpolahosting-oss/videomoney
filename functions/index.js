@@ -1156,7 +1156,10 @@ exports.vmApplyProgress = onCall(async (request) => {
     }
 
     const currentCoins = sanitizeInteger(data.coins, 0);
-    const currentAdRouletteAds = sanitizeInteger(data.adRouletteAds, 0);
+    const currentAdRouletteAds = sanitizeInteger(
+      data.adRouletteAds ?? data.adrouletteads,
+      0
+    );
     const currentVideos = sanitizeInteger(data.videosWatched, 0);
     const nextCoins =
       balanceSource === "videomoney" ? currentCoins + coinsDelta : currentCoins;
@@ -1181,7 +1184,8 @@ exports.vmApplyProgress = onCall(async (request) => {
       updates.coins = admin.firestore.FieldValue.increment(coinsDelta);
     }
     if (coinsDelta !== 0 && balanceSource === "adroulette") {
-      updates.adRouletteAds = admin.firestore.FieldValue.increment(coinsDelta);
+      updates.adRouletteAds = nextAdRouletteAds;
+      updates.adrouletteads = admin.firestore.FieldValue.delete();
     }
     if (videosWatchedDelta !== 0) {
       updates.videosWatched = admin.firestore.FieldValue.increment(videosWatchedDelta);
@@ -1275,7 +1279,10 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
 
     const userData = userSnap.data() || {};
     const currentCoins = sanitizeInteger(userData.coins, 0);
-    const currentAdRouletteAds = sanitizeInteger(userData.adRouletteAds, 0);
+    const currentAdRouletteAds = sanitizeInteger(
+      userData.adRouletteAds ?? userData.adrouletteads,
+      0
+    );
     const currentBalance =
       balanceSource === "adroulette" ? currentAdRouletteAds : currentCoins;
     if (currentBalance < coinsRequested) {
@@ -1294,6 +1301,7 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
         userRef,
         {
           adRouletteAds: remainingAdRouletteAds,
+          adrouletteads: admin.firestore.FieldValue.delete(),
         },
         {merge: true}
       );

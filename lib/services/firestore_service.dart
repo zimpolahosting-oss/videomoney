@@ -191,7 +191,11 @@ class FirestoreService {
       updates['leaderboardDisplayName'] = '';
     }
     if (!data.containsKey('adRouletteAds')) {
-      updates['adRouletteAds'] = 0;
+      final legacyAdRouletteAds = (data['adrouletteads'] as num?)?.toInt();
+      updates['adRouletteAds'] = legacyAdRouletteAds ?? 0;
+      if (data.containsKey('adrouletteads')) {
+        updates['adrouletteads'] = FieldValue.delete();
+      }
     }
 
     return updates;
@@ -830,13 +834,16 @@ class FirestoreService {
               (userData['leaderboardDisplayName'] as String? ?? '').trim();
           final currentViews = (userData['coins'] as num?)?.toInt() ?? 0;
           final currentAdRouletteAds =
-              (userData['adRouletteAds'] as num?)?.toInt() ?? 0;
+              (userData['adRouletteAds'] as num?)?.toInt() ??
+              (userData['adrouletteads'] as num?)?.toInt() ??
+              0;
           final videosWatched =
               (userData['videosWatched'] as num?)?.toInt() ?? 0;
 
           if (balanceSource == 'adroulette') {
             transaction.update(userRef, {
               'adRouletteAds': FieldValue.increment(coinsRequested),
+              'adrouletteads': FieldValue.delete(),
             });
           } else {
             transaction.update(userRef, {

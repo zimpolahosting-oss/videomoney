@@ -46,7 +46,10 @@ class AppUser {
       email: map['email'] as String? ?? '',
       leaderboardDisplayName: map['leaderboardDisplayName'] as String? ?? '',
       coins: (map['coins'] as num?)?.toInt() ?? 0,
-      adRouletteAds: (map['adRouletteAds'] as num?)?.toInt() ?? 0,
+      adRouletteAds:
+          (map['adRouletteAds'] as num?)?.toInt() ??
+          (map['adrouletteads'] as num?)?.toInt() ??
+          0,
       videosWatched: (map['videosWatched'] as num?)?.toInt() ?? 0,
       dailyVideosWatched: (map['dailyVideosWatched'] as num?)?.toInt() ?? 0,
       dailyProgressDate: map['dailyProgressDate'] as String? ?? '',
