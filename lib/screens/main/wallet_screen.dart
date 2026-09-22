@@ -300,17 +300,11 @@ class WalletScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pushNamed(
-                              AppRoutes.adroulettePayoutRequest,
-                            );
-                          },
-                          icon: const Icon(Icons.casino_rounded),
-                          label: const Text('Request Adroulette payout'),
-                        ),
+                      Text(
+                        'Open the Adroulette page to request an Adroulette payout.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
                       ),
                     ],
                   ),

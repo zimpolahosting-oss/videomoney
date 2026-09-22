@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../app_routes.dart';
 import '../../models/app_user.dart';
 import '../../services/earnings_service.dart';
 import '../../services/firestore_service.dart';
@@ -207,6 +208,26 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.white70,
                             ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: currentAds >=
+                                  FirestoreService.minimumAdRoulettePayoutAds
+                              ? () {
+                                  Navigator.of(context).pushNamed(
+                                    AppRoutes.adroulettePayoutRequest,
+                                  );
+                                }
+                              : null,
+                          icon: const Icon(Icons.payments_outlined),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFE6C54A),
+                            foregroundColor: const Color(0xFF231A00),
+                          ),
+                          label: const Text('Request Adroulette payout'),
+                        ),
                       ),
                     ],
                   ),
