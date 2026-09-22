@@ -305,10 +305,7 @@ class WalletScreen extends StatelessWidget {
                         child: FilledButton.icon(
                           onPressed: () {
                             Navigator.of(context).pushNamed(
-                              AppRoutes.payoutRequest,
-                              arguments: {
-                                'balanceSource': 'adroulette',
-                              },
+                              AppRoutes.adroulettePayoutRequest,
                             );
                           },
                           icon: const Icon(Icons.casino_rounded),

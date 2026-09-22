@@ -23,6 +23,7 @@ class AppRoutes {
   static const String termsOfService = '/terms-of-service';
   static const String adminDashboard = '/admin-dashboard';
   static const String payoutRequest = '/payout-request';
+  static const String adroulettePayoutRequest = '/adroulette-payout-request';
   static const String payoutHistory = '/payout-history';
   static const String inbox = '/inbox';
   static const String appRating = '/app-rating';
@@ -98,6 +99,13 @@ class AppRoutes {
           builder: (_) => PayoutRequestScreen(
             initialMethod: initialMethod,
             balanceSource: balanceSource,
+          ),
+          settings: settings,
+        );
+      case AppRoutes.adroulettePayoutRequest:
+        return MaterialPageRoute<void>(
+          builder: (_) => const PayoutRequestScreen(
+            balanceSource: 'adroulette',
           ),
           settings: settings,
         );
