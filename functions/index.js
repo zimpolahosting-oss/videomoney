@@ -1362,6 +1362,125 @@ exports.vmCreatePayoutRequest = onCall(async (request) => {
   };
 });
 
+exports.vmCreateAdroulettePayoutRequest = onCall(async (request) => {
+  const {uid, email: authEmail} = requireAuth(request);
+  const buildNumber = sanitizeInteger(request.data?.buildNumber, 0);
+  const appVersion = sanitizeString(request.data?.appVersion);
+  const versionName = sanitizeString(request.data?.versionName);
+  const adsRequested = sanitizeInteger(request.data?.adsRequested, 0);
+  const payoutMethod = sanitizeString(request.data?.payoutMethod).toLowerCase();
+  const payPalEmail = sanitizeString(request.data?.payPalEmail);
+  const revolutUsername = sanitizeString(request.data?.revolutUsername);
+  const accountHolderName = sanitizeString(request.data?.accountHolderName);
+  const payoutCurrency = sanitizeString(request.data?.payoutCurrency).toUpperCase();
+  const cryptoAddress = sanitizeString(request.data?.cryptoAddress);
+
+  requiresMinimumBuild(buildNumber);
+
+  if (adsRequested <= 0) {
+    throw new HttpsError("invalid-argument", "Requested ads must be greater than zero.");
+  }
+  if (adsRequested < VM_MINIMUM_PAYOUT_COINS) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Minimum payout is ${VM_MINIMUM_PAYOUT_COINS} ads.`
+    );
+  }
+  if (!accountHolderName) {
+    throw new HttpsError("invalid-argument", "Account holder name is required.");
+  }
+  if (!VM_ALLOWED_PAYOUT_METHODS.has(payoutMethod)) {
+    throw new HttpsError("invalid-argument", "Select a payout method.");
+  }
+  if (!VM_ALLOWED_PAYOUT_CURRENCIES.has(payoutCurrency)) {
+    throw new HttpsError("invalid-argument", "Select a payout currency.");
+  }
+  if (payoutMethod === "paypal" && !payPalEmail) {
+    throw new HttpsError("invalid-argument", "Enter a PayPal email.");
+  }
+  if (payoutMethod === "revolut" && !revolutUsername) {
+    throw new HttpsError("invalid-argument", "Enter your Revolut username.");
+  }
+  if ((payoutMethod === "btc" || payoutMethod === "usdc") && !cryptoAddress) {
+    throw new HttpsError("invalid-argument", "Enter your crypto wallet address.");
+  }
+
+  const openPayoutsSnap = await db
+    .collection("payouts")
+    .where("userId", "==", uid)
+    .where("status", "in", ["pending", "approved"])
+    .limit(1)
+    .get();
+  if (!openPayoutsSnap.empty) {
+    throw new HttpsError(
+      "failed-precondition",
+      "You already have an open payout request. Wait until it is completed or rejected before requesting another payout."
+    );
+  }
+
+  const payoutRef = db.collection("payouts").doc();
+  const userRef = db.collection("users").doc(uid);
+
+  await db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(userRef);
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User profile not found.");
+    }
+
+    const userData = userSnap.data() || {};
+    const currentAdRouletteAds = sanitizeInteger(
+      userData.adRouletteAds ?? userData.adrouletteads,
+      0
+    );
+    if (currentAdRouletteAds < adsRequested) {
+      throw new HttpsError("failed-precondition", "Not enough ads available.");
+    }
+
+    const remainingAdRouletteAds = currentAdRouletteAds - adsRequested;
+    const userEmail = sanitizeString(userData.email || authEmail);
+
+    tx.set(
+      userRef,
+      {
+        adRouletteAds: remainingAdRouletteAds,
+        adrouletteads: admin.firestore.FieldValue.delete(),
+      },
+      {merge: true}
+    );
+
+    tx.set(payoutRef, {
+      userId: uid,
+      userEmail,
+      coinsRequested: adsRequested,
+      payoutMethod,
+      payoutCurrency,
+      balanceSource: "adroulette",
+      status: "pending",
+      payPalEmail,
+      ibanOrBankAccount: payoutMethod === "revolut" ? revolutUsername : "",
+      revolutUsername,
+      accountHolderName,
+      bankName: "",
+      iban: "",
+      bankAccountNumber: "",
+      cryptoAddress,
+      appVersion,
+      versionName,
+      buildNumber,
+      minimumRequiredVersion: VM_MINIMUM_PAYOUT_VERSION,
+      minimumRequiredBuildNumber: VM_MINIMUM_BUILD_NUMBER,
+      minimumPayoutCoins: VM_MINIMUM_PAYOUT_COINS,
+      processingDays: VM_PAYOUT_PROCESSING_DAYS,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  return {
+    ok: true,
+    payoutId: payoutRef.id,
+  };
+});
+
 exports.vmCreateAdsTransfer = onCall(async (request) => {
   const {uid, email: authEmail} = requireAuth(request);
   await ensureAdsTransferEnabled();

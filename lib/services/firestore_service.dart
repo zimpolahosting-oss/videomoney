@@ -588,23 +588,37 @@ class FirestoreService {
       );
     }
 
-    await createPayoutRequest(
-      uid: uid,
-      coinsRequested: adsRequested,
-      appVersion: appVersion,
-      versionName: versionName,
-      buildNumber: buildNumber,
-      payoutMethod: payoutMethod,
-      payPalEmail: payPalEmail,
-      revolutUsername: revolutUsername,
-      accountHolderName: accountHolderName,
-      payoutCurrency: payoutCurrency,
-      bankName: '',
-      iban: '',
-      bankAccountNumber: '',
-      cryptoAddress: cryptoAddress,
-      balanceSource: 'adroulette',
-    );
+    final trimmedMethod = payoutMethod.trim().toLowerCase();
+    final trimmedPayPalEmail = payPalEmail.trim();
+    final trimmedRevolutUsername = revolutUsername.trim();
+    final trimmedAccountHolderName = accountHolderName.trim();
+    final trimmedCurrency = payoutCurrency.trim().toUpperCase();
+    final trimmedCryptoAddress = cryptoAddress.trim();
+
+    if (!isPayoutBuildAllowed(buildNumber)) {
+      throw Exception(
+        'Update required. Payout is only available on $minimumPayoutVersion or higher.',
+      );
+    }
+
+    final callable = _functions.httpsCallable('vmCreateAdroulettePayoutRequest');
+    try {
+      await callable.call(<String, dynamic>{
+        'uid': uid,
+        'adsRequested': adsRequested,
+        'appVersion': appVersion.trim(),
+        'versionName': versionName.trim(),
+        'buildNumber': buildNumber,
+        'payoutMethod': trimmedMethod,
+        'payPalEmail': trimmedPayPalEmail,
+        'revolutUsername': trimmedRevolutUsername,
+        'accountHolderName': trimmedAccountHolderName,
+        'payoutCurrency': trimmedCurrency,
+        'cryptoAddress': trimmedCryptoAddress,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw Exception(error.message ?? 'Unable to create Adroulette payout request.');
+    }
   }
 
   Stream<bool> watchAdsTransferEnabled() {
