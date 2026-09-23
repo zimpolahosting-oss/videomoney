@@ -4,6 +4,7 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/auth_gate.dart';
 import 'screens/main/app_rating_screen.dart';
 import 'screens/main/inbox_screen.dart';
+import 'screens/payout/adroulette_payout_request_screen.dart';
 import 'screens/payout/payout_history_screen.dart';
 import 'screens/payout/payout_request_screen.dart';
 import 'screens/support/about_screen.dart';
@@ -104,9 +105,7 @@ class AppRoutes {
         );
       case AppRoutes.adroulettePayoutRequest:
         return MaterialPageRoute<void>(
-          builder: (_) => const PayoutRequestScreen(
-            balanceSource: 'adroulette',
-          ),
+          builder: (_) => const AdroulettePayoutRequestScreen(),
           settings: settings,
         );
       default:

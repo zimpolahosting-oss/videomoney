@@ -567,6 +567,46 @@ class FirestoreService {
     }
   }
 
+
+
+  Future<void> createAdroulettePayoutRequest({
+    required String uid,
+    required int adsRequested,
+    required String appVersion,
+    required String versionName,
+    required int buildNumber,
+    required String payoutMethod,
+    required String payPalEmail,
+    required String revolutUsername,
+    required String accountHolderName,
+    required String payoutCurrency,
+    required String cryptoAddress,
+  }) async {
+    if (adsRequested < minimumAdRoulettePayoutAds) {
+      throw Exception(
+        'Minimum request is $minimumAdRoulettePayoutAds Adroulette ads.',
+      );
+    }
+
+    await createPayoutRequest(
+      uid: uid,
+      coinsRequested: adsRequested,
+      appVersion: appVersion,
+      versionName: versionName,
+      buildNumber: buildNumber,
+      payoutMethod: payoutMethod,
+      payPalEmail: payPalEmail,
+      revolutUsername: revolutUsername,
+      accountHolderName: accountHolderName,
+      payoutCurrency: payoutCurrency,
+      bankName: '',
+      iban: '',
+      bankAccountNumber: '',
+      cryptoAddress: cryptoAddress,
+      balanceSource: 'adroulette',
+    );
+  }
+
   Stream<bool> watchAdsTransferEnabled() {
     return _appConfig.doc('features').snapshots().map((doc) {
       final data = doc.data() ?? const <String, dynamic>{};
