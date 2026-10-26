@@ -14,7 +14,7 @@
         android:usesCleartextTraffic="true">
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-7683034036748999~7884634536" />
+            android:value="ca-app-pub-3822593515209932~9775586032" />
         <meta-data
             android:name="com.startapp.sdk.APPLICATION_ID"
             android:value="206588272" />

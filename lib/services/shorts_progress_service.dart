@@ -31,7 +31,7 @@ class ShortsProgressSnapshot {
     adBreakProgressShorts: 0,
     pendingAdBreakShorts: 0,
     pendingAdBreakProvider: '',
-    nextAdBreakProvider: ShortsProgressService.providerAdmob,
+    nextAdBreakProvider: ShortsProgressService.providerUswa,
     pendingAdBreakAttempted: false,
   );
 
@@ -87,6 +87,7 @@ class ShortsProgressService {
   static const int giftBoxViewsReward = 0;
   static const int adBreakViewsReward = 1;
   static const int adBreakThresholdShorts = 3;
+  static const String providerUswa = 'uswa';
   static const String providerStartio = 'startio';
   static const String providerGravite = 'gravite';
   static const String providerAdmob = 'admob';
@@ -150,7 +151,7 @@ class ShortsProgressService {
     final shouldStartNewAdBreak = snapshot.pendingAdBreakShorts == 0 &&
         rawAdBreakProgress >= adBreakThresholdShorts;
     final providerForBreak = shouldStartNewAdBreak
-        ? providerAdmob
+        ? providerUswa
         : _sanitizeProvider(
             snapshot.pendingAdBreakProvider,
             allowEmpty: false,
@@ -167,7 +168,7 @@ class ShortsProgressService {
     final nextWithPending = next.copyWith(
       pendingAdBreakShorts: nextPendingAdBreakShorts,
       pendingAdBreakProvider: providerForBreak,
-      nextAdBreakProvider: providerAdmob,
+      nextAdBreakProvider: providerUswa,
       pendingAdBreakAttempted:
           shouldStartNewAdBreak ? false : snapshot.pendingAdBreakAttempted,
     );
@@ -272,24 +273,29 @@ class ShortsProgressService {
 
   String _alternateProvider(String provider) {
     return switch (provider) {
-      providerAdmob => providerAppodeal,
+      providerUswa => providerGravite,
+      providerGravite => providerUswa,
+      providerAdmob => providerGravite,
       providerAppodeal => providerGravite,
-      providerGravite => providerAdmob,
-      _ => providerAdmob,
+      _ => providerUswa,
     };
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
     final value = (provider ?? '').trim();
     if (value.isEmpty) {
-      return allowEmpty ? '' : providerAdmob;
+      return allowEmpty ? '' : providerUswa;
+    }
+    if (value == providerUswa || value == providerGravite) {
+      return value;
     }
     if (value == providerAdmob ||
         value == providerAppodeal ||
-        value == providerGravite) {
-      return value;
+        value == providerUnity ||
+        value == providerMonetag) {
+      return providerUswa;
     }
-    return providerAdmob;
+    return providerUswa;
   }
 
 }

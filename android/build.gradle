@@ -11,7 +11,6 @@ allprojects {
             content { includeGroupByRegex "com\\.rtb\\..*" }
         }
         maven { url "https://dl.appnext.com/" }
-        maven { url "https://artifactory.appodeal.com/appodeal" }
     }
 }
 

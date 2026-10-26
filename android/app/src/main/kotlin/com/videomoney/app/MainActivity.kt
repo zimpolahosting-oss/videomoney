@@ -8,10 +8,6 @@ import com.appnext.core.callbacks.OnAdClosed
 import com.appnext.core.callbacks.OnAdError
 import com.appnext.core.callbacks.OnAdOpened
 import com.appnext.core.callbacks.OnVideoEnded
-import com.appodeal.ads.Appodeal
-import com.appodeal.ads.RewardedVideoCallbacks
-import com.appodeal.ads.initializing.ApdInitializationCallback
-import com.appodeal.ads.initializing.ApdInitializationError
 import com.facebook.ads.Ad
 import com.facebook.ads.AdError
 import com.facebook.ads.AdListener
@@ -29,9 +25,9 @@ import com.unity3d.mediation.LevelPlayConfiguration
 import com.unity3d.mediation.LevelPlayInitError
 import com.unity3d.mediation.LevelPlayInitListener
 import com.unity3d.mediation.LevelPlayInitRequest
-import com.unity3d.mediation.rewarded.LevelPlayReward
-import com.unity3d.mediation.rewarded.LevelPlayRewardedAd
-import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener
+import com.unity3d.mediation.LevelPlayReward
+import com.unity3d.mediation.LevelPlayRewardedAd
+import com.unity3d.mediation.LevelPlayRewardedAdListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -52,10 +48,8 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         GraviteAatkitManager.setEventListener(::emitEvent)
-        configureRewardedVideoCallbacks()
-        initializeAppnextIfNeeded()
-        initializeAppodealIfNeeded()
         initializeLevelPlayIfNeeded()
+        initializeAppnextIfNeeded()
         preloadMobFoxRewardedVideo()
     }
 
@@ -103,32 +97,13 @@ class MainActivity : FlutterActivity() {
                         result.success(GraviteAatkitManager.showRewardedVideo())
                     }
 
-                    "ensureAppodealInitialized" -> {
-                        initializeAppodealIfNeeded()
-                        result.success(Appodeal.isInitialized(REWARDED_VIDEO_TYPE))
-                    }
-
                     "ensureUnityInitialized" -> {
                         initializeLevelPlayIfNeeded()
                         result.success(levelPlayInitialized)
                     }
 
-                    "isAppodealRewardedVideoLoaded" -> {
-                        result.success(Appodeal.isLoaded(REWARDED_VIDEO_TYPE))
-                    }
-
-                    "preloadAppodealRewardedVideo" -> {
-                        cacheRewardedVideo()
-                        result.success(null)
-                    }
-
-                    "showAppodealRewardedVideo" -> {
-                        if (!Appodeal.isLoaded(REWARDED_VIDEO_TYPE)) {
-                            cacheRewardedVideo()
-                            result.success(false)
-                        } else {
-                            result.success(Appodeal.show(this, REWARDED_VIDEO_TYPE))
-                        }
+                    "isUnityRewardedVideoLoaded" -> {
+                        result.success(levelPlayRewardedLoaded || levelPlayRewardedAd?.isAdReady == true)
                     }
 
                     "preloadUnityRewardedVideo" -> {
@@ -190,10 +165,6 @@ class MainActivity : FlutterActivity() {
                         result.success(appnextRewardedVideo?.isAdLoaded == true)
                     }
 
-                    "isUnityRewardedVideoLoaded" -> {
-                        result.success(levelPlayRewardedLoaded || levelPlayRewardedAd?.isAdReady == true)
-                    }
-
                     "showUnityRewardedVideo" -> {
                         result.success(showLevelPlayRewardedVideo())
                     }
@@ -249,56 +220,6 @@ class MainActivity : FlutterActivity() {
         preloadMobFoxRewardedVideo()
     }
 
-    private fun configureRewardedVideoCallbacks() {
-        Appodeal.setRewardedVideoCallbacks(object : RewardedVideoCallbacks {
-            override fun onRewardedVideoLoaded(isPrecache: Boolean) {
-                Log.d(LOG_TAG, "[rewarded][appodeal] loaded.")
-                emitEvent("onRewardedVideoLoaded", mapOf("isPrecache" to isPrecache))
-            }
-
-            override fun onRewardedVideoFailedToLoad() {
-                Log.w(LOG_TAG, "[rewarded][appodeal] failed to load.")
-                emitEvent("onRewardedVideoFailedToLoad")
-            }
-
-            override fun onRewardedVideoShown() {
-                Log.d(LOG_TAG, "[rewarded][appodeal] shown.")
-                emitEvent("onRewardedVideoShown")
-            }
-
-            override fun onRewardedVideoShowFailed() {
-                Log.w(LOG_TAG, "[rewarded][appodeal] failed to show.")
-                emitEvent("onRewardedVideoShowFailed")
-                cacheRewardedVideo()
-            }
-
-            override fun onRewardedVideoClicked() = Unit
-
-            override fun onRewardedVideoFinished(amount: Double, currency: String) {
-                Log.d(LOG_TAG, "[rewarded][appodeal] completed.")
-                emitEvent(
-                    "onRewardedVideoFinished",
-                    mapOf(
-                        "amount" to amount,
-                        "currency" to currency,
-                    ),
-                )
-            }
-
-            override fun onRewardedVideoClosed(finished: Boolean) {
-                Log.d(LOG_TAG, "[rewarded][appodeal] closed.")
-                emitEvent("onRewardedVideoClosed", mapOf("finished" to finished))
-                cacheRewardedVideo()
-            }
-
-            override fun onRewardedVideoExpired() {
-                Log.w(LOG_TAG, "[rewarded][appodeal] expired.")
-                emitEvent("onRewardedVideoExpired")
-                cacheRewardedVideo()
-            }
-        })
-    }
-
     private fun initializeLevelPlayIfNeeded() {
         if (levelPlayInitialized || levelPlayInitializing) {
             if (levelPlayInitialized) {
@@ -336,8 +257,14 @@ class MainActivity : FlutterActivity() {
                     levelPlayInitialized = false
                     levelPlayRewardedLoaded = false
                     levelPlayRewardedLoading = false
-                    emitEvent("onUnityRewardedVideoFailedToLoad", mapOf("error" to error.toString()))
-                    Log.w(LOG_TAG, "[rewarded][levelplay] init failed: $error")
+                    emitEvent(
+                        "onUnityRewardedVideoFailedToLoad",
+                        mapOf("error" to error.toString()),
+                    )
+                    Log.w(
+                        LOG_TAG,
+                        "[rewarded][levelplay] init failed: $error",
+                    )
                 }
             },
         )
@@ -367,7 +294,10 @@ class MainActivity : FlutterActivity() {
                     override fun onAdLoadFailed(error: LevelPlayAdError) {
                         levelPlayRewardedLoaded = false
                         levelPlayRewardedLoading = false
-                        emitEvent("onUnityRewardedVideoFailedToLoad", mapOf("error" to error.toString()))
+                        emitEvent(
+                            "onUnityRewardedVideoFailedToLoad",
+                            mapOf("error" to error.toString()),
+                        )
                         Log.w(LOG_TAG, "[rewarded][levelplay] failed to load: $error")
                     }
 
@@ -398,7 +328,10 @@ class MainActivity : FlutterActivity() {
                     ) {
                         levelPlayRewardedLoaded = false
                         levelPlayRewardedLoading = false
-                        emitEvent("onUnityRewardedVideoShowFailed", mapOf("error" to error.toString()))
+                        emitEvent(
+                            "onUnityRewardedVideoShowFailed",
+                            mapOf("error" to error.toString()),
+                        )
                         Log.w(LOG_TAG, "[rewarded][levelplay] failed to show: $error")
                         preloadLevelPlayRewardedVideo()
                     }
@@ -447,32 +380,6 @@ class MainActivity : FlutterActivity() {
         rewardedAd?.showAd(this)
         Log.d(LOG_TAG, "[rewarded][levelplay] showing rewarded video.")
         return true
-    }
-
-    private fun initializeAppodealIfNeeded() {
-        if (Appodeal.isInitialized(REWARDED_VIDEO_TYPE)) {
-            return
-        }
-
-        val appKey = BuildConfig.APPODEAL_APP_KEY
-        if (appKey == APP_KEY_PLACEHOLDER) {
-            Log.w(LOG_TAG, "Appodeal app key is still using the placeholder value.")
-        }
-
-        Appodeal.initialize(
-            this,
-            appKey,
-            REWARDED_VIDEO_TYPE,
-            object : ApdInitializationCallback {
-                override fun onInitializationFinished(errors: List<ApdInitializationError>?) {
-                    if (errors.isNullOrEmpty()) {
-                        cacheRewardedVideo()
-                    } else {
-                        Log.w(LOG_TAG, "Appodeal initialization completed with ${errors.size} issue(s).")
-                    }
-                }
-            },
-        )
     }
 
     private fun initializeMetaAudienceNetwork() {
@@ -670,15 +577,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun cacheRewardedVideo() {
-        if (Appodeal.isInitialized(REWARDED_VIDEO_TYPE) &&
-            !Appodeal.isLoaded(REWARDED_VIDEO_TYPE)
-        ) {
-            Log.d(LOG_TAG, "[rewarded][appodeal] requesting load.")
-            Appodeal.cache(this, REWARDED_VIDEO_TYPE)
-        }
-    }
-
     private fun preloadMobFoxRewardedVideo() {
         if (mobFoxRewardedLoaded || MobFoxRewardedManager.isLoaded()) {
             mobFoxRewardedLoaded = true
@@ -722,9 +620,7 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val REWARDED_VIDEO_CHANNEL = "com.videomoney.app/rewarded_video"
-        private const val REWARDED_VIDEO_TYPE = Appodeal.REWARDED_VIDEO
-        private const val APP_KEY_PLACEHOLDER = "APPODEAL_APP_KEY"
         private const val MOBFOX_REWARDED_REQUEST_CODE = 7149
-        private const val LOG_TAG = "VideoMoneyAppodeal"
+        private const val LOG_TAG = "VideoMoneyAds"
     }
 }

@@ -17,11 +17,6 @@ if (localPropertiesFile.exists()) {
 }
 def hasReleaseKeystore = keystoreProperties['storeFile'] != null &&
         rootProject.file(keystoreProperties['storeFile']).exists()
-def appodealAppKey = (
-        localProperties.getProperty('appodeal.appKey')
-                ?: System.getenv('APPODEAL_APP_KEY')
-                ?: 'APPODEAL_APP_KEY'
-).trim()
 def appnextAppId = (
         localProperties.getProperty('appnext.appId')
                 ?: System.getenv('APPNEXT_APP_ID')
@@ -103,7 +98,6 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        buildConfigField "String", "APPODEAL_APP_KEY", "\"${appodealAppKey}\""
         buildConfigField "String", "APPNEXT_APP_ID", "\"${appnextAppId}\""
         buildConfigField "String", "APPNEXT_PLACEMENT_ID", "\"${appnextPlacementId}\""
         buildConfigField "String", "META_APP_ID", "\"${metaAppId}\""
@@ -157,8 +151,5 @@ dependencies {
     implementation "androidx.media3:media3-ui:1.4.1"
     implementation "com.facebook.android:audience-network-sdk:6.21.0"
     implementation "com.appnext.sdk:ads:2.7.6.473"
-    implementation "com.appodeal.ads.sdk:core:4.2.0"
-    implementation "com.appodeal.ads.sdk.adapters:admob:24.7.0.0"
-    implementation "com.appodeal.ads.sdk.adapters:iab:1.8.1.0"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
 }

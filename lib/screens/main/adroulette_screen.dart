@@ -20,7 +20,7 @@ class AdrouletteScreen extends StatefulWidget {
 }
 
 class _AdrouletteScreenState extends State<AdrouletteScreen> {
-  static const List<String> _providerLabels = ['AdMob', 'Appodeal', 'Gravite'];
+  static const List<String> _providerLabels = ['USWA', 'Gravite'];
 
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
@@ -44,21 +44,8 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
     super.dispose();
   }
 
-  RewardedAdProvider _providerForLabel(String label) {
-    switch (label) {
-      case 'Appodeal':
-        return RewardedAdProvider.appodeal;
-      case 'Gravite':
-        return RewardedAdProvider.gravite;
-      case 'AdMob':
-      default:
-        return RewardedAdProvider.admob;
-    }
-  }
-
   Future<void> _spinAndShowAd(String uid) async {
     if (_isSpinning || _isShowingAd) return;
-
     setState(() {
       _isSpinning = true;
       _statusText = 'Spinning the wheel...';
@@ -68,7 +55,6 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
     final finalIndex = _random.nextInt(_providerLabels.length);
     var index = 0;
     final completer = Completer<void>();
-
     _spinTimer?.cancel();
     _spinTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
       if (!mounted) return;
@@ -81,7 +67,6 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
     Future<void>.delayed(Duration(milliseconds: spinDurationMs), () async {
       _spinTimer?.cancel();
       if (!mounted) return;
-
       setState(() {
         _selectedProviderLabel = _providerLabels[finalIndex];
         _isSpinning = false;
@@ -115,11 +100,20 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
           ),
         ),
       );
-
       completer.complete();
     });
 
     await completer.future;
+  }
+
+  RewardedAdProvider _providerForLabel(String label) {
+    switch (label) {
+      case 'Gravite':
+        return RewardedAdProvider.gravite;
+      case 'USWA':
+      default:
+        return RewardedAdProvider.uswa;
+    }
   }
 
   @override
@@ -140,8 +134,9 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
           builder: (context, snapshot) {
             final appUser = snapshot.data;
             final currentAds = appUser?.adRouletteAds ?? 0;
-            final progress = (currentAds / FirestoreService.minimumAdRoulettePayoutAds)
-                .clamp(0.0, 1.0);
+            final progress =
+                (currentAds / FirestoreService.minimumAdRoulettePayoutAds)
+                    .clamp(0.0, 1.0);
             final remaining = currentAds >= FirestoreService.minimumAdRoulettePayoutAds
                 ? 0
                 : FirestoreService.minimumAdRoulettePayoutAds - currentAds;
@@ -166,9 +161,7 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                     color: const Color(0xFF3A2C00).withOpacity(0.92),
-                    border: Border.all(
-                      color: const Color(0xFFE6C54A).withOpacity(0.55),
-                    ),
+                    border: Border.all(color: const Color(0xFFE6C54A).withOpacity(0.55)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

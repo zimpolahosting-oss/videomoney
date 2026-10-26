@@ -20,7 +20,6 @@ import '../../services/players_are_gamers_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/rewarded_ad_service.dart';
 import '../../services/shorts_progress_service.dart';
-import '../../services/videomoney_ad_sdk.dart';
 import '../../services/video_feed_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/animated_int_text.dart';
@@ -54,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _earningsService = EarningsService();
   final _playersAreGamersService = PlayersAreGamersService();
   final _pagMatchmakingService = PagMatchmakingService();
-  final _videomoneyAdSdk = VideomoneyAdSdk.instance;
   final _videoFeedService = VideoFeedService();
   final _countedShortIds = <String>{};
   String? _completionNavigationInFlightForVideoId;
@@ -74,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _bonusProgressShorts = 0;
   bool _giftReady = false;
   int _pendingAdBreakShorts = 0;
-  String _pendingAdBreakProvider = ShortsProgressService.providerAdmob;
+  String _pendingAdBreakProvider = ShortsProgressService.providerUswa;
   bool _pendingAdBreakAttempted = false;
   int _lastTrackedPositionMs = 0;
   int _currentVideoTrackedWatchMs = 0;
@@ -819,8 +817,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final positionMs = (_playerCurrentTimeSeconds * 1000).round();
     if (durationMs <= 0 || positionMs <= 0) return;
 
-    // Require either ~90% watched OR at least 45s (whichever is smaller), but never below 20s.
-    final percentThresholdMs = (durationMs * 0.90).round();
+    // Require either ~95% watched OR at least 45s (whichever is smaller), but never below 20s.
+    final percentThresholdMs = (durationMs * 0.95).round();
     final targetMs = [
       20000,
       percentThresholdMs,
@@ -920,26 +918,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     _resumeAfterOverlay = widget.isActiveTab;
     try {
-      final pendingProvider =
-          (_pendingAdBreakProvider == ShortsProgressService.providerUnity ||
-                  _pendingAdBreakProvider == ShortsProgressService.providerMonetag)
-              ? ShortsProgressService.providerAdmob
-              : _pendingAdBreakProvider;
-      final isAdmobBreak = pendingProvider == ShortsProgressService.providerAdmob;
-      final isAppodealBreak =
-          pendingProvider == ShortsProgressService.providerAppodeal;
+      final pendingProvider = _pendingAdBreakProvider;
+      final isUswaBreak = pendingProvider == ShortsProgressService.providerUswa;
       final isGraviteBreak =
           pendingProvider == ShortsProgressService.providerGravite;
-      final isUnityBreak =
-          pendingProvider == ShortsProgressService.providerUnity;
-      final isMonetagBreak =
-          pendingProvider == ShortsProgressService.providerMonetag;
-      final isRewardedTurn =
-          isAdmobBreak ||
-          isAppodealBreak ||
-          isGraviteBreak;
-      final shouldFallbackToMonetag =
-          isAdmobBreak || isAppodealBreak || isGraviteBreak;
       final completed =
           await Navigator.of(context).push<bool>(
             MaterialPageRoute<bool>(
@@ -950,45 +932,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 adStartDelay: const Duration(milliseconds: 250),
                 onPrepare: () => _suspendPlayback(unloadPlayer: true),
                 onStartAd: (_) async {
-                  if (isRewardedTurn) {
-                    var rewardedCompleted =
-                        await _earningsService.showRewardedBonusAd(
-                          provider: isAdmobBreak
-                                  ? RewardedAdProvider.admob
-                                  : isAppodealBreak
-                                  ? RewardedAdProvider.appodeal
-                                  : isGraviteBreak
-                                  ? RewardedAdProvider.gravite
-                                  : RewardedAdProvider.unity,
-                          onAdStatus: (message) {
-                            debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
-                          },
-                        );
-                    if (!rewardedCompleted && shouldFallbackToMonetag) {
-                      rewardedCompleted = await _videomoneyAdSdk.showInterstitial(
-                        context: pageContext,
-                        callbacks: VideomoneyAdCallbacks(
-                          onFailed: (provider, reason) {
-                            debugPrint(
-                              '[VideomoneyAds][Home] ${provider.name} failed during Monetag backup fallback: '
-                              '$reason',
-                            );
-                          },
-                        ),
-                      );
-                    }
-                    return rewardedCompleted;
-                  }
-                  return _videomoneyAdSdk.showInterstitial(
-                    context: pageContext,
-                    callbacks: VideomoneyAdCallbacks(
-                      onFailed: (provider, reason) {
-                        debugPrint(
-                          '[VideomoneyAds][Home] ${provider.name} failed during ad break: '
-                          '$reason',
-                        );
-                      },
-                    ),
+                  return _earningsService.showRewardedBonusAd(
+                    provider: isUswaBreak
+                        ? RewardedAdProvider.uswa
+                        : RewardedAdProvider.gravite,
+                    onAdStatus: (message) {
+                      debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
+                    },
                   );
                 },
               ),
@@ -1040,16 +990,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isAdmobBreak
-                  ? _localizedHomeText('no_provider', provider: 'AdMob')
-                  : isAppodealBreak
-                  ? _localizedHomeText('no_provider', provider: 'Appodeal')
+              isUswaBreak
+                  ? _localizedHomeText('no_provider', provider: 'USWA')
                   : isGraviteBreak
                   ? _localizedHomeText('no_provider', provider: 'Gravite')
-                  : isMonetagBreak
-                  ? _localizedHomeText('no_provider', provider: 'Monetag')
-                  : isUnityBreak
-                  ? _localizedHomeText('no_provider', provider: 'Unity')
                   : _localizedHomeText('no_generic'),
             ),
           ),
@@ -1084,11 +1028,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _providerLabelForAdBreak(String provider) {
-    if (provider == ShortsProgressService.providerAdmob) return 'AdMob';
-    if (provider == ShortsProgressService.providerAppodeal) return 'Appodeal';
+    if (provider == ShortsProgressService.providerUswa) return 'USWA';
     if (provider == ShortsProgressService.providerGravite) return 'Gravite';
-    if (provider == ShortsProgressService.providerUnity) return 'AdMob';
-    if (provider == ShortsProgressService.providerMonetag) return 'Monetag';
     return 'Ad';
   }
 
