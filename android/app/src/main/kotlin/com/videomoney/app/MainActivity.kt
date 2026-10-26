@@ -25,9 +25,9 @@ import com.unity3d.mediation.LevelPlayConfiguration
 import com.unity3d.mediation.LevelPlayInitError
 import com.unity3d.mediation.LevelPlayInitListener
 import com.unity3d.mediation.LevelPlayInitRequest
-import com.unity3d.mediation.LevelPlayReward
-import com.unity3d.mediation.LevelPlayRewardedAd
-import com.unity3d.mediation.LevelPlayRewardedAdListener
+import com.unity3d.mediation.rewarded.LevelPlayReward
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAd
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
