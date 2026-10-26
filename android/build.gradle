@@ -3,6 +3,14 @@ allprojects {
         google()
         mavenCentral()
         maven {
+            url 'https://verve.jfrog.io/artifactory/verve-gradle-release'
+            content { includeGroup "net.pubnative" }
+        }
+        maven {
+            url 'https://dl-maven-android.mintegral.com/repository/mbridge_android_sdk_oversea'
+            content { includeGroup "com.mbridge.msdk.oversea" }
+        }
+        maven {
             url 'https://gravite-sdk-releases.s3.eu-central-1.amazonaws.com/aatkit/android/maven'
             content { includeGroupByRegex "com\\.intentsoftware\\..*" }
         }
