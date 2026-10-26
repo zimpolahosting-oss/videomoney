@@ -4,7 +4,10 @@ allprojects {
         mavenCentral()
         maven {
             url 'https://verve.jfrog.io/artifactory/verve-gradle-release'
-            content { includeGroup "net.pubnative" }
+            content {
+                includeGroup "net.pubnative"
+                includeGroup "com.verve"
+            }
         }
         maven {
             url 'https://dl-maven-android.mintegral.com/repository/mbridge_android_sdk_oversea'
