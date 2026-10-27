@@ -58,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? _completionNavigationInFlightForVideoId;
   late final Stream<int> _onlineUsersCountStream =
       PresenceService.instance.watchOnlineUsersCount();
-  late final WebViewController _webViewController;
+  late WebViewController _webViewController;
+  int _webViewInstanceKey = 0;
 
   Timer? _watchTimer;
   Timer? _playlistRefreshTimer;
@@ -102,7 +103,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _webViewController = WebViewController()
+    _webViewController = _createWebViewController();
+    unawaited(_earningsService.preloadRewardedVideo());
+    _initializeHome();
+  }
+
+  WebViewController _createWebViewController() {
+    final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF030806))
       ..setUserAgent(_youtubeDesktopUserAgent)
@@ -127,12 +134,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           },
         ),
       );
-    final platformController = _webViewController.platform;
+    final platformController = controller.platform;
     if (platformController is AndroidWebViewController) {
       platformController.setMediaPlaybackRequiresUserGesture(false);
     }
-    unawaited(_earningsService.preloadRewardedVideo());
-    _initializeHome();
+    return controller;
+  }
+
+  void _resetWebViewController() {
+    _playerReady = false;
+    _playerStateCode = -1;
+    _playerCurrentTimeSeconds = 0;
+    _playerDurationSeconds = 0;
+    _webViewController = _createWebViewController();
+    if (mounted) {
+      setState(() {
+        _webViewInstanceKey += 1;
+      });
+    } else {
+      _webViewInstanceKey += 1;
+    }
   }
 
   Future<void> _initializeHome() async {
@@ -444,16 +465,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _blockPlaybackResume(const Duration(minutes: 10));
     await _pausePlayback();
     if (!unloadPlayer) return;
-    try {
-      _playerReady = false;
-      _playerStateCode = -1;
-      _playerCurrentTimeSeconds = 0;
-      _playerDurationSeconds = 0;
-      await _webViewController.loadHtmlString(
-        _buildBlankPlayerHtml(),
-        baseUrl: _appBaseUrl,
-      );
-    } catch (_) {}
+    _resetWebViewController();
   }
 
   Future<void> _resumePlaybackIfNeeded() async {
@@ -1224,6 +1236,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   controller: _webViewController,
                   thumbnailUrl: _feed[_currentIndex].thumbnailUrl,
                   showWebView: !_isShowingAdBreak && !_playerSuspended,
+                  webViewKey: ValueKey(_webViewInstanceKey),
                 ),
               ),
               Positioned.fill(
@@ -1690,11 +1703,13 @@ class _ShortsPlayerBackdrop extends StatelessWidget {
     required this.controller,
     this.thumbnailUrl,
     this.showWebView = true,
+    this.webViewKey,
   });
 
   final WebViewController controller;
   final String? thumbnailUrl;
   final bool showWebView;
+  final Key? webViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1711,7 +1726,7 @@ class _ShortsPlayerBackdrop extends StatelessWidget {
             ),
           ),
         if (showWebView)
-          WebViewWidget(controller: controller)
+          WebViewWidget(key: webViewKey, controller: controller)
         else
           const ColoredBox(color: Color(0xFF030806)),
       ],
