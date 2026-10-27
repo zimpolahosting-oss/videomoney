@@ -2,6 +2,7 @@ package com.videomoney.app
 
 import android.app.Activity
 import android.app.Application
+import android.os.SystemClock
 import android.util.Log
 import com.intentsoftware.addapptr.AATKit
 import com.intentsoftware.addapptr.AATKitAdNetworkOptions
@@ -29,6 +30,10 @@ object GraviteAatkitManager :
     private var consentFlowCompleted = false
     private var canRequestAds = false
     private var pendingPreload = false
+    private var rewardedOverlayShowing = false
+    private var rewardedCallbackDelivered = false
+    private var rewardedOpenedAtMs = 0L
+    private const val REWARDED_FALLBACK_MIN_SHOW_MS = 8000L
 
     fun initialize(application: Application) {
         if (initialized) {
@@ -77,6 +82,10 @@ object GraviteAatkitManager :
         currentActivity = activity
         requestConsentAndMaybeInitialize(activity)
         if (initialized && canRequestAds) {
+            if (rewardedOverlayShowing) {
+                Log.d(LOG_TAG, "[rewarded][gravite] skip activity resume while overlay is showing")
+                return
+            }
             AATKit.onActivityResume(activity)
             rewardedPlacement?.listener = this
             if (pendingPreload || rewardedPlacement?.hasAd() != true) {
@@ -88,8 +97,12 @@ object GraviteAatkitManager :
 
     fun onActivityPause(activity: Activity) {
         if (initialized) {
-            rewardedPlacement?.stopAutoReload()
-            AATKit.onActivityPause(activity)
+            if (rewardedOverlayShowing) {
+                Log.d(LOG_TAG, "[rewarded][gravite] skip activity pause while overlay is showing")
+            } else {
+                rewardedPlacement?.stopAutoReload()
+                AATKit.onActivityPause(activity)
+            }
         }
         if (currentActivity === activity) {
             currentActivity = null
@@ -143,11 +156,31 @@ object GraviteAatkitManager :
 
     override fun onPauseForAd(placement: Placement) {
         rewardedLoaded = false
+        rewardedOverlayShowing = true
+        rewardedCallbackDelivered = false
+        rewardedOpenedAtMs = SystemClock.elapsedRealtime()
         eventListener?.invoke("onGraviteRewardedVideoShown", emptyMap())
         Log.d(LOG_TAG, "[rewarded][gravite] shown placement=${placement.name}")
     }
 
     override fun onResumeAfterAd(placement: Placement) {
+        val openDurationMs =
+            if (rewardedOpenedAtMs > 0L) {
+                SystemClock.elapsedRealtime() - rewardedOpenedAtMs
+            } else {
+                0L
+            }
+        if (!rewardedCallbackDelivered && openDurationMs >= REWARDED_FALLBACK_MIN_SHOW_MS) {
+            rewardedCallbackDelivered = true
+            eventListener?.invoke("onGraviteRewardedVideoCompleted", emptyMap())
+            Log.w(
+                LOG_TAG,
+                "[rewarded][gravite] fallback reward on close after ${openDurationMs}ms " +
+                    "placement=${placement.name}",
+            )
+        }
+        rewardedOverlayShowing = false
+        rewardedOpenedAtMs = 0L
         eventListener?.invoke("onGraviteRewardedVideoClosed", emptyMap())
         rewardedPlacement?.startAutoReload()
         rewardedLoaded = rewardedPlacement?.hasAd() == true
@@ -158,6 +191,7 @@ object GraviteAatkitManager :
         placement: Placement,
         aatKitReward: AATKitReward?,
     ) {
+        rewardedCallbackDelivered = true
         eventListener?.invoke("onGraviteRewardedVideoCompleted", emptyMap())
         Log.d(
             LOG_TAG,
