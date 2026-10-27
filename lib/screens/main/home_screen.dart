@@ -910,15 +910,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
 
-    _isShowingAdBreak = true;
+    setState(() {
+      _isShowingAdBreak = true;
+      _playerSuspended = true;
+    });
+    _resumeAfterOverlay = widget.isActiveTab;
     _blockPlaybackResume(const Duration(minutes: 2));
     await _suspendPlayback(unloadPlayer: true);
     _adBreakPauseEnforcer?.cancel();
-    _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
-      if (!_isShowingAdBreak) return;
-      unawaited(_suspendPlayback(unloadPlayer: true));
-    });
-    _resumeAfterOverlay = widget.isActiveTab;
+    _adBreakPauseEnforcer = null;
     try {
       final pendingProvider = _pendingAdBreakProvider;
       final isUswaBreak = pendingProvider == ShortsProgressService.providerUswa;
@@ -932,7 +932,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 providerName: _providerLabelForAdBreak(pendingProvider),
                 autoStart: true,
                 adStartDelay: const Duration(milliseconds: 900),
-                onPrepare: () => _suspendPlayback(unloadPlayer: true),
+                onPrepare: _pausePlayback,
                 onStartAd: (_) async {
                   return _earningsService.showRewardedBonusAd(
                     provider: isUswaBreak
@@ -1019,7 +1019,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } finally {
       _adBreakPauseEnforcer?.cancel();
       _adBreakPauseEnforcer = null;
-      _isShowingAdBreak = false;
+      if (mounted) {
+        setState(() {
+          _isShowingAdBreak = false;
+        });
+      } else {
+        _isShowingAdBreak = false;
+      }
       final shouldRestorePlayback = _resumeAfterOverlay && !_disableAdsForTesting;
       _resumeAfterOverlay = false;
       if (shouldRestorePlayback) {
