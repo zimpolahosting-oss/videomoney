@@ -77,7 +77,7 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
       String? lastStatusMessage;
       final rewardGranted = await _earningsService.watchAdRouletteAd(
         uid: uid,
-        provider: _providerForLabel(_selectedProviderLabel),
+        provider: RewardedAdProvider.auto,
         onAdStatus: (message) {
           lastStatusMessage = message;
         },

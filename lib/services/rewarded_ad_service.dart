@@ -47,7 +47,7 @@ class RewardedAdService {
   static const String rewardDeliveryFailedMessage =
       'The ad finished, but we could not update your balance. Please try again.';
   static const Duration _networkCooldownDuration = Duration(minutes: 10);
-  static const Duration _graviteCloseCompletionGrace = Duration(seconds: 5);
+  static const Duration _graviteCloseCompletionGrace = Duration(seconds: 12);
   static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.uswa,
     _RewardedNetwork.gravite,
@@ -448,6 +448,12 @@ class RewardedAdService {
     _graviteCloseGraceTimer?.cancel();
     _graviteCloseGraceTimer = Timer(_graviteCloseCompletionGrace, () {
       if (_activeNativeNetwork != _RewardedNetwork.gravite) return;
+      if (!_isNativeRewardEarned) {
+        _markNetworkCoolingOff(
+          _RewardedNetwork.gravite,
+          'closed without reward callback',
+        );
+      }
       _completeNativeRewardedFlow(_isNativeRewardEarned, reloadNextAd: true);
     });
   }
