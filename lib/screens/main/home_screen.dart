@@ -589,7 +589,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           playerVars: {
             autoplay: 1,
             playsinline: 1,
-            controls: 1,
+            controls: 0,
+            fs: 0,
+            disablekb: 1,
             rel: 0,
             enablejsapi: 1,
             origin: appOrigin,
@@ -817,8 +819,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final positionMs = (_playerCurrentTimeSeconds * 1000).round();
     if (durationMs <= 0 || positionMs <= 0) return;
 
-    // Require either ~95% watched OR at least 45s (whichever is smaller), but never below 20s.
-    final percentThresholdMs = (durationMs * 0.95).round();
+    // Require either ~98% watched OR at least 45s (whichever is smaller), but never below 20s.
+    final percentThresholdMs = (durationMs * 0.98).round();
     final targetMs = [
       20000,
       percentThresholdMs,
@@ -1215,6 +1217,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _ShortsPlayerBackdrop(
                   controller: _webViewController,
                   thumbnailUrl: _feed[_currentIndex].thumbnailUrl,
+                  showWebView: !_isShowingAdBreak && !_playerSuspended,
                 ),
               ),
               Positioned.fill(
@@ -1680,10 +1683,12 @@ class _ShortsPlayerBackdrop extends StatelessWidget {
   const _ShortsPlayerBackdrop({
     required this.controller,
     this.thumbnailUrl,
+    this.showWebView = true,
   });
 
   final WebViewController controller;
   final String? thumbnailUrl;
+  final bool showWebView;
 
   @override
   Widget build(BuildContext context) {
@@ -1699,7 +1704,10 @@ class _ShortsPlayerBackdrop extends StatelessWidget {
               ),
             ),
           ),
-        WebViewWidget(controller: controller),
+        if (showWebView)
+          WebViewWidget(controller: controller)
+        else
+          const ColoredBox(color: Color(0xFF030806)),
       ],
     );
   }
