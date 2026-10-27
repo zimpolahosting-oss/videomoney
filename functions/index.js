@@ -1144,11 +1144,13 @@ exports.vmApplyProgress = onCall(async (request) => {
     const windowCount = sanitizeInteger(data.rewardWindowCount, 0);
     const inSameWindow = windowStartMs && now - windowStartMs < VM_REWARD_WINDOW_MS;
     const nextWindowStart = inSameWindow ? windowStartMs : now;
+    const rewardCountsTowardWindow =
+      coinsDelta > 0 && balanceSource === "videomoney";
     const nextWindowCount = inSameWindow
-      ? windowCount + (coinsDelta > 0 ? 1 : 0)
-      : (coinsDelta > 0 ? 1 : 0);
+      ? windowCount + (rewardCountsTowardWindow ? 1 : 0)
+      : (rewardCountsTowardWindow ? 1 : 0);
 
-    if (coinsDelta > 0 && nextWindowCount > VM_REWARD_MAX_IN_WINDOW) {
+    if (rewardCountsTowardWindow && nextWindowCount > VM_REWARD_MAX_IN_WINDOW) {
       throw new HttpsError(
         "resource-exhausted",
         "Too many rewards too fast. Slow down."

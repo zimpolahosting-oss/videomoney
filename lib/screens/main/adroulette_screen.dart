@@ -20,7 +20,7 @@ class AdrouletteScreen extends StatefulWidget {
 }
 
 class _AdrouletteScreenState extends State<AdrouletteScreen> {
-  static const List<String> _providerLabels = ['USWA'];
+  static const List<String> _providerLabels = ['USWA', 'BONUS', 'LUCKY', 'MEGA', 'SPIN'];
 
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
@@ -71,7 +71,7 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
         _selectedProviderLabel = _providerLabels[finalIndex];
         _isSpinning = false;
         _isShowingAd = true;
-        _statusText = 'Opening $_selectedProviderLabel ad...';
+        _statusText = 'Opening your next ad...';
       });
 
       String? lastStatusMessage;
