@@ -272,13 +272,7 @@ class ShortsProgressService {
   }
 
   String _alternateProvider(String provider) {
-    return switch (provider) {
-      providerUswa => providerGravite,
-      providerGravite => providerUswa,
-      providerAdmob => providerGravite,
-      providerAppodeal => providerGravite,
-      _ => providerUswa,
-    };
+    return providerUswa;
   }
 
   String _sanitizeProvider(String? provider, {bool allowEmpty = false}) {
@@ -286,8 +280,11 @@ class ShortsProgressService {
     if (value.isEmpty) {
       return allowEmpty ? '' : providerUswa;
     }
-    if (value == providerUswa || value == providerGravite) {
+    if (value == providerUswa) {
       return value;
+    }
+    if (value == providerGravite) {
+      return providerUswa;
     }
     if (value == providerAdmob ||
         value == providerAppodeal ||

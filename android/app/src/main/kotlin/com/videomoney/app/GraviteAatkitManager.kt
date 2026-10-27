@@ -164,21 +164,6 @@ object GraviteAatkitManager :
     }
 
     override fun onResumeAfterAd(placement: Placement) {
-        val openDurationMs =
-            if (rewardedOpenedAtMs > 0L) {
-                SystemClock.elapsedRealtime() - rewardedOpenedAtMs
-            } else {
-                0L
-            }
-        if (!rewardedCallbackDelivered && openDurationMs >= REWARDED_FALLBACK_MIN_SHOW_MS) {
-            rewardedCallbackDelivered = true
-            eventListener?.invoke("onGraviteRewardedVideoCompleted", emptyMap())
-            Log.w(
-                LOG_TAG,
-                "[rewarded][gravite] fallback reward on close after ${openDurationMs}ms " +
-                    "placement=${placement.name}",
-            )
-        }
         rewardedOverlayShowing = false
         rewardedOpenedAtMs = 0L
         eventListener?.invoke("onGraviteRewardedVideoClosed", emptyMap())

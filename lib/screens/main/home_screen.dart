@@ -947,7 +947,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onPrepare: _pausePlayback,
                 onStartAd: (_) async {
                   return _earningsService.showRewardedBonusAd(
-                    provider: RewardedAdProvider.auto,
+                    provider: RewardedAdProvider.uswa,
                     onAdStatus: (message) {
                       debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                     },

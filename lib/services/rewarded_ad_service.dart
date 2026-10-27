@@ -50,7 +50,6 @@ class RewardedAdService {
   static const Duration _graviteCloseCompletionGrace = Duration(seconds: 12);
   static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.uswa,
-    _RewardedNetwork.gravite,
   ];
 
   RewardedAd? _rewardedAd;

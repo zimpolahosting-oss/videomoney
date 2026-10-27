@@ -20,7 +20,7 @@ class AdrouletteScreen extends StatefulWidget {
 }
 
 class _AdrouletteScreenState extends State<AdrouletteScreen> {
-  static const List<String> _providerLabels = ['USWA', 'Gravite'];
+  static const List<String> _providerLabels = ['USWA'];
 
   final _firestoreService = FirestoreService();
   final _earningsService = EarningsService();
@@ -77,7 +77,7 @@ class _AdrouletteScreenState extends State<AdrouletteScreen> {
       String? lastStatusMessage;
       final rewardGranted = await _earningsService.watchAdRouletteAd(
         uid: uid,
-        provider: RewardedAdProvider.auto,
+        provider: RewardedAdProvider.uswa,
         onAdStatus: (message) {
           lastStatusMessage = message;
         },
