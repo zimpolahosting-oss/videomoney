@@ -910,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _isShowingAdBreak = true;
     _blockPlaybackResume(const Duration(minutes: 2));
-    unawaited(_suspendPlayback(unloadPlayer: true));
+    await _suspendPlayback(unloadPlayer: true);
     _adBreakPauseEnforcer?.cancel();
     _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
       if (!_isShowingAdBreak) return;
@@ -929,7 +929,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (pageContext) => ShortsAdBreakScreen(
                 providerName: _providerLabelForAdBreak(pendingProvider),
                 autoStart: true,
-                adStartDelay: const Duration(milliseconds: 250),
+                adStartDelay: const Duration(milliseconds: 900),
                 onPrepare: () => _suspendPlayback(unloadPlayer: true),
                 onStartAd: (_) async {
                   return _earningsService.showRewardedBonusAd(
@@ -974,8 +974,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _pendingAdBreakAttempted = snapshot.pendingAdBreakAttempted;
         });
       } else if (!completed || !rewardAccepted) {
-        final snapshot =
-            await ShortsProgressService.instance.advancePendingAdBreakProvider(
+        final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
           user.uid,
         );
         if (!mounted) return;

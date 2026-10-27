@@ -40,10 +40,12 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     super.initState();
     _openedAt = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(widget.onPrepare());
-      if (widget.autoStart) {
-        unawaited(_startAdFlowAfterDelay());
-      }
+      unawaited(() async {
+        await widget.onPrepare();
+        if (widget.autoStart) {
+          await _startAdFlowAfterDelay();
+        }
+      }());
     });
   }
 

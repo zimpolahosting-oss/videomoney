@@ -524,7 +524,6 @@ class _PlayersAreGamersWebViewScreenState
       }
 
       final rewarded = await _earningsService.showRewardedBonusAd(
-        provider: RewardedAdProvider.uswa,
         onAdStatus: (message) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
