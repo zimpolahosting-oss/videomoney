@@ -141,7 +141,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return controller;
   }
 
-  void _resetWebViewController() {
+  Future<void> _hardStopPlayer() async {
+    try {
+      await _webViewController.runJavaScript('''
+        try {
+          window.__vmForcePaused = true;
+          var player = window.player;
+          if (player) {
+            if (typeof player.mute === 'function') player.mute();
+            if (typeof player.pauseVideo === 'function') player.pauseVideo();
+            if (typeof player.stopVideo === 'function') player.stopVideo();
+            if (typeof player.destroy === 'function') player.destroy();
+          }
+          var frame = document.querySelector('iframe');
+          if (frame && frame.parentNode) frame.parentNode.removeChild(frame);
+          window.player = null;
+        } catch (_) {}
+      ''');
+    } catch (_) {}
+  }
+
+  Future<void> _resetWebViewController() async {
+    await _hardStopPlayer();
     _playerReady = false;
     _playerStateCode = -1;
     _playerCurrentTimeSeconds = 0;
@@ -465,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _blockPlaybackResume(const Duration(minutes: 10));
     await _pausePlayback();
     if (!unloadPlayer) return;
-    _resetWebViewController();
+    await _resetWebViewController();
   }
 
   Future<void> _resumePlaybackIfNeeded() async {
@@ -497,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
     if (!_playerReady) {
-      await _loadCurrentVideoIntoWebView(force: true);
+      await _goToNextVideo();
       if (!mounted) return;
       Future<void>.delayed(const Duration(milliseconds: 900), () {
         if (!mounted) return;
@@ -613,7 +634,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onReady: function(event) {
               ensureTicker();
               postBridge({ type: 'ready', videoId: videoId });
-              if (!window.__vmForcePaused) {
+              var currentState = event.target.getPlayerState ? event.target.getPlayerState() : -1;
+              if (!window.__vmForcePaused && currentState !== YT.PlayerState.PLAYING) {
                 event.target.playVideo();
               }
             },
@@ -869,7 +891,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final activeVideoId = _feed[_currentIndex].videoId;
     if (activeVideoId != completedVideoId) return;
-    if (_currentIndex >= _feed.length - 1) return;
 
     _completionNavigationInFlightForVideoId = completedVideoId;
     try {
