@@ -648,9 +648,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                    event.data === YT.PlayerState.BUFFERING)) {
                 try {
                   event.target.pauseVideo();
-                  if (typeof event.target.stopVideo === 'function') {
-                    event.target.stopVideo();
-                  }
                 } catch (_) {}
               }
               postBridge({ type: 'state', state: Number(event.data), videoId: videoId });
