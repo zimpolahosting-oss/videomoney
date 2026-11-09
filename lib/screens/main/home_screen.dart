@@ -949,9 +949,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     _resumeAfterOverlay = widget.isActiveTab;
     _blockPlaybackResume(const Duration(minutes: 2));
-    await _suspendPlayback(unloadPlayer: true);
+    await _pausePlayback();
     _adBreakPauseEnforcer?.cancel();
-    _adBreakPauseEnforcer = null;
+    _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
+      if (!_isShowingAdBreak) return;
+      unawaited(_pausePlayback());
+    });
     try {
       final pendingProvider = _pendingAdBreakProvider;
       final isUswaBreak = pendingProvider == ShortsProgressService.providerUswa;
