@@ -334,6 +334,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           _buildTab(index: 2),
           _buildTab(index: 3),
               _buildTab(index: 4),
+              _buildTab(index: 5),
         ],
       ),
     );
