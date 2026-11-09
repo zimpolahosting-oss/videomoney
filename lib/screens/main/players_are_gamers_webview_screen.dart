@@ -462,7 +462,7 @@ class _PlayersAreGamersWebViewScreenState
             payload['replayId']?.toString().trim().isNotEmpty == true
                 ? payload['replayId'].toString().trim()
                 : 'pag-replay-${DateTime.now().millisecondsSinceEpoch}';
-        final rewarded = await _earningsService.showRewardedBonusAd(
+        final rewarded = await _earningsService.showRewardedBonusAd(provider: RewardedAdProvider.uswa, 
           onAdStatus: (message) {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
@@ -523,7 +523,7 @@ class _PlayersAreGamersWebViewScreenState
         throw Exception('You need to be signed in.');
       }
 
-      final rewarded = await _earningsService.showRewardedBonusAd(
+      final rewarded = await _earningsService.showRewardedBonusAd(provider: RewardedAdProvider.uswa, 
         onAdStatus: (message) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
