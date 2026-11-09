@@ -473,9 +473,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (window.player && typeof window.player.pauseVideo === 'function') {
             window.player.pauseVideo();
           }
-          if (window.player && typeof window.player.stopVideo === 'function') {
-            window.player.stopVideo();
-          }
         } catch (_) {}
       ''');
     } catch (_) {}
@@ -498,11 +495,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _webViewController.runJavaScript('''
         try {
           window.__vmForcePaused = false;
-          if (window.player && typeof window.player.unMute === 'function') {
-            window.player.unMute();
+          var resumeState = -1;
+          if (window.player && typeof window.player.getPlayerState === 'function') {
+            resumeState = window.player.getPlayerState();
           }
-          if (window.player && typeof window.player.playVideo === 'function') {
-            window.player.playVideo();
+          if (resumeState !== 0) {
+            if (window.player && typeof window.player.unMute === 'function') {
+              window.player.unMute();
+            }
+            if (window.player && typeof window.player.playVideo === 'function') {
+              window.player.playVideo();
+            }
           }
         } catch (_) {}
       ''');
