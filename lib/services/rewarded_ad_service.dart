@@ -48,6 +48,8 @@ class RewardedAdService {
       'The ad finished, but we could not update your balance. Please try again.';
   static const Duration _networkCooldownDuration = Duration(minutes: 10);
   static const Duration _graviteCloseCompletionGrace = Duration(seconds: 12);
+  static const Duration _uswaSlowLoadTimeout = Duration(seconds: 15);
+  static const Duration _uswaLoadRetryInterval = Duration(seconds: 3);
   static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.uswa,
   ];
@@ -75,6 +77,9 @@ class RewardedAdService {
   Timer? _graviteCloseGraceTimer;
   bool _activeNativeNetworkShown = false;
   bool _awaitingGraviteCompletionAfterClose = false;
+  DateTime? _lastUswaLoadKick;
+  Timer? _uswaRetryTimer;
+  int _uswaLoadFailures = 0;
 
   bool get isAdReady => _rewardedAd != null;
 
@@ -97,6 +102,9 @@ class RewardedAdService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isLoading = false;
+          _uswaLoadFailures = 0;
+          _uswaRetryTimer?.cancel();
+          _uswaRetryTimer = null;
           _logLoaded(_RewardedNetwork.uswa);
         },
         onAdFailedToLoad: (error) {
@@ -106,9 +114,24 @@ class RewardedAdService {
             _RewardedNetwork.uswa,
             details: 'load failed: ${error.code} ${error.message}',
           );
+          _scheduleUswaReload();
         },
       ),
     );
+  }
+
+  void _scheduleUswaReload() {
+    // On a fresh install the first USWA load often fails while the ad SDK is
+    // still warming up. Retry in the background (bounded) so the ad is ready
+    // before the user reaches an ad break.
+    if (_uswaLoadFailures >= 8) return;
+    _uswaLoadFailures += 1;
+    _uswaRetryTimer?.cancel();
+    final capped = _uswaLoadFailures < 4 ? _uswaLoadFailures : 4;
+    _uswaRetryTimer = Timer(Duration(seconds: 4 * capped), () {
+      if (_rewardedAd != null || _isLoading) return;
+      unawaited(_loadRewardedAd());
+    });
   }
 
   void _disposeCurrentAd([RewardedAd? ad]) {
@@ -344,6 +367,18 @@ class RewardedAdService {
       }
     }
     for (final network in order) {
+      // USWA and AdMob share the same RewardedAd slot. On a fresh install the
+      // very first load can take a while (cold SDK + first server round trip),
+      // so wait for it instead of failing fast and leaving the ad break hanging
+      // while the short keeps playing.
+      if (network == _RewardedNetwork.uswa ||
+          network == _RewardedNetwork.admob) {
+        if (await _awaitUswaAdReady()) {
+          debugPrint('[Ads][rewarded] selected USWA after slow load.');
+          return _RewardedNetwork.uswa;
+        }
+        continue;
+      }
       await _givePreferredNetworkOneMoreChance(network);
       if (_isRewardedReady(network)) {
         debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)} after retry.');
@@ -351,6 +386,24 @@ class RewardedAdService {
       }
     }
     return null;
+  }
+
+  Future<bool> _awaitUswaAdReady() async {
+    if (_isNetworkCoolingDown(_RewardedNetwork.uswa)) return false;
+    final deadline = DateTime.now().add(_uswaSlowLoadTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (_rewardedAd != null) return true;
+      if (!_isLoading) {
+        final lastKick = _lastUswaLoadKick;
+        if (lastKick == null ||
+            DateTime.now().difference(lastKick) > _uswaLoadRetryInterval) {
+          _lastUswaLoadKick = DateTime.now();
+          unawaited(_loadRewardedAd());
+        }
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+    }
+    return _rewardedAd != null;
   }
 
   Future<void> _givePreferredNetworkOneMoreChance(
