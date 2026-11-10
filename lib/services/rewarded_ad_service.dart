@@ -150,6 +150,7 @@ class RewardedAdService {
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
     RewardedAdProvider provider = RewardedAdProvider.auto,
+    bool closeCountsAsCompleted = false,
   }) async {
     _registerMethodHandler();
     if (_isShowing) {
@@ -170,6 +171,7 @@ class RewardedAdService {
         return _showUswaRewardedAd(
           onUserEarnedReward: onUserEarnedReward,
           onAdStatus: onAdStatus,
+          closeCountsAsCompleted: closeCountsAsCompleted,
         );
       case _RewardedNetwork.mobfox:
       case _RewardedNetwork.gravite:
@@ -189,6 +191,7 @@ class RewardedAdService {
   Future<bool> _showUswaRewardedAd({
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
+    bool closeCountsAsCompleted = false,
   }) async {
     final ad = _rewardedAd;
     if (ad == null) {
@@ -247,7 +250,7 @@ class RewardedAdService {
         armUswaTimeout(beforeShow: false);
       },
       onAdDismissedFullScreenContent: (ad) async {
-        completeUswaFlow(rewardEarned);
+        completeUswaFlow(closeCountsAsCompleted ? adShown : rewardEarned);
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
         _markNetworkCoolingOff(

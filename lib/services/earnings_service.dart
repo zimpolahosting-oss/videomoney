@@ -20,11 +20,13 @@ class EarningsService {
   Future<bool> showRewardedBonusAd({
     required ValueChanged<String> onAdStatus,
     RewardedAdProvider provider = RewardedAdProvider.auto,
+    bool closeCountsAsCompleted = false,
   }) {
     return _rewardedAdService.showRewardedAd(
       onUserEarnedReward: () async {},
       onAdStatus: onAdStatus,
       provider: provider,
+      closeCountsAsCompleted: closeCountsAsCompleted,
     );
   }
 

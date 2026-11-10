@@ -88,6 +88,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _playerReady = false;
   bool _isLoadingFeed = true;
   bool _isShowingAdBreak = false;
+  bool _showPostAdOverlay = false;
+  bool _postAdRewardGranted = false;
   bool _isRewardHandling = false;
   bool _isProcessingCompletedShort = false;
   bool _resumeAfterOverlay = false;
@@ -966,6 +968,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!_isShowingAdBreak) return;
       unawaited(_pausePlayback());
     });
+    bool rewardAccepted = false;
     try {
       final pendingProvider = _pendingAdBreakProvider;
       final isUswaBreak = pendingProvider == ShortsProgressService.providerUswa;
@@ -983,6 +986,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onStartAd: (_) async {
                   return _earningsService.showRewardedBonusAd(
                     provider: RewardedAdProvider.uswa,
+                    closeCountsAsCompleted: true,
                     onAdStatus: (message) {
                       debugPrint('[VideomoneyAds][Home][$pendingProvider] $message');
                     },
@@ -1007,8 +1011,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
       if (!mounted) return;
-      final rewardAccepted =
-          completed && (rewardResult?.videomoneyRewardGranted ?? false);
+      rewardAccepted = completed && (rewardResult?.videomoneyRewardGranted ?? false);
       if (rewardAccepted) {
         final snapshot = await ShortsProgressService.instance.consumePendingAdBreak(
           user.uid,
@@ -1071,12 +1074,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       } else {
         _isShowingAdBreak = false;
       }
-      final shouldRestorePlayback = _resumeAfterOverlay && !_disableAdsForTesting;
+      final shouldPromptContinue = _resumeAfterOverlay && !_disableAdsForTesting;
       _resumeAfterOverlay = false;
-      if (shouldRestorePlayback) {
-        unawaited(_restorePlaybackAfterAdBreak());
+      if (shouldPromptContinue && mounted) {
+        // Never auto-resume after the ad. On a fresh install the auto-resume
+        // raced the cold player, fell back to the same short, or left the ad
+        // hanging on screen. Showing an explicit "+1 / Play" prompt instead
+        // lets the user continue to the next short when they are ready.
+        setState(() {
+          _playerSuspended = true;
+          _playerReady = false;
+          _postAdRewardGranted = rewardAccepted;
+          _showPostAdOverlay = true;
+        });
       }
     }
+  }
+
+  Future<void> _continueAfterAd() async {
+    if (!mounted) return;
+    setState(() {
+      _showPostAdOverlay = false;
+      _playerSuspended = false;
+    });
+    _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
+    await _goToNextVideo();
+    if (!mounted) return;
+    unawaited(_resumePlaybackIfNeeded());
+  }
+
+  Future<void> _continueViaAdroulette() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      await _continueAfterAd();
+      return;
+    }
+    await _earningsService.watchAdRouletteAd(
+      uid: user.uid,
+      provider: RewardedAdProvider.uswa,
+      onAdStatus: (message) {
+        debugPrint('[VideomoneyAds][Home][adroulette-fallback] $message');
+      },
+    );
+    await _continueAfterAd();
   }
 
   String _providerLabelForAdBreak(String provider) {
@@ -1355,6 +1395,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     ),
                                   ],
                                 ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_showPostAdOverlay)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black.withOpacity(0.78),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 360),
+                          child: _OverlayCard(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  _postAdRewardGranted ? '+1' : 'Ad',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppTheme.primarySoft,
+                                    fontSize: 44,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _postAdRewardGranted
+                                      ? 'Reward added. Tap play to continue.'
+                                      : 'The ad did not finish. Tap play to continue, or watch one via Adroulette.',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppTheme.textMuted,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                FilledButton.icon(
+                                  onPressed: _continueAfterAd,
+                                  icon: const Icon(Icons.play_arrow_rounded),
+                                  label: const Text('Play'),
+                                ),
+                                if (!_postAdRewardGranted) ...[
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: _continueViaAdroulette,
+                                    icon: const Icon(Icons.casino_outlined),
+                                    label: const Text('Watch via Adroulette'),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
