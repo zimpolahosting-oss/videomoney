@@ -226,17 +226,37 @@ class RewardedAdService {
     void armUswaTimeout({required bool beforeShow}) {
       adMobFlowTimeout?.cancel();
       adMobFlowTimeout = Timer(
-        beforeShow ? const Duration(seconds: 12) : const Duration(seconds: 45),
+        beforeShow ? const Duration(seconds: 12) : const Duration(seconds: 120),
         () {
           if (completer.isCompleted) return;
-          final details = beforeShow
-              ? 'timeout before show'
-              : 'timeout after show';
-          _markNetworkCoolingOff(_RewardedNetwork.uswa, details);
-          _logUnavailable(_RewardedNetwork.uswa, details: details);
-          onAdStatus?.call(adUnavailableMessage);
+          if (beforeShow) {
+            _markNetworkCoolingOff(
+              _RewardedNetwork.uswa,
+              'timeout before show',
+            );
+            _logUnavailable(
+              _RewardedNetwork.uswa,
+              details: 'timeout before show',
+            );
+            onAdStatus?.call(adUnavailableMessage);
+            ad.dispose();
+            completeUswaFlow(false);
+            return;
+          }
+          // The ad was shown but never reported a dismissal in time. Long
+          // creatives (for example a sequence that needs several "close"
+          // taps) can run past the old 45s window, so do not cool the network
+          // down for that, and still count the view when closing counts as
+          // completion so the user keeps the reward.
+          final counted = closeCountsAsCompleted ? adShown : rewardEarned;
+          debugPrint(
+            '[Ads][rewarded] USWA timeout after show (counted=$counted).',
+          );
+          if (!counted) {
+            onAdStatus?.call(adUnavailableMessage);
+          }
           ad.dispose();
-          completeUswaFlow(rewardEarned);
+          completeUswaFlow(counted);
         },
       );
     }
