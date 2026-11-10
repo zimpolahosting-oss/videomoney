@@ -1109,13 +1109,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _continueAfterAd();
       return;
     }
-    await _earningsService.watchAdRouletteAd(
-      uid: user.uid,
-      provider: RewardedAdProvider.uswa,
-      onAdStatus: (message) {
-        debugPrint('[VideomoneyAds][Home][adroulette-fallback] $message');
-      },
-    );
+    if (!mounted) return;
+    // Treat the Adroulette fallback exactly like an ad break: hide the overlay,
+    // fully stop the short and keep it paused while the ad is on screen.
+    // Otherwise the short keeps playing behind the Adroulette ad.
+    await _pausePlayback();
+    await _hardStopPlayer();
+    _playerReady = false;
+    if (mounted) {
+      setState(() {
+        _showPostAdOverlay = false;
+        _playerSuspended = true;
+        _isShowingAdBreak = true;
+      });
+    }
+    _adBreakPauseEnforcer?.cancel();
+    _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
+      if (!_isShowingAdBreak) return;
+      unawaited(_pausePlayback());
+    });
+    try {
+      await _earningsService.watchAdRouletteAd(
+        uid: user.uid,
+        provider: RewardedAdProvider.uswa,
+        onAdStatus: (message) {
+          debugPrint('[VideomoneyAds][Home][adroulette-fallback] $message');
+        },
+      );
+    } finally {
+      _adBreakPauseEnforcer?.cancel();
+      _adBreakPauseEnforcer = null;
+      if (mounted) {
+        setState(() {
+          _isShowingAdBreak = false;
+        });
+      } else {
+        _isShowingAdBreak = false;
+      }
+    }
     await _continueAfterAd();
   }
 
