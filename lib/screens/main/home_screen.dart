@@ -521,9 +521,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
     if (!_playerReady) {
-      // The player was hard-stopped for the ad break, so reload the same short
-      // instead of skipping to the next one.
-      await _loadCurrentVideoIntoWebView(force: true);
+      await _goToNextVideo();
       if (!mounted) return;
       Future<void>.delayed(const Duration(milliseconds: 900), () {
         if (!mounted) return;
