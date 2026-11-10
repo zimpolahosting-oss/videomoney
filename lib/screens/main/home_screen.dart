@@ -521,7 +521,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _playbackResumeBlockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
     if (!_playerReady) {
-      await _goToNextVideo();
+      // The player was hard-stopped for the ad break, so reload the same short
+      // instead of skipping to the next one.
+      await _loadCurrentVideoIntoWebView(force: true);
       if (!mounted) return;
       Future<void>.delayed(const Duration(milliseconds: 900), () {
         if (!mounted) return;
@@ -943,13 +945,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final user = FirebaseAuth.instance.currentUser;
     if (!mounted || user == null || _isShowingAdBreak) return;
 
+    _resumeAfterOverlay = widget.isActiveTab;
+    _blockPlaybackResume(const Duration(minutes: 2));
+
+    // Stop the short while the WebView is still attached to the tree. On a
+    // fresh install both the ad SDK and the YoUTube player are cold, so the
+    // pause used to race against the WebView being hidden; when it lost, the
+    // first short kept playing behind the ad and the ad appeared to hang.
+    // Hard-stopping the player here removes that race entirely.
+    await _pausePlayback();
+    await _hardStopPlayer();
+    _playerReady = false;
+
+    if (!mounted || _isShowingAdBreak) return;
     setState(() {
       _isShowingAdBreak = true;
       _playerSuspended = true;
     });
-    _resumeAfterOverlay = widget.isActiveTab;
-    _blockPlaybackResume(const Duration(minutes: 2));
-    await _pausePlayback();
+
     _adBreakPauseEnforcer?.cancel();
     _adBreakPauseEnforcer = Timer.periodic(const Duration(milliseconds: 900), (_) {
       if (!_isShowingAdBreak) return;
