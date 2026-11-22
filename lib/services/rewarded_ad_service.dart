@@ -52,6 +52,7 @@ class RewardedAdService {
   static const Duration _uswaLoadRetryInterval = Duration(seconds: 3);
   static const List<_RewardedNetwork> _priorityOrder = [
     _RewardedNetwork.uswa,
+    _RewardedNetwork.gravite,
   ];
 
   RewardedAd? _rewardedAd;
@@ -69,6 +70,7 @@ class RewardedAdService {
   FutureOr<void> Function()? _nativeRewardCallback;
   void Function(String message)? _nativeStatusCallback;
   _RewardedNetwork? _activeNativeNetwork;
+  _RewardedNetwork? _lastAutoRewardedNetwork;
   bool _isLoading = false;
   bool _isShowing = false;
   bool _isNativeRewardEarned = false;
@@ -163,6 +165,9 @@ class RewardedAdService {
       unawaited(preloadRewardedAd());
       onAdStatus?.call(adUnavailableMessage);
       return false;
+    }
+    if (provider == RewardedAdProvider.auto) {
+      _lastAutoRewardedNetwork = network;
     }
 
     switch (network) {
@@ -377,7 +382,16 @@ class RewardedAdService {
         _RewardedNetwork.gravite,
       ]);
     }
-    return _selectFirstReadyWithRetry(_priorityOrder);
+    return _selectFirstReadyWithRetry(_autoRotationOrder());
+  }
+
+  /// For the automatic provider we rotate USWA and Gravite so both networks
+  /// take turns instead of always preferring USWA.
+  List<_RewardedNetwork> _autoRotationOrder() {
+    if (_lastAutoRewardedNetwork == _RewardedNetwork.uswa) {
+      return _priorityOrder.reversed.toList(growable: false);
+    }
+    return _priorityOrder;
   }
 
   Future<_RewardedNetwork?> _selectFirstReadyWithRetry(
