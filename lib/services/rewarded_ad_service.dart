@@ -160,40 +160,61 @@ class RewardedAdService {
       return false;
     }
 
-    final network = await _selectNextRewardedNetwork(preferredProvider: provider);
-    if (network == null) {
-      unawaited(preloadRewardedAd());
-      onAdStatus?.call(adUnavailableMessage);
-      return false;
-    }
-    if (provider == RewardedAdProvider.auto) {
-      _lastAutoRewardedNetwork = network;
+    // When the first network that gets picked fails to actually display a
+    // creative (for example an expired USWA ad, or a native network that
+    // reports "loaded" but serves nothing), fall back to the next network that
+    // does have an ad instead of giving up with "no ad available". The
+    // unavailable status is only surfaced once every candidate failed, so a
+    // successful fallback never flashes a stale error.
+    final tried = <_RewardedNetwork>{};
+    void captureStatus(String message) {
+      if (message == adUnavailableMessage) return;
+      onAdStatus?.call(message);
     }
 
-    switch (network) {
-      case _RewardedNetwork.uswa:
-      case _RewardedNetwork.admob:
-        return _showUswaRewardedAd(
-          onUserEarnedReward: onUserEarnedReward,
-          onAdStatus: onAdStatus,
-          closeCountsAsCompleted: closeCountsAsCompleted,
-        );
-      case _RewardedNetwork.mobfox:
-      case _RewardedNetwork.gravite:
-      case _RewardedNetwork.appodeal:
-      case _RewardedNetwork.unity:
-      case _RewardedNetwork.appnext:
-      case _RewardedNetwork.meta:
-      case _RewardedNetwork.startio:
-        return _showNativeRewardedAd(
-          network,
-          onUserEarnedReward: onUserEarnedReward,
-          onAdStatus: onAdStatus,
-        );
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final network = await _selectNextRewardedNetwork(
+        preferredProvider: provider,
+        exclude: tried,
+      );
+      if (network == null || !tried.add(network)) break;
+      if (network == _RewardedNetwork.uswa) {
+        tried.add(_RewardedNetwork.admob);
+      } else if (network == _RewardedNetwork.admob) {
+        tried.add(_RewardedNetwork.uswa);
+      }
+
+      final outcome = network == _RewardedNetwork.uswa ||
+              network == _RewardedNetwork.admob
+          ? await _showUswaRewardedAd(
+              onUserEarnedReward: onUserEarnedReward,
+              onAdStatus: captureStatus,
+              closeCountsAsCompleted: closeCountsAsCompleted,
+            )
+          : await _showNativeRewardedAd(
+              network,
+              onUserEarnedReward: onUserEarnedReward,
+              onAdStatus: captureStatus,
+            );
+
+      if (outcome.shown) {
+        if (provider == RewardedAdProvider.auto) {
+          _lastAutoRewardedNetwork = network;
+        }
+        return outcome.rewarded;
+      }
+      debugPrint(
+        '[Ads][rewarded] ${_labelForNetwork(network)} did not show; '
+        'trying the next network.',
+      );
     }
+
+    unawaited(preloadRewardedAd());
+    onAdStatus?.call(adUnavailableMessage);
+    return false;
   }
 
-  Future<bool> _showUswaRewardedAd({
+  Future<({bool rewarded, bool shown})> _showUswaRewardedAd({
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
     bool closeCountsAsCompleted = false,
@@ -202,7 +223,7 @@ class RewardedAdService {
     if (ad == null) {
       unawaited(preloadRewardedAd());
       onAdStatus?.call(adUnavailableMessage);
-      return false;
+      return (rewarded: false, shown: false);
     }
 
     final completer = Completer<bool>();
@@ -307,17 +328,18 @@ class RewardedAdService {
       armUswaTimeout(beforeShow: true);
     }
 
-    return completer.future;
+    final rewarded = await completer.future;
+    return (rewarded: rewarded, shown: adShown);
   }
 
-  Future<bool> _showNativeRewardedAd(
+  Future<({bool rewarded, bool shown})> _showNativeRewardedAd(
     _RewardedNetwork network, {
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
   }) async {
     final showMethod = _showMethodForNetwork(network);
     if (showMethod == null) {
-      return false;
+      return (rewarded: false, shown: false);
     }
 
     _nativeShowCompleter = Completer<bool>();
@@ -336,53 +358,66 @@ class RewardedAdService {
     if (!shown) {
       _logUnavailable(network);
       _completeNativeRewardedFlow(false, reloadNextAd: true);
-      return false;
+      return (rewarded: false, shown: false);
     }
 
     _logShown(network);
-    return _nativeShowCompleter!.future;
+    final rewarded = await _nativeShowCompleter!.future;
+    return (rewarded: rewarded, shown: true);
   }
 
   Future<_RewardedNetwork?> _selectNextRewardedNetwork({
     required RewardedAdProvider preferredProvider,
+    Set<_RewardedNetwork> exclude = const {},
   }) async {
     await _refreshNativeRewardedAvailability();
+
+    // Drop the networks that already failed to show an ad in this call so the
+    // caller can fall back to a different network that does have creative.
+    List<_RewardedNetwork> candidates(List<_RewardedNetwork> order) =>
+        order.where((network) => !exclude.contains(network)).toList(
+              growable: false,
+            );
+
     if (preferredProvider == RewardedAdProvider.uswa ||
         preferredProvider == RewardedAdProvider.admob) {
-      return _selectFirstReadyWithRetry(const [
+      return _selectFirstReadyWithRetry(candidates(const [
         _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
         _RewardedNetwork.gravite,
-      ]);
+      ]));
     }
     if (preferredProvider == RewardedAdProvider.appodeal) {
-      return _selectFirstReadyWithRetry(const [
+      return _selectFirstReadyWithRetry(candidates(const [
         _RewardedNetwork.uswa,
         _RewardedNetwork.gravite,
         _RewardedNetwork.admob,
-      ]);
+      ]));
     }
-    if (preferredProvider == RewardedAdProvider.unity) {
+    if (preferredProvider == RewardedAdProvider.unity &&
+        !exclude.contains(_RewardedNetwork.unity)) {
       await _givePreferredNetworkOneMoreChance(_RewardedNetwork.unity);
-      return _isRewardedReady(_RewardedNetwork.unity)
-          ? _RewardedNetwork.unity
-          : null;
+      if (_isRewardedReady(_RewardedNetwork.unity)) {
+        return _RewardedNetwork.unity;
+      }
+      // Unity had no ad; fall through to the generic order so another network
+      // can still serve the ad.
     }
     if (preferredProvider == RewardedAdProvider.gravite) {
-      return _selectFirstReadyWithRetry(const [
+      return _selectFirstReadyWithRetry(candidates(const [
         _RewardedNetwork.gravite,
         _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
-      ]);
+      ]));
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
-      return _selectFirstReadyWithRetry(const [
+      return _selectFirstReadyWithRetry(candidates(const [
         _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
         _RewardedNetwork.gravite,
-      ]);
+      ]));
     }
-    return _selectFirstReadyWithRetry(_autoRotationOrder());
+    return _selectFirstReadyWithRetry(candidates(_autoRotationOrder()));
   }
 
   /// For the automatic provider we rotate USWA and Gravite so both networks
