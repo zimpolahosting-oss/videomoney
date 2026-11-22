@@ -438,13 +438,21 @@ class RewardedAdService {
         return network;
       }
     }
+    var uswaSlotWaited = false;
     for (final network in order) {
-      // USWA and AdMob share the same RewardedAd slot. On a fresh install the
-      // very first load can take a while (cold SDK + first server round trip),
-      // so wait for it instead of failing fast and leaving the ad break hanging
-      // while the short keeps playing.
-      if (network == _RewardedNetwork.uswa ||
-          network == _RewardedNetwork.admob) {
+      // USWA and AdMob share the same RewardedAd slot, so wait for the slow
+      // first load only once instead of burning the timeout twice.
+      if (network == _RewardedNetwork.admob) {
+        continue;
+      }
+      if (network == _RewardedNetwork.uswa) {
+        if (uswaSlotWaited) continue;
+        uswaSlotWaited = true;
+        // On a fresh install the very first load can take a while (cold SDK +
+        // first server round trip), so wait for it instead of failing fast and
+        // leaving the ad break hanging while the short keeps playing. When USWA
+        // still has no ad it is cooled off, so the loop moves on to Gravite
+        // instead of retrying USWA on every ad break.
         if (await _awaitUswaAdReady()) {
           debugPrint('[Ads][rewarded] selected USWA after slow load.');
           return _RewardedNetwork.uswa;
@@ -461,7 +469,7 @@ class RewardedAdService {
   }
 
   Future<bool> _awaitUswaAdReady() async {
-    if (_isNetworkCoolingDown(_RewardedNetwork.uswa)) return false;
+    if (_isUswaSlotCoolingDown()) return false;
     final deadline = DateTime.now().add(_uswaSlowLoadTimeout);
     while (DateTime.now().isBefore(deadline)) {
       if (_rewardedAd != null) return true;
@@ -475,7 +483,12 @@ class RewardedAdService {
       }
       await Future<void>.delayed(const Duration(milliseconds: 400));
     }
-    return _rewardedAd != null;
+    if (_rewardedAd != null) return true;
+    // USWA still has no ad (for example no fill in this region). Cool the whole
+    // USWA/AdMob slot off so the next ad break goes straight to Gravite instead
+    // of waiting on USWA all over again.
+    _markNetworkCoolingOff(_RewardedNetwork.uswa, 'no ad available');
+    return false;
   }
 
   Future<void> _givePreferredNetworkOneMoreChance(
@@ -500,10 +513,19 @@ class RewardedAdService {
     }
     if (network == _RewardedNetwork.uswa ||
         network == _RewardedNetwork.admob) {
+      // USWA and AdMob share a single RewardedAd slot, so a cooldown on either
+      // must block both. Otherwise the selector would silently fall back to
+      // AdMob and end up showing the very same (empty) USWA creative again
+      // instead of moving on to Gravite.
+      if (_isUswaSlotCoolingDown()) return false;
       return _rewardedAd != null;
     }
     return _nativeRewardedReady[network] ?? false;
   }
+
+  bool _isUswaSlotCoolingDown() =>
+      _isNetworkCoolingDown(_RewardedNetwork.uswa) ||
+      _isNetworkCoolingDown(_RewardedNetwork.admob);
 
   void _registerMethodHandler() {
     if (_methodHandlerRegistered) return;
