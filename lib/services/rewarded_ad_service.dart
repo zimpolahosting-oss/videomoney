@@ -38,7 +38,7 @@ class RewardedAdService {
 
   static final RewardedAdService _instance = RewardedAdService._internal();
   static const String rewardedAdUnitId =
-      '/22893901953/ca-mb-app-pub-2509511211458165-tag/Uswa_com.videomoney.app_Rewarded';
+      'ca-app-pub-7683034036748999/1933132998';
   static const bool disableOtherLegacySdkAds = false;
   static const MethodChannel _channel =
       MethodChannel('com.videomoney.app/rewarded_video');
@@ -106,7 +106,7 @@ class RewardedAdService {
     _isLoading = true;
     await RewardedAd.load(
       adUnitId: rewardedAdUnitId,
-      request: const AdManagerAdRequest(),
+      request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
