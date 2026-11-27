@@ -17,6 +17,12 @@ class EarningsService {
     return _rewardedAdService.preloadRewardedAd();
   }
 
+  /// Skips the rewarded provider that is currently taking too long and lets the
+  /// running ad flow move on to the next one in the chain.
+  void skipCurrentRewardedAd() {
+    _rewardedAdService.skipCurrentRewardedAttempt();
+  }
+
   Future<bool> showRewardedBonusAd({
     required ValueChanged<String> onAdStatus,
     RewardedAdProvider provider = RewardedAdProvider.auto,

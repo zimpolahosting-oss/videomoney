@@ -971,7 +971,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     bool rewardAccepted = false;
     try {
       final pendingProvider = _pendingAdBreakProvider;
-      final isUswaBreak = pendingProvider == ShortsProgressService.providerUswa;
+      final isAdmobBreak = pendingProvider == ShortsProgressService.providerUswa ||
+          pendingProvider == ShortsProgressService.providerAdmob;
       final isGraviteBreak =
           pendingProvider == ShortsProgressService.providerGravite;
       final completed =
@@ -983,6 +984,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 autoStart: true,
                 adStartDelay: const Duration(milliseconds: 900),
                 onPrepare: _pausePlayback,
+                onNextProvider: _earningsService.skipCurrentRewardedAd,
                 onStartAd: (_) async {
                   return _earningsService.showRewardedBonusAd(
                     provider: RewardedAdProvider.auto,
@@ -1039,8 +1041,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isUswaBreak
-                  ? _localizedHomeText('no_provider', provider: 'USWA')
+              isAdmobBreak
+                  ? _localizedHomeText('no_provider', provider: 'AdMob')
                   : isGraviteBreak
                   ? _localizedHomeText('no_provider', provider: 'Gravite')
                   : _localizedHomeText('no_generic'),
@@ -1151,7 +1153,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _providerLabelForAdBreak(String provider) {
-    if (provider == ShortsProgressService.providerUswa) return 'USWA';
+    // The USWA and AdMob constants point at the same google_mobile_ads slot,
+    // which is now surfaced as AdMob.
+    if (provider == ShortsProgressService.providerUswa ||
+        provider == ShortsProgressService.providerAdmob) {
+      return 'AdMob';
+    }
     if (provider == ShortsProgressService.providerGravite) return 'Gravite';
     return 'Ad';
   }

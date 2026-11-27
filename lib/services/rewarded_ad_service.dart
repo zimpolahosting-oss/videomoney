@@ -50,8 +50,13 @@ class RewardedAdService {
   static const Duration _graviteCloseCompletionGrace = Duration(seconds: 12);
   static const Duration _uswaSlowLoadTimeout = Duration(seconds: 15);
   static const Duration _uswaLoadRetryInterval = Duration(seconds: 3);
+  // AdMob is the primary rewarded provider again. It uses the same
+  // google_mobile_ads rewarded slot that used to be labelled "USWA", so the
+  // slot is now surfaced as AdMob and USWA is temporarily disabled (kept out
+  // of every selection order). Gravite stays in the chain as the fallback for
+  // when AdMob has no fill.
   static const List<_RewardedNetwork> _priorityOrder = [
-    _RewardedNetwork.uswa,
+    _RewardedNetwork.admob,
     _RewardedNetwork.gravite,
   ];
 
@@ -70,7 +75,9 @@ class RewardedAdService {
   FutureOr<void> Function()? _nativeRewardCallback;
   void Function(String message)? _nativeStatusCallback;
   _RewardedNetwork? _activeNativeNetwork;
-  _RewardedNetwork? _lastAutoRewardedNetwork;
+  // Set while a provider is being shown/loaded so the ad-break UI can abort a
+  // provider that is taking too long and move on to the next one.
+  void Function()? _abortActiveAttempt;
   bool _isLoading = false;
   bool _isShowing = false;
   bool _isNativeRewardEarned = false;
@@ -107,13 +114,13 @@ class RewardedAdService {
           _uswaLoadFailures = 0;
           _uswaRetryTimer?.cancel();
           _uswaRetryTimer = null;
-          _logLoaded(_RewardedNetwork.uswa);
+          _logLoaded(_RewardedNetwork.admob);
         },
         onAdFailedToLoad: (error) {
           _rewardedAd = null;
           _isLoading = false;
           _logUnavailable(
-            _RewardedNetwork.uswa,
+            _RewardedNetwork.admob,
             details: 'load failed: ${error.code} ${error.message}',
           );
           _scheduleUswaReload();
@@ -186,7 +193,8 @@ class RewardedAdService {
 
       final outcome = network == _RewardedNetwork.uswa ||
               network == _RewardedNetwork.admob
-          ? await _showUswaRewardedAd(
+          ? await _showGoogleRewardedAd(
+              network,
               onUserEarnedReward: onUserEarnedReward,
               onAdStatus: captureStatus,
               closeCountsAsCompleted: closeCountsAsCompleted,
@@ -198,9 +206,6 @@ class RewardedAdService {
             );
 
       if (outcome.shown) {
-        if (provider == RewardedAdProvider.auto) {
-          _lastAutoRewardedNetwork = network;
-        }
         return outcome.rewarded;
       }
       debugPrint(
@@ -214,7 +219,19 @@ class RewardedAdService {
     return false;
   }
 
-  Future<({bool rewarded, bool shown})> _showUswaRewardedAd({
+  /// Called from the ad-break UI when the user taps "No ad? Click next".
+  ///
+  /// Aborts the provider that is currently taking too long so the ongoing
+  /// [showRewardedAd] loop immediately moves on to the next network in the
+  /// chain instead of waiting for the before-show timeout to expire.
+  void skipCurrentRewardedAttempt() {
+    final abort = _abortActiveAttempt;
+    _abortActiveAttempt = null;
+    abort?.call();
+  }
+
+  Future<({bool rewarded, bool shown})> _showGoogleRewardedAd(
+    _RewardedNetwork network, {
     required FutureOr<void> Function() onUserEarnedReward,
     void Function(String message)? onAdStatus,
     bool closeCountsAsCompleted = false,
@@ -249,6 +266,19 @@ class RewardedAdService {
       }
     }
 
+    // Lets the ad-break UI abort this provider when the user taps
+    // "No ad? Click next", so the caller's loop moves on to the next network
+    // instead of waiting out the full before-show timeout.
+    void abortActiveAttempt() {
+      if (completer.isCompleted || adShown) return;
+      debugPrint(
+        '[Ads][rewarded] ${_labelForNetwork(network)} skipped by user.',
+      );
+      completeUswaFlow(false);
+    }
+
+    _abortActiveAttempt = abortActiveAttempt;
+
     void armUswaTimeout({required bool beforeShow}) {
       adMobFlowTimeout?.cancel();
       adMobFlowTimeout = Timer(
@@ -256,14 +286,8 @@ class RewardedAdService {
         () {
           if (completer.isCompleted) return;
           if (beforeShow) {
-            _markNetworkCoolingOff(
-              _RewardedNetwork.uswa,
-              'timeout before show',
-            );
-            _logUnavailable(
-              _RewardedNetwork.uswa,
-              details: 'timeout before show',
-            );
+            _markNetworkCoolingOff(network, 'timeout before show');
+            _logUnavailable(network, details: 'timeout before show');
             onAdStatus?.call(adUnavailableMessage);
             ad.dispose();
             completeUswaFlow(false);
@@ -276,7 +300,8 @@ class RewardedAdService {
           // completion so the user keeps the reward.
           final counted = closeCountsAsCompleted ? adShown : rewardEarned;
           debugPrint(
-            '[Ads][rewarded] USWA timeout after show (counted=$counted).',
+            '[Ads][rewarded] ${_labelForNetwork(network)} timeout after show '
+            '(counted=$counted).',
           );
           if (!counted) {
             onAdStatus?.call(adUnavailableMessage);
@@ -292,7 +317,7 @@ class RewardedAdService {
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
         adShown = true;
-        _logShown(_RewardedNetwork.uswa);
+        _logShown(network);
         armUswaTimeout(beforeShow: false);
       },
       onAdDismissedFullScreenContent: (ad) async {
@@ -300,11 +325,11 @@ class RewardedAdService {
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
         _markNetworkCoolingOff(
-          _RewardedNetwork.uswa,
+          network,
           'show failed: ${error.code} ${error.message}',
         );
         _logUnavailable(
-          _RewardedNetwork.uswa,
+          network,
           details: 'show failed: ${error.code} ${error.message}',
         );
         onAdStatus?.call(adUnavailableMessage);
@@ -329,6 +354,7 @@ class RewardedAdService {
     }
 
     final rewarded = await completer.future;
+    _abortActiveAttempt = null;
     return (rewarded: rewarded, shown: adShown);
   }
 
@@ -353,6 +379,13 @@ class RewardedAdService {
     _graviteCloseGraceTimer = null;
     _isShowing = true;
     _armNativeFlowTimeout(network, beforeShow: true);
+    _abortActiveAttempt = () {
+      if (_activeNativeNetwork != network || _activeNativeNetworkShown) return;
+      debugPrint(
+        '[Ads][rewarded] ${_labelForNetwork(network)} skipped by user.',
+      );
+      _completeNativeRewardedFlow(false, reloadNextAd: true);
+    };
 
     final shown = await _channel.invokeMethod<bool>(showMethod) ?? false;
     if (!shown) {
@@ -362,7 +395,9 @@ class RewardedAdService {
     }
 
     _logShown(network);
-    final rewarded = await _nativeShowCompleter!.future;
+    final completer = _nativeShowCompleter!;
+    final rewarded = await completer.future;
+    _abortActiveAttempt = null;
     return (rewarded: rewarded, shown: true);
   }
 
@@ -381,17 +416,17 @@ class RewardedAdService {
 
     if (preferredProvider == RewardedAdProvider.uswa ||
         preferredProvider == RewardedAdProvider.admob) {
+      // USWA is temporarily disabled; the shared google_mobile_ads slot is
+      // surfaced as AdMob, with Gravite kept as the fallback.
       return _selectFirstReadyWithRetry(candidates(const [
-        _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
         _RewardedNetwork.gravite,
       ]));
     }
     if (preferredProvider == RewardedAdProvider.appodeal) {
       return _selectFirstReadyWithRetry(candidates(const [
-        _RewardedNetwork.uswa,
-        _RewardedNetwork.gravite,
         _RewardedNetwork.admob,
+        _RewardedNetwork.gravite,
       ]));
     }
     if (preferredProvider == RewardedAdProvider.unity &&
@@ -406,13 +441,11 @@ class RewardedAdService {
     if (preferredProvider == RewardedAdProvider.gravite) {
       return _selectFirstReadyWithRetry(candidates(const [
         _RewardedNetwork.gravite,
-        _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
       ]));
     }
     if (preferredProvider == RewardedAdProvider.liftoff) {
       return _selectFirstReadyWithRetry(candidates(const [
-        _RewardedNetwork.uswa,
         _RewardedNetwork.admob,
         _RewardedNetwork.gravite,
       ]));
@@ -420,14 +453,9 @@ class RewardedAdService {
     return _selectFirstReadyWithRetry(candidates(_autoRotationOrder()));
   }
 
-  /// For the automatic provider we rotate USWA and Gravite so both networks
-  /// take turns instead of always preferring USWA.
-  List<_RewardedNetwork> _autoRotationOrder() {
-    if (_lastAutoRewardedNetwork == _RewardedNetwork.uswa) {
-      return _priorityOrder.reversed.toList(growable: false);
-    }
-    return _priorityOrder;
-  }
+  /// AdMob is the primary rewarded provider and Gravite only steps in when
+  /// AdMob has no fill, so the automatic order stays fixed (AdMob first).
+  List<_RewardedNetwork> _autoRotationOrder() => _priorityOrder;
 
   Future<_RewardedNetwork?> _selectFirstReadyWithRetry(
     List<_RewardedNetwork> order,
@@ -438,30 +466,33 @@ class RewardedAdService {
         return network;
       }
     }
-    var uswaSlotWaited = false;
+    var googleSlotWaited = false;
     for (final network in order) {
-      // USWA and AdMob share the same RewardedAd slot, so wait for the slow
-      // first load only once instead of burning the timeout twice.
-      if (network == _RewardedNetwork.admob) {
-        continue;
-      }
-      if (network == _RewardedNetwork.uswa) {
-        if (uswaSlotWaited) continue;
-        uswaSlotWaited = true;
+      // USWA and AdMob share the same google_mobile_ads RewardedAd slot, so
+      // wait for the slow first load only once instead of burning the timeout
+      // twice.
+      if (network == _RewardedNetwork.uswa ||
+          network == _RewardedNetwork.admob) {
+        if (googleSlotWaited) continue;
+        googleSlotWaited = true;
         // On a fresh install the very first load can take a while (cold SDK +
         // first server round trip), so wait for it instead of failing fast and
-        // leaving the ad break hanging while the short keeps playing. When USWA
-        // still has no ad it is cooled off, so the loop moves on to Gravite
-        // instead of retrying USWA on every ad break.
+        // leaving the ad break hanging while the short keeps playing. When the
+        // slot still has no ad it is cooled off, so the loop moves on to Gravite
+        // instead of retrying the slot on every ad break.
         if (await _awaitUswaAdReady()) {
-          debugPrint('[Ads][rewarded] selected USWA after slow load.');
-          return _RewardedNetwork.uswa;
+          debugPrint(
+            '[Ads][rewarded] selected ${_labelForNetwork(network)} after slow load.',
+          );
+          return network;
         }
         continue;
       }
       await _givePreferredNetworkOneMoreChance(network);
       if (_isRewardedReady(network)) {
-        debugPrint('[Ads][rewarded] selected ${_labelForNetwork(network)} after retry.');
+        debugPrint(
+          '[Ads][rewarded] selected ${_labelForNetwork(network)} after retry.',
+        );
         return network;
       }
     }
@@ -484,10 +515,10 @@ class RewardedAdService {
       await Future<void>.delayed(const Duration(milliseconds: 400));
     }
     if (_rewardedAd != null) return true;
-    // USWA still has no ad (for example no fill in this region). Cool the whole
-    // USWA/AdMob slot off so the next ad break goes straight to Gravite instead
-    // of waiting on USWA all over again.
-    _markNetworkCoolingOff(_RewardedNetwork.uswa, 'no ad available');
+    // The shared Google slot still has no ad (for example no fill in this
+    // region). Cool the whole AdMob/USWA slot off so the next ad break goes
+    // straight to Gravite instead of waiting on it all over again.
+    _markNetworkCoolingOff(_RewardedNetwork.admob, 'no ad available');
     return false;
   }
 

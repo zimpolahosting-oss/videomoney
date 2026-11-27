@@ -10,19 +10,27 @@ class ShortsAdBreakScreen extends StatefulWidget {
     required this.providerName,
     required this.onPrepare,
     required this.onStartAd,
+    this.onNextProvider,
     this.autoStart = false,
     this.adStartDelay = const Duration(seconds: 6),
     this.minimumVisibleDuration = const Duration(seconds: 10),
     this.adFlowTimeout = const Duration(seconds: 150),
+    this.noAdWait = const Duration(seconds: 8),
   });
 
   final String providerName;
   final Future<void> Function() onPrepare;
   final Future<bool> Function(BuildContext context) onStartAd;
+
+  /// Called when the user taps "No ad? Click next". The ad flow keeps running
+  /// in the background; this asks it to skip the provider that is taking too
+  /// long and move on to the next one.
+  final VoidCallback? onNextProvider;
   final bool autoStart;
   final Duration adStartDelay;
   final Duration minimumVisibleDuration;
   final Duration adFlowTimeout;
+  final Duration noAdWait;
 
   @override
   State<ShortsAdBreakScreen> createState() => _ShortsAdBreakScreenState();
@@ -33,6 +41,8 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
   bool _isStartingAd = false;
   bool _didAttemptAd = false;
   bool _allowClose = false;
+  bool _showNoAdPrompt = false;
+  Timer? _noAdTimer;
   String _statusText = '';
 
   @override
@@ -51,6 +61,7 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
 
   @override
   void dispose() {
+    _noAdTimer?.cancel();
     super.dispose();
   }
 
@@ -62,6 +73,8 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
         'tapNextAd': 'Tap the button to watch your next ad.',
         'startingAd': 'Starting ad...',
         'timeoutStarting': 'The ad is taking too long to load. Please try again.',
+        'noAdClickNext': 'No ad? Click next',
+        'nextProvider': 'Try next provider',
         'continueTitle': 'Watch ad to continue',
         'watchNow': 'Watch ad now',
         'afterThreeShorts':
@@ -72,6 +85,8 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
         'tapNextAd': 'Druk op de knop om je volgende advertentie te bekijken.',
         'startingAd': 'Advertentie wordt gestart...',
         'timeoutStarting': 'De advertentie duurt te lang met laden. Probeer opnieuw.',
+        'noAdClickNext': 'Geen ad? Klik op volgende',
+        'nextProvider': 'Volgende provider proberen',
         'continueTitle': 'Kijk een advertentie om verder te gaan',
         'watchNow': 'Bekijk advertentie',
         'afterThreeShorts':
@@ -204,8 +219,10 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     setState(() {
       _didAttemptAd = true;
       _isStartingAd = true;
+      _showNoAdPrompt = false;
       _statusText = _tr('startingAd');
     });
+    _armNoAdTimer();
     bool completed = false;
     try {
       completed = await widget.onStartAd(context).timeout(
@@ -215,9 +232,14 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     } catch (_) {
       completed = false;
     }
-    if (!completed && mounted) {
+    _noAdTimer?.cancel();
+    _noAdTimer = null;
+    if (mounted) {
       setState(() {
-        _statusText = _tr('timeoutStarting');
+        _showNoAdPrompt = false;
+        if (!completed) {
+          _statusText = _tr('timeoutStarting');
+        }
       });
     }
     final remainingMinimum =
@@ -228,6 +250,32 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
     if (!mounted) return;
     _allowClose = true;
     Navigator.of(context).pop(completed);
+  }
+
+  /// Arms the "No ad? Click next" prompt. If the currently selected provider
+  /// has not started an ad within [ShortsAdBreakScreen.noAdWait], the user gets
+  /// the option to skip it and move on to the next provider.
+  void _armNoAdTimer() {
+    _noAdTimer?.cancel();
+    _noAdTimer = Timer(widget.noAdWait, () {
+      if (!mounted || !_isStartingAd) return;
+      setState(() {
+        _showNoAdPrompt = true;
+      });
+    });
+  }
+
+  void _onNextProviderPressed() {
+    widget.onNextProvider?.call();
+    if (!mounted) return;
+    setState(() {
+      _showNoAdPrompt = false;
+      _statusText = _tr('startingAd');
+    });
+    // Give the next provider its own window before offering the button again.
+    if (_isStartingAd) {
+      _armNoAdTimer();
+    }
   }
 
   Future<void> _startAdFlowAfterDelay() async {
@@ -328,6 +376,26 @@ class _ShortsAdBreakScreenState extends State<ShortsAdBreakScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
+                      if (_showNoAdPrompt) ...[
+                        Text(
+                          _tr('noAdClickNext'),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _onNextProviderPressed,
+                            icon: const Icon(Icons.skip_next_rounded),
+                            label: Text(_tr('nextProvider')),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
                       if (!widget.autoStart) ...[
                         SizedBox(
                           width: double.infinity,
